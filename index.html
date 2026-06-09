@@ -2,7 +2,6 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Nexus Hexa Guard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='85'>🏰</text></svg>">
     
@@ -438,53 +437,9 @@
             outline: none;
             box-shadow: none;
         }
-
-        /* ── PORT MOBILE ── */
-    .mobile-menu-btn { display: none; }
-    .close-sidebar-btn { display: none; }
-
-    @media (max-width: 768px) {
-    #custom-cursor { display: none !important; }
-    #controls-hint { display: none !important; }
-    
-    /* Botão flutuante para abrir a loja */
-    .mobile-menu-btn {
-        display: flex !important; position: fixed; top: 15px; left: 15px;
-        width: 50px; height: 50px; background: rgba(20, 22, 28, 0.85);
-        border: 1px solid var(--border-color); border-radius: 12px;
-        color: #eab308; font-size: 24px; align-items: center; justify-content: center;
-        z-index: 10000; backdrop-filter: blur(10px); cursor: pointer;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    }
-    
-    /* Sidebar vira um painel retrátil embaixo */
-    #sidebar {
-        top: auto; bottom: 0; left: 0; width: 100%; height: auto; max-height: 55vh;
-        transform: translateY(110%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 20px 20px 0 0; border: none; border-top: 1px solid var(--border-color);
-        z-index: 10001; padding-bottom: 20px;
-    }
-    #sidebar.open { transform: translateY(0); }
-    
-    .close-sidebar-btn {
-        display: block; width: 100%; padding: 12px; background: #3f3f46;
-        color: #fff; text-align: center; border-radius: 8px; border: none;
-        font-weight: bold; margin-bottom: 15px; text-transform: uppercase;
-    }
-
-    #hand-container { bottom: 85px; transform: translateX(-50%) scale(0.9); }
-    #shop-buttons { padding-bottom: 30px; }
-    .cards-container { flex-wrap: wrap !important; gap: 10px; }
-    .card-wrapper { transform: scale(0.85); margin: -10px; }
-    #tooltip { width: 280px; font-size: 14px; padding: 15px; }
-    }
     </style>
 </head>
 <body>
-    <div class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.add('open')">
-        <i class="fa-solid fa-hammer"></i>
-    </div>
-
     <div style="font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; visibility: hidden; pointer-events: none;">\uf05b\uf135\uf0e7</div>
 
     <div id="tutorial-overlay">
@@ -550,9 +505,6 @@
     <div id="sidebar">
         <!-- TÍTULO -->
         <div id="sidebar-title">
-            <button class="close-sidebar-btn" onclick="document.getElementById('sidebar').classList.remove('open')">
-                <i class="fa-solid fa-chevron-down"></i> Fechar Menu
-            </button>
             <span style="font-size:20px;">🏰</span>
             <span>Nexus Hexa Guard</span>
         </div>
@@ -933,50 +885,6 @@
         window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
         window.addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
 
-        // ── CONTROLES MOBILE (Pan e Pinch-to-Zoom) ──
-        let initialPinchDist = null;
-
-        canvas.addEventListener('touchstart', e => {
-            if (isShopOpen || gameOver) return;
-            if (e.touches.length === 1) {
-                isDragging = true;
-                dragLastX = e.touches[0].clientX;
-                dragLastY = e.touches[0].clientY;
-                dragVX = 0; dragVY = 0;
-            } else if (e.touches.length === 2) {
-                isDragging = false;
-                initialPinchDist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchmove', e => {
-            if (isShopOpen || gameOver) return;
-            e.preventDefault(); // Evita que a página dê scroll
-            if (e.touches.length === 1 && isDragging) {
-                let dx = e.touches[0].clientX - dragLastX;
-                let dy = e.touches[0].clientY - dragLastY;
-                dragVX = dx * DRAG_SENS; dragVY = dy * DRAG_SENS;
-                camX += dragVX / zoom; camY += dragVY / zoom;
-                dragLastX = e.touches[0].clientX; dragLastY = e.touches[0].clientY;
-            } else if (e.touches.length === 2 && initialPinchDist) {
-                let dist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                let delta = dist - initialPinchDist;
-                zoomTarget = Math.max(0.4, Math.min(zoomTarget + delta * 0.005, 3.0));
-                initialPinchDist = dist;
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', e => {
-            if (e.touches.length < 2) initialPinchDist = null;
-            if (e.touches.length === 0) isDragging = false;
-        });
-
         // Bloqueia menu de contexto no canvas
         canvas.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -1303,11 +1211,8 @@
         }
 
         function moveDrag(e) {
-            // No mobile, a carta flutua MAIS ALTA para o dedo não tampar a visão
-            let yOffset = e.pointerType === 'touch' ? 110 : 50; 
-            
             dragElement.style.left = (e.clientX - 35) + 'px';
-            dragElement.style.top  = (e.clientY - yOffset) + 'px';
+            dragElement.style.top  = (e.clientY - 50) + 'px';
             
             cardDragTargetX = e.clientX;
             cardDragTargetY = e.clientY;
@@ -3625,13 +3530,11 @@
             }
         });
 
-        window.addEventListener('pointerdown', e => {
-            if(gameOver) return;
-            if(e.pointerType === 'mouse' && e.button !== 0) return; // Ignora clique direito do mouse
-            
-            // Pega a área segura (se for celular, não tem limite de 300px da sidebar)
-            let safeArea = window.innerWidth <= 768 ? 0 : 300;
-            if(isShopOpen || dragElement || e.clientX < safeArea) return;
+        window.addEventListener('mousedown', e => {
+            if(gameOver) { return; }
+            if(e.button !== 0) return; // só botão esquerdo coloca torres
+            if(isShopOpen || dragElement || e.clientX < 300) return;
+            let pos = screenToGrid(e.clientX, e.clientY);
             
             let clickedLock = getLocks().find(l => l.gx === pos.x && l.gy === pos.y);
             if(clickedLock) {
