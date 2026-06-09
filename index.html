@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Nexus Hexa Guard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='85'>🏰</text></svg>">
     
@@ -437,9 +438,53 @@
             outline: none;
             box-shadow: none;
         }
+
+        /* ── PORT MOBILE ── */
+    .mobile-menu-btn { display: none; }
+    .close-sidebar-btn { display: none; }
+
+    @media (max-width: 768px) {
+    #custom-cursor { display: none !important; }
+    #controls-hint { display: none !important; }
+    
+    /* Botão flutuante para abrir a loja */
+    .mobile-menu-btn {
+        display: flex !important; position: fixed; top: 15px; left: 15px;
+        width: 50px; height: 50px; background: rgba(20, 22, 28, 0.85);
+        border: 1px solid var(--border-color); border-radius: 12px;
+        color: #eab308; font-size: 24px; align-items: center; justify-content: center;
+        z-index: 10000; backdrop-filter: blur(10px); cursor: pointer;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    
+    /* Sidebar vira um painel retrátil embaixo */
+    #sidebar {
+        top: auto; bottom: 0; left: 0; width: 100%; height: auto; max-height: 55vh;
+        transform: translateY(110%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 20px 20px 0 0; border: none; border-top: 1px solid var(--border-color);
+        z-index: 10001; padding-bottom: 20px;
+    }
+    #sidebar.open { transform: translateY(0); }
+    
+    .close-sidebar-btn {
+        display: block; width: 100%; padding: 12px; background: #3f3f46;
+        color: #fff; text-align: center; border-radius: 8px; border: none;
+        font-weight: bold; margin-bottom: 15px; text-transform: uppercase;
+    }
+
+    #hand-container { bottom: 85px; transform: translateX(-50%) scale(0.9); }
+    #shop-buttons { padding-bottom: 30px; }
+    .cards-container { flex-wrap: wrap !important; gap: 10px; }
+    .card-wrapper { transform: scale(0.85); margin: -10px; }
+    #tooltip { width: 280px; font-size: 14px; padding: 15px; }
+    }
     </style>
 </head>
 <body>
+    <div class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.add('open')">
+        <i class="fa-solid fa-hammer"></i>
+    </div>
+
     <div style="font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; visibility: hidden; pointer-events: none;">\uf05b\uf135\uf0e7</div>
 
     <div id="tutorial-overlay">
@@ -505,6 +550,9 @@
     <div id="sidebar">
         <!-- TÍTULO -->
         <div id="sidebar-title">
+            <button class="close-sidebar-btn" onclick="document.getElementById('sidebar').classList.remove('open')">
+                <i class="fa-solid fa-chevron-down"></i> Fechar Menu
+            </button>
             <span style="font-size:20px;">🏰</span>
             <span>Nexus Hexa Guard</span>
         </div>
