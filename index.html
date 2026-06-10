@@ -1292,6 +1292,7 @@
         function previewCardStats(tower, card) {
             if(!card || !card.apply) return { range: tower.range, damage: tower.damage, fireRate: tower.fireRate };
             let clone = {
+                isPreview: true, // <--- ADICIONE ESTA FLAG AQUI
                 type: tower.type, level: tower.level,
                 baseDmg: tower.baseDmg, baseRate: tower.baseRate, baseRange: tower.baseRange,
                 modDmg: tower.modDmg, modRate: tower.modRate, modRange: tower.modRange,
@@ -2690,10 +2691,10 @@
             createCard("Lubrificação Extrema", "common", '<i class="fa-solid fa-droplet"></i>', "Escorrega e vai.", "+25% Vel. Ataque", "-10% Dano", t => {t.modRate-=0.25; t.modDmg-=0.10;}),
             createCard("Visor Simples", "common", '<i class="fa-solid fa-eye"></i>', "Sem erro.", "+15% Alcance, +5% Crit", "Nenhum", t => {t.modRange+=0.15; t.critChance+=0.05;}),
             createCard("Carga Econômica", "common", '<i class="fa-solid fa-battery-quarter"></i>', "Gasta menos, ganha mais.", "+1 Ouro por Abate", "-10% Dano", t => {t.goldPerKill+=1; t.modDmg-=0.10;}),
-            createCard("Armadura Leve", "common", '<i class="fa-solid fa-shield-halved"></i>', "Proteção simples.", "+15% Vida Base", "Nenhum", t => { hp += 3; updateUI(); }),
+            createCard("Armadura Leve", "common", '<i class="fa-solid fa-shield-halved"></i>', "Proteção simples.", "+15% Vida Base", "Nenhum", t => { if(!t.isPreview) { hp += 3; updateUI(); } }),
             createCard("Alinhamento", "common", '<i class="fa-solid fa-ruler-combined"></i>', "Tiro reto.", "+10% Vel. Projétil", "Nenhum", t => t.projectileSpeed *= 1.10),
             createCard("Calibração", "common", '<i class="fa-solid fa-compass-drafting"></i>', "Na mosca.", "+10% Crit Damage", "Nenhum", t => t.critDamage += 0.10),
-            createCard("Moeda da Sorte", "common", '<i class="fa-solid fa-coins"></i>', "Sorte.", "+15 Ouro (Imediato)", "Nenhum", t => { gold += 15; updateUI(); }),
+            createCard("Moeda da Sorte", "common", '<i class="fa-solid fa-coins"></i>', "Sorte.", "+15 Ouro (Imediato)", "Nenhum", t => { if(!t.isPreview) { gold += 15; updateUI(); } }),
 
             createCard("Munição Perfurante", "rare", '<i class="fa-solid fa-angles-right"></i>', "Atravessa alvos.", "Ataque Perfurante", "-15% Dano", t => {t.flags.add('piercing'); t.modDmg-=0.15;}),
             createCard("Radar Militar", "rare", '<i class="fa-solid fa-satellite-dish"></i>', "Visão além do alcance.", "+50% Alcance", "-10% Vel. Ataque", t => {t.modRange+=0.50; t.modRate+=0.10;}),
@@ -2795,25 +2796,25 @@
         const angelicCards = [
             createCard("Pena Luminosa", "common", '<i class="fa-solid fa-feather"></i>', "Um toque de luz divina.", "+15% Alcance", "Nenhum", t => t.modRange += 0.15),
             createCard("Sopro Divino", "common", '<i class="fa-solid fa-wind"></i>', "Acelera os justos.", "+15% Vel. Ataque", "Nenhum", t => t.modRate -= 0.15),
-            createCard("Escudo da Fé", "common", '<i class="fa-solid fa-shield"></i>', "Proteção menor.", "+1 Vida Base", "-5% Dano", t => { hp += 1; t.modDmg -= 0.05; updateUI(); }),
+            createCard("Escudo da Fé", "common", '<i class="fa-solid fa-shield"></i>', "Proteção menor.", "+1 Vida Base", "-5% Dano", t => { t.modDmg -= 0.05; if (!t.isPreview) { hp += 1; updateUI(); } }),
             createCard("Canto Angelical", "common", '<i class="fa-solid fa-music"></i>', "Harmonia no campo.", "+10% Dano, +5% Vel", "Nenhum", t => { t.modDmg += 0.10; t.modRate -= 0.05; }),
-            createCard("Bênção Financeira", "common", '<i class="fa-solid fa-hand-holding-dollar"></i>', "Os deuses pagam bem.", "+10 Ouro, +5% Ouro Mult.", "Nenhum", t => { gold += 10; t.goldMultiplier += 0.05; updateUI(); }),
+            createCard("Bênção Financeira", "common", '<i class="fa-solid fa-hand-holding-dollar"></i>', "Os deuses pagam bem.", "+10 Ouro, +5% Ouro Mult.", "Nenhum", t => { t.goldMultiplier += 0.05; if (!t.isPreview) { gold += 10; updateUI(); } }),
 
             createCard("Raio Purificador", "rare", '<i class="fa-solid fa-bolt-lightning"></i>', "Limpa a escuridão.", "Ataque Arcano, +10% Dano", "Nenhum", t => { t.flags.add('arcane'); t.modDmg += 0.10; }),
-            createCard("Graça Restauradora", "rare", '<i class="fa-solid fa-heart-pulse"></i>', "Cura constante.", "+3 Vida Base", "Nenhum", t => { hp += 3; updateUI(); }),
+            createCard("Graça Restauradora", "rare", '<i class="fa-solid fa-heart-pulse"></i>', "Cura constante.", "+3 Vida Base", "Nenhum", t => { if (!t.isPreview) { hp += 3; updateUI(); } }),
             createCard("Aura de Proteção", "rare", '<i class="fa-solid fa-sun"></i>', "Cega os inimigos.", "+30% Alcance", "Nenhum", t => t.modRange += 0.30),
             createCard("Martelo Sagrado", "rare", '<i class="fa-solid fa-gavel"></i>', "Justiça pesada.", "+40% Dano", "-10% Vel. Ataque", t => { t.modDmg += 0.40; t.modRate += 0.10; }),
             createCard("Visão Celestial", "rare", '<i class="fa-solid fa-eye"></i>', "Nada escapa.", "+30% Crit Chance", "Nenhum", t => t.critChance += 0.3),
 
             createCard("Julgamento Divino", "epic", '<i class="fa-solid fa-scale-balanced"></i>', "A balança pesa.", "Storm + 50% Crit Dmg", "Nenhum", t => { t.flags.add('storm'); t.critDamage += 0.5; }),
             createCard("Presença Angélica", "legendary", '<i class="fa-solid fa-hands-praying"></i>', "Inspiração divina.", "+67% Vel. Ataque", "Nenhum", t => t.modRate -= 0.67),
-            createCard("Ressurreição Parcial", "epic", '<i class="fa-solid fa-cross"></i>', "A base se ergue.", "+10 Vida Base", "Nenhum", t => { hp += 10; updateUI(); }),
+            createCard("Ressurreição Parcial", "epic", '<i class="fa-solid fa-cross"></i>', "A base se ergue.", "+10 Vida Base", "Nenhum", t => { if (!t.isPreview) { hp += 10; updateUI(); } }),
             createCard("Santuário", "epic", '<i class="fa-solid fa-place-of-worship"></i>', "Zona segura.", "+0.3 Roubo Vida", "Nenhum", t => t.lifeSteal += 0.3),
             createCard("Fúria dos Céus", "epic", '<i class="fa-solid fa-cloud-sun"></i>', "Trovões impiedosos.", "Lightning + Piercing", "Nenhum", t => { t.flags.add('lightning'); t.flags.add('piercing'); }),
 
             createCard("Ira de Deus", "legendary", '<i class="fa-solid fa-hands-holding-circle"></i>', "Dano supremo, alcance global.", "+200% Alcance, +200% Dano", "Nenhum", t => { t.modRange += 2.0; t.modDmg += 2.0; }),
             createCard("Avatar da Luz", "legendary", '<i class="fa-solid fa-user-astronaut"></i>', "Forma pura.", "Plasma + Arcane AoE", "Nenhum", t => { t.flags.add('plasma'); t.flags.add('arcane'); t.splashRadius += 3; }),
-            createCard("Portões do Paraíso", "legendary", '<i class="fa-solid fa-torii-gate"></i>', "Ouro e vida fartos.", "+20 Vida, +300 Ouro", "Nenhum", t => { hp += 20; gold += 300; updateUI(); }),
+            createCard("Portões do Paraíso", "legendary", '<i class="fa-solid fa-torii-gate"></i>', "Ouro e vida fartos.", "+20 Vida, +300 Ouro", "Nenhum", t => { if (!t.isPreview) { hp += 20; gold += 300; updateUI(); } }),
             createCard("Milagre Supremo", "legendary", '<i class="fa-solid fa-dove"></i>', "Impossível de morrer.", "+1.5 Roubo Vida, +100% Vel", "Nenhum", t => { t.lifeSteal += 1.5; t.modRate -= 0.50; }),
             createCard("Arcanjo Guardião", "legendary", '<i class="fa-solid fa-person-burst"></i>', "EXCLUSIVA DA LUZ.", "Dano Triplo, +100% Crit", "Nenhum", t => { t.modDmg += 2.0; t.critChance = 1.0; })
         ];
@@ -2821,33 +2822,33 @@
 
         // ══ CARTAS DEMONÍACAS (TREVAS) ══
         const demonicCards = [
-            createCard("Pacto de Sangue", "common", '<i class="fa-solid fa-file-contract"></i>', "Dano bruto.", "+30% Dano", "-1 Vida Base", t => { t.modDmg += 0.30; hp -= 1; updateUI(); if(hp<=0) gameOver=true; }),
+            createCard("Pacto de Sangue", "common", '<i class="fa-solid fa-file-contract"></i>', "Dano bruto.", "+30% Dano", "-1 Vida Base", t => { t.modDmg += 0.30; if (!t.isPreview) { hp -= 1; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Fogo Fátuo", "common", '<i class="fa-solid fa-fire-flame-simple"></i>', "Queima leve.", "Aplica Fogo", "-10% Alcance", t => { t.flags.add('fire'); t.modRange -= 0.10; }),
             createCard("Garra Sombria", "common", '<i class="fa-solid fa-hand-lizard"></i>', "Rasga a carne.", "30% Sangramento", "Nenhum", t => t.flags.add('bleed')),
-            createCard("Sussurro Abissal", "common", '<i class="fa-solid fa-ear-listen"></i>', "Acelera o fim.", "+20% Vel. Ataque", "-1 Vida Base", t => { t.modRate -= 0.20; hp -= 1; updateUI(); if(hp<=0) gameOver=true; }),
-            createCard("Chifre Quebrado", "common", '<i class="fa-solid fa-tooth"></i>', "Ganha uns trocados.", "+35 Ouro", "-2 Vida Base", t => { gold += 35; hp -= 2; updateUI(); if(hp<=0) gameOver=true; }),
+            createCard("Sussurro Abissal", "common", '<i class="fa-solid fa-ear-listen"></i>', "Acelera o fim.", "+20% Vel. Ataque", "-1 Vida Base", t => { t.modRate -= 0.20; if (!t.isPreview) { hp -= 1; updateUI(); if(hp<=0) gameOver=true; } }),
+            createCard("Chifre Quebrado", "common", '<i class="fa-solid fa-tooth"></i>', "Ganha uns trocados.", "+35 Ouro", "-2 Vida Base", t => { if (!t.isPreview) { gold += 35; hp -= 2; updateUI(); if(hp<=0) gameOver=true; } }),
 
-            createCard("Sacrifício Menor", "rare", '<i class="fa-solid fa-droplet"></i>', "Mais sangue, mais poder.", "+70% Dano", "-3 Vida Base", t => { t.modDmg += 0.70; hp -= 3; updateUI(); if(hp<=0) gameOver=true; }),
+            createCard("Sacrifício Menor", "rare", '<i class="fa-solid fa-droplet"></i>', "Mais sangue, mais poder.", "+70% Dano", "-3 Vida Base", t => { t.modDmg += 0.70; if (!t.isPreview) { hp -= 3; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Marca da Maldição", "rare", '<i class="fa-solid fa-skull"></i>', "Dor dupla.", "+40% Crit Dmg, Sangramento", "Nenhum", t => { t.critDamage += 0.4; t.flags.add('bleed'); }),
-            createCard("Olho do Abismo", "rare", '<i class="fa-solid fa-eye-slash"></i>', "Alcance sombrio.", "+50% Alcance", "-2 Vida Base", t => { t.modRange += 0.50; hp -= 2; updateUI(); if(hp<=0) gameOver=true; }),
-            createCard("Sede de Sangue", "rare", '<i class="fa-solid fa-vial"></i>', "Frenesi.", "+60% Vel. Ataque", "-3 Vida Base", t => { t.modRate -= 0.60; hp -= 3; updateUI(); if(hp<=0) gameOver=true; }),
+            createCard("Olho do Abismo", "rare", '<i class="fa-solid fa-eye-slash"></i>', "Alcance sombrio.", "+50% Alcance", "-2 Vida Base", t => { t.modRange += 0.50; if (!t.isPreview) { hp -= 2; updateUI(); if(hp<=0) gameOver=true; } }),
+            createCard("Sede de Sangue", "rare", '<i class="fa-solid fa-vial"></i>', "Frenesi.", "+60% Vel. Ataque", "-3 Vida Base", t => { t.modRate -= 0.60; if (!t.isPreview) { hp -= 3; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Aura Putrefata", "rare", '<i class="fa-solid fa-bugs"></i>', "Todos adoecem.", "Poison + Epidemic", "Nenhum", t => { t.flags.add('poison'); t.flags.add('epidemic'); }),
 
-            createCard("Pacto Sombrio", "epic", '<i class="fa-solid fa-scroll"></i>', "Sangue por poder.", "+200% Dano, Penetra Armadura", "-5 Vida Base", t => { t.modDmg += 2.0; t.flags.add('piercing'); hp -= 5; updateUI(); if(hp<=0) gameOver=true; }),
+            createCard("Pacto Sombrio", "epic", '<i class="fa-solid fa-scroll"></i>', "Sangue por poder.", "+200% Dano, Penetra Armadura", "-5 Vida Base", t => { t.modDmg += 2.0; t.flags.add('piercing'); if (!t.isPreview) { hp -= 5; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Tormento", "epic", '<i class="fa-solid fa-face-dizzy"></i>', "Caos em área.", "Explosion + Fire", "Nenhum", t => { t.flags.add('explosion'); t.flags.add('fire'); }),
             createCard("Alma Corrompida", "epic", '<i class="fa-solid fa-ghost"></i>', "Tiros assombrados.", "Void + 2 Ricochetes", "Nenhum", t => { t.flags.add('void'); t.chainTargets += 2; t.flags.add('chain'); }),
-            createCard("Chama do Inferno", "epic", '<i class="fa-solid fa-fire-burner"></i>', "Queima o mapa.", "+200% Dano Fogo", "-4 Vida Base", t => { t.flags.add('fire'); t.modDmg += 2.0; hp -= 4; updateUI(); if(hp<=0) gameOver=true; }),
-            createCard("Fenda Abissal", "epic", '<i class="fa-solid fa-burst"></i>', "Tudo de uma vez.", "+100% Vel e Dano", "-7 Vida Base", t => { t.modRate -= 0.50; t.modDmg += 1.0; hp -= 7; updateUI(); if(hp<=0) gameOver=true; }),
+            createCard("Chama do Inferno", "epic", '<i class="fa-solid fa-fire-burner"></i>', "Queima o mapa.", "+200% Dano Fogo", "-4 Vida Base", t => { t.flags.add('fire'); t.modDmg += 2.0; if (!t.isPreview) { hp -= 4; updateUI(); if(hp<=0) gameOver=true; } }),
+            createCard("Fenda Abissal", "epic", '<i class="fa-solid fa-burst"></i>', "Tudo de uma vez.", "+100% Vel e Dano", "-7 Vida Base", t => { t.modRate -= 0.50; t.modDmg += 1.0; if (!t.isPreview) { hp -= 7; updateUI(); if(hp<=0) gameOver=true; } }),
 
-            createCard("Despertar do Demônio", "legendary", '<i class="fa-solid fa-spaghetti-monster-flying"></i>', "O verdadeiro monstro.", "+400% Dano, Fogo+Sangramento", "-6 Vida Base", t => { t.modDmg += 4.0; t.flags.add('fire'); t.flags.add('bleed'); hp -= 6; updateUI(); if(hp<=0) gameOver=true; }),
-            createCard("Ritual de Sangue", "legendary", '<i class="fa-solid fa-syringe"></i>', "Venda sua alma.", "+800 Ouro", "-8 Vida Base", t => { gold += 800; hp -= 8; updateUI(); if(hp<=0) gameOver=true; }),
+            createCard("Despertar do Demônio", "legendary", '<i class="fa-solid fa-spaghetti-monster-flying"></i>', "O verdadeiro monstro.", "+400% Dano, Fogo+Sangramento", "-6 Vida Base", t => { t.modDmg += 4.0; t.flags.add('fire'); t.flags.add('bleed'); if (!t.isPreview) { hp -= 6; updateUI(); if(hp<=0) gameOver=true; } }),
+            createCard("Ritual de Sangue", "legendary", '<i class="fa-solid fa-syringe"></i>', "Venda sua alma.", "+800 Ouro", "-8 Vida Base", t => { if (!t.isPreview) { gold += 800; hp -= 8; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Apocalipse Sombrio", "legendary", '<i class="fa-solid fa-volcano"></i>', "Fogo e Morte.", "Meteor + Void", "Nenhum", t => { t.flags.add('meteor'); t.flags.add('void'); t.modDmg += 2.0; }),
             createCard("Devorador de Mundos", "legendary", '<i class="fa-solid fa-teeth-open"></i>', "Insaciável.", "+5 Roubo Vida, Sangramento AoE", "Nenhum", t => { t.lifeSteal += 5.0; t.flags.add('bleed'); t.splashRadius += 2; }),
             createCard("Senhor do Abismo", "legendary", '<i class="fa-solid fa-khanda"></i>', "EXCLUSIVA DAS TREVAS. Aniquila Bosses.", "Void+Chain+Nuclear, +15x vs Boss, -10 HP", "Quase Morte", t => { 
                 t.flags.add('void'); t.flags.add('chain'); t.flags.add('nuclear'); 
                 t.chainTargets += 10; t.modDmg += 11.0; 
                 t.bossKiller = true; // flag consultada no handleKill para bonus vs boss
-                hp -= 10; updateUI(); if(hp<=0) gameOver=true; 
+                if (!t.isPreview) { hp -= 10; updateUI(); if(hp<=0) gameOver=true; } 
             })
         ];
         demonicCards.forEach(c => { c.alignment = 'demonic'; arcanasPool.push(c); });
@@ -3433,10 +3434,10 @@
             let elDiff = document.getElementById('diff-indicator');
             if(elDiff) {
                 let pct = Math.round((adaptiveMult - 1) * 100);
-                if      (adaptiveMult < 0.90) { elDiff.innerText = 'Fácil (' + pct + '%)';     elDiff.style.color = '#22c55e'; }
-                else if (adaptiveMult < 1.20) { elDiff.innerText = 'Normal';                    elDiff.style.color = '#a1a1aa'; }
-                else if (adaptiveMult < 1.60) { elDiff.innerText = 'Difícil (+' + pct + '%)';  elDiff.style.color = '#f97316'; }
-                else                          { elDiff.innerText = 'Brutal (+' + pct + '%)';   elDiff.style.color = '#ef4444'; }
+                if      (pct < -10) { elDiff.innerText = 'Fácil (' + pct + '%)';     elDiff.style.color = '#22c55e'; }
+                else if (pct < 20)  { elDiff.innerText = 'Normal';                    elDiff.style.color = '#a1a1aa'; }
+                else if (pct < 60)  { elDiff.innerText = 'Difícil (+' + pct + '%)';  elDiff.style.color = '#f97316'; }
+                else                { elDiff.innerText = 'Brutal (+' + pct + '%)';   elDiff.style.color = '#ef4444'; }
             }
             let expansionsAvailable = Math.floor(wave / 5) - expansionsUsed; 
             let elExp = document.getElementById('expansions'); if(elExp) elExp.innerText = Math.max(0, expansionsAvailable);
