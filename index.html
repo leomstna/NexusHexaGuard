@@ -2,7 +2,6 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus Hexa Guard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='85'>🏰</text></svg>">
     
@@ -438,173 +437,6 @@
             outline: none;
             box-shadow: none;
         }
-
-        /* ══════════════════════════════════════════
-           MOBILE / TOUCH PORT
-        ══════════════════════════════════════════ */
-        @media (pointer: coarse), (max-width: 768px) {
-
-            /* Esconde cursor customizado no touch */
-            #custom-cursor { display: none !important; }
-
-            /* Esconde hints de teclado */
-            #controls-hint { display: none !important; }
-
-            /* ── SIDEBAR MOBILE ── */
-            #sidebar {
-                top: auto !important;
-                left: 0 !important;
-                bottom: 0 !important;
-                right: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                max-height: 70vh;
-                border-radius: 20px 20px 0 0 !important;
-                transform: translateY(calc(100% - 56px));
-                transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                z-index: 100 !important;
-                padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
-                /* fix scrollbar */
-                overflow-y: auto;
-            }
-            #sidebar.open {
-                transform: translateY(0);
-            }
-
-            /* Puxador do sidebar */
-            #sidebar::before {
-                content: '';
-                display: block;
-                width: 40px; height: 4px;
-                background: #3f3f46;
-                border-radius: 2px;
-                margin: 0 auto 12px auto;
-            }
-
-            /* Header do sidebar sempre visível como pull-bar */
-            #sidebar-title {
-                cursor: pointer;
-                padding-bottom: 8px !important;
-                margin-bottom: 0 !important;
-            }
-
-            /* ── HUD FLUTUANTE NO TOPO (substitui sidebar em closed state) ── */
-            #mobile-hud-bar {
-                display: flex !important;
-            }
-
-            /* ── HAND CONTAINER MOBILE ── */
-            #hand-container {
-                bottom: 70px !important;
-                left: 10px !important;
-                right: 10px !important;
-                width: calc(100% - 20px) !important;
-                transform: none !important;
-                overflow-x: auto;
-                overflow-y: hidden;
-                flex-wrap: nowrap !important;
-                justify-content: flex-start !important;
-                padding: 10px 12px !important;
-                min-height: 100px !important;
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-            }
-            #hand-container::-webkit-scrollbar { display: none; }
-
-            .hand-card {
-                flex-shrink: 0 !important;
-                width: 64px !important;
-                height: 90px !important;
-                font-size: 10px !important;
-                touch-action: none;
-            }
-            .hand-card .mini-icon { font-size: 22px !important; }
-
-            /* ── SHOP MOBILE ── */
-            #shop-overlay {
-                padding: 20px 0 20px 0 !important;
-                overflow-y: auto !important;
-            }
-            #shop-title { font-size: 20px !important; margin-bottom: 12px !important; padding: 0 16px; text-align: center; }
-            #shop-gold-display { font-size: 20px !important; }
-
-            .cards-container {
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-                gap: 12px !important;
-                padding: 0 12px;
-            }
-            .card-wrapper {
-                width: 160px !important;
-                height: 240px !important;
-            }
-            .card-header { font-size: 14px !important; }
-            .card-icon { font-size: 30px !important; margin: 10px auto !important; }
-            .card-desc { font-size: 11px !important; }
-            .card-stats { font-size: 12px !important; }
-
-            #shop-buttons { padding: 0 16px; width: 100%; box-sizing: border-box; }
-            #shop-buttons > div { flex-wrap: wrap !important; }
-            #reroll-btn, #lootbox-btn {
-                font-size: 14px !important;
-                padding: 12px 16px !important;
-                flex: 1;
-            }
-            #close-shop-btn { width: 100% !important; }
-
-            /* ── TUTORIAL MOBILE ── */
-            .tutorial-container {
-                max-width: 95vw !important;
-                margin: 0 10px;
-            }
-            .tut-content-wrapper { height: 220px !important; }
-            .tut-step { padding: 0 20px !important; }
-            .tut-footer { padding: 16px 20px 20px !important; }
-            .tut-header { padding: 50px 20px 16px !important; }
-
-            /* ── GAMEOVER MOBILE ── */
-            #gameover-overlay { padding: 20px 12px !important; }
-
-            /* ── SIDEBAR BUTTONS SEMPRE VISÍVEIS ── */
-            #sidebar-buttons { position: sticky; bottom: 0; }
-            #btn-start-wave, #btn-auto-wave { padding: 14px !important; font-size: 13px !important; }
-
-            /* ── LOOTBOX MOBILE ── */
-            .lootbox-chest { font-size: 80px !important; }
-            #lootbox-title { font-size: 22px !important; margin-bottom: 30px !important; text-align: center; padding: 0 20px; }
-        }
-
-        /* HUD flutuante no topo (mobile) — escondido no desktop */
-        #mobile-hud-bar {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            z-index: 50;
-            background: rgba(15,17,21,0.85);
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid #27272a;
-            padding: 8px 16px;
-            padding-top: calc(8px + env(safe-area-inset-top));
-            box-sizing: border-box;
-            gap: 0;
-            flex-wrap: nowrap;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .mhud-item {
-            display: flex; align-items: center; gap: 4px;
-            font-size: 13px; font-weight: 700;
-        }
-        .mhud-icon { font-size: 14px; }
-        .mhud-val { color: #f4f4f5; }
-        /* Botão toggle do sidebar */
-        #btn-sidebar-toggle {
-            background: rgba(240,208,0,0.15); border: 1px solid rgba(240,208,0,0.3);
-            color: #fde047; border-radius: 8px;
-            padding: 6px 12px; font-size: 12px; font-weight: 800; letter-spacing: 1px;
-            text-transform: uppercase; cursor: pointer;
-        }
-
     </style>
 </head>
 <body>
@@ -638,10 +470,9 @@
                         <i class="fa-solid fa-arrows-up-down-left-right"></i>
                     </div>
                     <ul style="text-align: left; background: #18181b; padding: 15px 30px; border-radius: 10px; border: 1px solid #27272a; display: inline-block;">
-                        <li style="margin-bottom: 8px;"><strong>1 dedo</strong>: arrastar para mover a câmera.</li>
-                        <li style="margin-bottom: 8px;"><strong>2 dedos</strong>: pinch para dar zoom.</li>
-                        <li style="margin-bottom: 8px;">No PC: <strong>[W][A][S][D]</strong> e <strong>[Scroll]</strong>.</li>
-                        <li>Arrastar segurando o <strong>[Botão Direito]</strong> do mouse.</li>
+                        <li style="margin-bottom: 8px;">Mova a câmera com <strong>[W] [A] [S] [D]</strong>.</li>
+                        <li style="margin-bottom: 8px;">Aproxime ou afaste usando o <strong>[Scroll do Mouse]</strong>.</li>
+                        <li>Arraste a tela segurando o <strong>[Botão Direito]</strong>.</li>
                     </ul>
                 </div>
 
@@ -670,14 +501,6 @@
     </div>
 
     <div id="custom-cursor"></div>
-
-    <!-- HUD MOBILE (topo) -->
-    <div id="mobile-hud-bar">
-        <div class="mhud-item"><span class="mhud-icon">❤️</span><span id="m-hp" class="mhud-val">20</span></div>
-        <div class="mhud-item"><span class="mhud-icon">💰</span><span id="m-gold" class="mhud-val">50</span></div>
-        <div class="mhud-item"><span class="mhud-icon">🌊</span><span id="m-wave" class="mhud-val">1</span></div>
-        <button id="btn-sidebar-toggle" onclick="toggleMobileSidebar()">☰ Menu</button>
-    </div>
 
     <div id="sidebar">
         <!-- TÍTULO -->
@@ -1087,166 +910,10 @@
             // mantém dragVX/dragVY para inércia pós-drag
         });
 
-        // ══════════════════════════════════════════════════════
-        //  TOUCH: Pan de câmera (1 dedo) + Pinch zoom (2 dedos)
-        //         Tap para construir torre
-        // ══════════════════════════════════════════════════════
-        let touchStartX = 0, touchStartY = 0;
-        let touchLastX = 0, touchLastY = 0;
-        let touchPanVX = 0, touchPanVY = 0;
-        let pinchDist0 = 0, zoomTarget0 = 0;
-        let isTouchPanning = false;
-        let touchStartTime = 0;
-        let touchMoved = false;
-        const TOUCH_TAP_THRESHOLD = 10; // px de movimento para considerar tap
-
-        function getTouchDist(t1, t2) {
-            return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-        }
-
-        canvas.addEventListener('touchstart', e => {
-            if(isShopOpen || gameOver) return;
-            e.preventDefault();
-            const touches = e.touches;
-            touchStartTime = Date.now();
-            touchMoved = false;
-
-            if(touches.length === 1) {
-                isTouchPanning = true;
-                touchStartX = touches[0].clientX;
-                touchStartY = touches[0].clientY;
-                touchLastX = touches[0].clientX;
-                touchLastY = touches[0].clientY;
-                touchPanVX = 0; touchPanVY = 0;
-            } else if(touches.length === 2) {
-                isTouchPanning = false;
-                pinchDist0 = getTouchDist(touches[0], touches[1]);
-                zoomTarget0 = zoomTarget;
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchmove', e => {
-            if(isShopOpen || gameOver) return;
-            e.preventDefault();
-            const touches = e.touches;
-
-            if(touches.length === 1 && isTouchPanning) {
-                let dx = touches[0].clientX - touchLastX;
-                let dy = touches[0].clientY - touchLastY;
-                touchPanVX = dx * DRAG_SENS;
-                touchPanVY = dy * DRAG_SENS;
-                camX += touchPanVX / zoom;
-                camY += touchPanVY / zoom;
-                touchLastX = touches[0].clientX;
-                touchLastY = touches[0].clientY;
-
-                // Se moveu mais que threshold, não é tap
-                let totalDX = touches[0].clientX - touchStartX;
-                let totalDY = touches[0].clientY - touchStartY;
-                if(Math.hypot(totalDX, totalDY) > TOUCH_TAP_THRESHOLD) touchMoved = true;
-
-            } else if(touches.length === 2) {
-                let newDist = getTouchDist(touches[0], touches[1]);
-                let scale = newDist / Math.max(pinchDist0, 1);
-                zoomTarget = Math.max(0.4, Math.min(zoomTarget0 * scale, 3.0));
-                touchMoved = true;
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', e => {
-            if(isShopOpen || gameOver) return;
-            e.preventDefault();
-            const wasPanning = isTouchPanning;
-
-            if(e.touches.length === 0) {
-                isTouchPanning = false;
-                // Herda inércia do pan
-                dragVX = touchPanVX;
-                dragVY = touchPanVY;
-            }
-
-            // Tap = toque curto sem mover → construir torre ou expandir
-            if(wasPanning && !touchMoved && e.changedTouches.length === 1) {
-                let cx = e.changedTouches[0].clientX;
-                let cy = e.changedTouches[0].clientY;
-
-                // Ignora taps sobre o sidebar ou hand-container
-                let sidebarEl = document.getElementById('sidebar');
-                let handEl = document.getElementById('hand-container');
-                let mhudEl = document.getElementById('mobile-hud-bar');
-                let sRect = sidebarEl.getBoundingClientRect();
-                let hRect = handEl.getBoundingClientRect();
-                let mRect = mhudEl.getBoundingClientRect();
-                if((cx >= sRect.left && cy >= sRect.top && cx <= sRect.right && cy <= sRect.bottom) ||
-                   (cx >= hRect.left && cy >= hRect.top && cx <= hRect.right && cy <= hRect.bottom) ||
-                   (cx >= mRect.left && cy >= mRect.top && cx <= mRect.right && cy <= mRect.bottom)) return;
-
-                let pos = screenToGrid(cx, cy);
-
-                // Verifica se é lock de expansão
-                let clickedLock = getLocks().find(l => l.gx === pos.x && l.gy === pos.y);
-                if(clickedLock) {
-                    if(waveActive) {
-                        let screenPos = cartToIso(pos.x, pos.y);
-                        let scx = canvas.width/2; let scy = canvas.height/2;
-                        let sx = (screenPos.x - scx) * zoom + scx;
-                        let sy = (screenPos.y - scy) * zoom + scy;
-                        floatingTexts.push(new FloatingText(sx, sy, "EM COMBATE!", '#ef4444'));
-                        applyShake(4);
-                    } else { expandMap(clickedLock.dir, clickedLock.gx, clickedLock.gy); }
-                    return;
-                }
-
-                // Construir torre
-                if(pos.y >= 0 && pos.y < map.length && pos.x >= 0 && pos.x < map[0].length && map[pos.y][pos.x] === 0) {
-                    if(waveActive) {
-                        let p = cartToIso(pos.x, pos.y); let scx = canvas.width/2; let scy = canvas.height/2;
-                        let sx = (p.x - scx) * zoom + scx; let sy = (p.y - scy) * zoom + scy;
-                        floatingTexts.push(new FloatingText(sx, sy, "EM COMBATE!", '#ef4444'));
-                        applyShake(4); return;
-                    }
-                    if(!towers.some(t => t.gridX === pos.x && t.gridY === pos.y)) {
-                        let cost = towerTypes[selectedTowerKey].cost;
-                        if(gold >= cost) {
-                            gold -= cost; towers.push(new Tower(pos.x, pos.y, selectedTowerKey));
-                            statTowersBuilt++;
-                            createParticles(pos.x, pos.y, '#71717a', 15); applyShake(3); updateUI();
-                        } else {
-                            let p = cartToIso(pos.x, pos.y); let scx = canvas.width/2; let scy = canvas.height/2;
-                            let sx = (p.x - scx) * zoom + scx; let sy = (p.y - scy) * zoom + scy;
-                            floatingTexts.push(new FloatingText(sx, sy, "SEM OURO!", '#ef4444'));
-                            flashGold(); applyShake(5);
-                        }
-                    }
-                }
-            }
-        }, { passive: false });
-
-        // ── MOBILE SIDEBAR TOGGLE ──────────────────────────────────────────
-        function toggleMobileSidebar() {
-            let sb = document.getElementById('sidebar');
-            sb.classList.toggle('open');
-        }
-
-        // Fechar sidebar ao clicar fora (em mobile)
-        document.getElementById('sidebar').addEventListener('click', e => {
-            // se clicar no título, toggle
-            if(e.target.closest('#sidebar-title')) {
-                let sb = document.getElementById('sidebar');
-                sb.classList.toggle('open');
-            }
-        });
-
-        // ── PATCH HUD MOBILE → já integrado dentro de updateUI() acima ──
-
-
         // Scroll: zoom com inércia, bloqueado quando cursor está sobre o sidebar
         window.addEventListener('wheel', e => {
             if(gameOver) return; // LIBERA O SCROLL NA TELA DE GAME OVER
-            // bloqueia zoom quando mouse está sobre o sidebar (desktop)
-            let sidebarEl = document.getElementById('sidebar');
-            let sRect = sidebarEl ? sidebarEl.getBoundingClientRect() : null;
-            if(sRect && e.clientX >= sRect.left && e.clientX <= sRect.right && e.clientY >= sRect.top && e.clientY <= sRect.bottom) return;
+            if(e.clientX < 310) return; // dentro do sidebar — não zuma
             if(isShopOpen) return;
             e.preventDefault();
             const delta = e.deltaY > 0 ? -0.18 : 0.18;
@@ -3776,17 +3443,13 @@
             let elSells = document.getElementById('sells'); if(elSells) elSells.innerText = sellTokens;
             if(hp <= 0 && elHp) elHp.classList.add('danger');
             let elShopGold = document.getElementById('shop-gold-val'); if(elShopGold) elShopGold.innerText = gold;
-
-            // Atualiza HUD mobile
-            let mHp = document.getElementById('m-hp'); if(mHp) mHp.innerText = Math.max(0, Math.floor(hp));
-            let mGold = document.getElementById('m-gold'); if(mGold) mGold.innerText = gold;
-            let mWave = document.getElementById('m-wave'); if(mWave) mWave.innerText = wave;
         }
 
         window.addEventListener('mousemove', e => {
-            if(isShopOpen || dragElement || e.target.closest('#sidebar') || e.target.closest('#hand-container')) { 
+            if(isShopOpen || dragElement || e.clientX < 300) { 
                 hoverGridX = -1; hoverGridY = -1;
-                if(!e.target.closest('#sidebar')) tt.classList.remove('visible');
+                // só esconde o tooltip se não vier do sidebar (sidebar tem seus próprios listeners)
+                if(e.clientX >= 300) tt.classList.remove('visible');
                 window.lastHoveredTower = null; return; 
             }
             let p = screenToGrid(e.clientX, e.clientY); hoverGridX = p.x; hoverGridY = p.y;
@@ -3870,12 +3533,7 @@
         window.addEventListener('mousedown', e => {
             if(gameOver) { return; }
             if(e.button !== 0) return; // só botão esquerdo coloca torres
-            if(isShopOpen || dragElement) return;
-            // Ignora clique se o alvo for dentro do sidebar
-            let sidebarEl = document.getElementById('sidebar');
-            let handEl = document.getElementById('hand-container');
-            let mhudEl = document.getElementById('mobile-hud-bar');
-            if(e.target.closest('#sidebar') || e.target.closest('#hand-container') || e.target.closest('#mobile-hud-bar')) return;
+            if(isShopOpen || dragElement || e.clientX < 300) return;
             let pos = screenToGrid(e.clientX, e.clientY);
             
             let clickedLock = getLocks().find(l => l.gx === pos.x && l.gy === pos.y);
