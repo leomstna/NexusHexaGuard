@@ -461,7 +461,7 @@
                 <div class="tut-step active" id="tut-step-0">
                     <h2>Bem-vindo ao Nexus Hexa Guard</h2>
                     <div style="font-size: 50px; color: #eab308; margin: 15px 0;">🏰</div>
-                    <p>Sua base possui <strong>20 de Vida</strong>. Se os inimigos chegarem ao fim do caminho, você toma dano. Sobreviva o máximo de ondas possíveis.</p>
+                    <p>Sua base possui <strong>20 de Vida</strong>. Se os inimigos chegarem ao fim do caminho, você toma dano.<br><br><span style="color:#ef4444; font-size:13px; font-weight:bold;">⚠ Dica: Se o "Auto-Wave" e "Pular Loja" estiverem ativos e você tomar dano, eles serão desativados por segurança!</span></p>
                 </div>
 
                 <div class="tut-step" id="tut-step-1">
@@ -835,6 +835,8 @@
         let cursorTarget = {x: window.innerWidth/2, y: window.innerHeight/2};
         let cursorCurrent = {x: window.innerWidth/2, y: window.innerHeight/2};
         window.addEventListener('mousemove', (e) => { cursorTarget.x = e.clientX; cursorTarget.y = e.clientY; });
+        window.addEventListener('keydown', e => { if(!isTutorialActive) keys[e.key.toLowerCase()] = true; }); // <-- SUBSTITUA A LINHA ORIGINAL POR ESTA
+        
 
         function animateCursor() {
             cursorCurrent.x += (cursorTarget.x - cursorCurrent.x) * 0.18;
@@ -891,6 +893,9 @@
         window.addEventListener('mousedown', e => {
             if(e.button === 2) {
                 // botão direito inicia drag de câmera
+                if(isTutorialActive || gameOver) { return; }
+                if(isTutorialActive || isShopOpen) return;
+                if(e.button !== 0) return;
                 if(isShopOpen) return;
                 isDragging = true; dragLastX = e.clientX; dragLastY = e.clientY;
                 dragVX = 0; dragVY = 0;
@@ -912,6 +917,7 @@
 
         // Scroll: zoom com inércia, bloqueado quando cursor está sobre o sidebar
         window.addEventListener('wheel', e => {
+            if(isTutorialActive || gameOver) return
             if(gameOver) return; // LIBERA O SCROLL NA TELA DE GAME OVER
             if(e.clientX < 310) return; // dentro do sidebar — não zuma
             if(isShopOpen) return;
@@ -940,6 +946,7 @@
         let statCrits = 0;
         let statRerolls = 0; let gameOverAlpha = 0; let isShopOpen = false; let waveActive = false;
         let rerollCost = 15;
+        let isTutorialActive = true; // <-- ADICIONE ESTA LINHA AQUI
 
         // ── SISTEMA DE MODIFICADORES DE LOJA ──
         const shopMods = {
@@ -1722,6 +1729,24 @@
                         let dmg = this.enemyType === 'boss' ? 3 : 1;
                         hp -= dmg; waveEnemyDmgDealt += dmg; statTotalDmgTaken += dmg;
                         applyShake(this.enemyType === 'boss' ? 20 : 8);
+
+                        // --- ADICIONE ESTE BLOCO NOVO AQUI ---
+                        if (autoWave && skipShop) {
+                            autoWave = false;
+                            skipShop = false;
+                            
+                            // Reseta os botões da UI
+                            let btnAuto = document.getElementById('btn-auto-wave');
+                            if (btnAuto) { btnAuto.innerText = 'AUTO-WAVE: OFF'; btnAuto.classList.remove('on'); }
+                            
+                            let btnSkip = document.getElementById('btn-skip-shop');
+                            if (btnSkip) { btnSkip.innerText = 'PULAR LOJA: OFF'; btnSkip.classList.remove('on'); btnSkip.style.display = 'none'; }
+                            
+                            // Joga um texto vermelho na tela pra avisar o jogador
+                            floatingTexts.push(new FloatingText(canvas.width/2, canvas.height * 0.35, "AUTO-WAVE CANCELADO!", '#ef4444', true));
+                        }
+                        // ------------------------------------
+
                         this.dead = true; updateUI(); if(hp <= 0) gameOver = true; break;
                     }
                     let dx = tgt.x - this.x; let dy = tgt.y - this.y; let dist = Math.hypot(dx, dy);
@@ -3329,6 +3354,7 @@
 
             // Se completou o último passo, fecha o tutorial
             if (currentTutStep >= totalTutSteps) {
+                isTutorialActive = false; // <-- ADICIONE ISTO AQUI
                 let overlay = document.getElementById('tutorial-overlay');
                 overlay.style.opacity = '0';
                 setTimeout(() => overlay.remove(), 500);
@@ -3447,7 +3473,7 @@
         }
 
         window.addEventListener('mousemove', e => {
-            if(isShopOpen || dragElement || e.clientX < 300) { 
+            if(isTutorialActive || isShopOpen || dragElement || e.clientX < 300) {
                 hoverGridX = -1; hoverGridY = -1;
                 // só esconde o tooltip se não vier do sidebar (sidebar tem seus próprios listeners)
                 if(e.clientX >= 300) tt.classList.remove('visible');
@@ -3532,6 +3558,7 @@
         });
 
         window.addEventListener('mousedown', e => {
+            if(isTutorialActive || gameOver) { return; }
             if(gameOver) { return; }
             if(e.button !== 0) return; // só botão esquerdo coloca torres
             if(isShopOpen || dragElement || e.clientX < 300) return;
@@ -4122,6 +4149,7 @@
         });
 
         function skipTutorial() {
+            isTutorialActive = false; // <-- ADICIONE ISTO AQUI
             let overlay = document.getElementById('tutorial-overlay');
             if (overlay) {
                 overlay.style.opacity = '0';
