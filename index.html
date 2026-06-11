@@ -893,10 +893,7 @@
         window.addEventListener('mousedown', e => {
             if(e.button === 2) {
                 // botão direito inicia drag de câmera
-                if(isTutorialActive || gameOver) { return; }
-                if(isTutorialActive || isShopOpen) return;
-                if(e.button !== 0) return;
-                if(isShopOpen) return;
+                if(isTutorialActive || gameOver || isShopOpen) return;
                 isDragging = true; dragLastX = e.clientX; dragLastY = e.clientY;
                 dragVX = 0; dragVY = 0;
                 e.preventDefault();
