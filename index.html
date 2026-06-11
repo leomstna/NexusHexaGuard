@@ -932,6 +932,7 @@
         let waveStartHp = 20;
         let waveTotalEnemyHp = 0;
         let waveEnemyDmgDealt = 0;
+        let waveEnemyHpKilled = 0;  // HP total de inimigos mortos pelas torres nesta wave
         let skipShop = false;
         // stats para tela de game over
         let statTotalDmgDealt = 0;
@@ -1970,6 +1971,8 @@
             handleKill(enemy, sX, sY) {
                 enemy.dead = true;
                 statEnemiesKilled++;
+                waveEnemyHpKilled += enemy.maxHp;
+                waveEnemyHpKilled += enemy.maxHp;  // acumula HP morto pelas torres
                 let goldDrop = enemy.goldReward ? Math.floor(enemy.goldReward * this.goldMultiplier) + this.goldPerKill : Math.floor(5 * this.goldMultiplier) + this.goldPerKill;
                 
                 // Removemos o 'gold += goldDrop' imediato daqui.
@@ -3243,15 +3246,31 @@
 
         function calcAdaptiveDifficulty() {
             if (waveTotalEnemyHp > 0) {
-                let dmgPressure = waveEnemyDmgDealt / Math.max(1, waveStartHp);
-                if (dmgPressure === 0)         adaptiveMult = Math.min(1.6, adaptiveMult * 1.03);
-                else if (dmgPressure < 0.1)   adaptiveMult = Math.min(1.6, adaptiveMult * 1.01);
-                else if (dmgPressure >= 0.15) adaptiveMult = Math.max(0.82, adaptiveMult * 0.97);
+                // Pressão de dano recebido: quanto % do HP do player foi perdido
+                let dmgPressure  = waveEnemyDmgDealt / Math.max(1, waveStartHp);
+                // Pressão de kill: % do HP total de inimigos que as torres liquidaram
+                // (alto = build forte, pouco passou; baixo = muitos escaparam)
+                let killPressure = waveEnemyHpKilled  / Math.max(1, waveTotalEnemyHp);
+
+                // Ajuste base pela pressão de dano (igual ao antigo)
+                let delta = 0;
+                if      (dmgPressure === 0)      delta += 0.030;
+                else if (dmgPressure < 0.10)     delta += 0.010;
+                else if (dmgPressure >= 0.15)    delta -= 0.030;
+
+                // Bônus/penalidade pelo DPS das torres (killPressure)
+                // Se matou >80% sem tomar dano → build poderosa, aperta mais
+                if (killPressure >= 0.80 && dmgPressure < 0.05)  delta += 0.025;
+                // Se matou >90% independente do dano → aperta levemente
+                else if (killPressure >= 0.90)                    delta += 0.012;
+                // Se matou <40% (muitos escaparam) → alivia
+                else if (killPressure < 0.40)                     delta -= 0.015;
+
                 let waveFloor = 1.0 + Math.max(0, wave - 5) * 0.008;
-                adaptiveMult = Math.max(waveFloor, adaptiveMult);
+                adaptiveMult = Math.max(waveFloor, Math.min(1.6, adaptiveMult + delta));
                 adaptiveMult = Math.round(adaptiveMult * 1000) / 1000;
             }
-            waveTotalEnemyHp = 0; waveEnemyDmgDealt = 0;
+            waveTotalEnemyHp = 0; waveEnemyDmgDealt = 0; waveEnemyHpKilled = 0;
         }
 
         function showShop() {
