@@ -185,7 +185,38 @@
         }
         #btn-start-wave { background: linear-gradient(45deg, #16a34a, #22c55e); }
         #btn-auto-wave { background: #3f3f46; color: #a1a1aa; margin-top: 8px;}
-        #btn-auto-wave.on { background: linear-gradient(45deg, #ca8a04, #eab308); color: #000; }
+        #btn-auto-wave.on, #btn-skip-shop.on { 
+            background: linear-gradient(45deg, #ca8a04, #eab308); 
+            color: #000; 
+        }
+
+        /* Animação bruta pro botão de pular loja brotar da escuridão */
+        #btn-skip-shop {
+            max-height: 0;
+            margin: 0 !important;
+            padding: 0;
+            border: 0;
+            font-size: 0;
+            line-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            box-shadow: none !important; /* Assassina a sombra fantasma */
+            pointer-events: none; /* Evita cliques invisíveis */
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            background: #3f3f46; 
+            color: #a1a1aa;
+        }
+
+        #btn-skip-shop.visible {
+            max-height: 50px;
+            margin-top: 8px !important;
+            padding: 13px;
+            font-size: 14px;
+            line-height: normal;
+            opacity: 1;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4) !important; /* Devolve a sombra */
+            pointer-events: all;
+        }
         .btn-action:disabled { background: #27272a !important; color: #71717a !important; box-shadow: none !important; transform: none !important; pointer-events: none;}
 
         /* LOJA DE CARTAS */
@@ -568,7 +599,10 @@
         <div id="sidebar-buttons">
             <button id="btn-start-wave" class="btn-action magnet-btn targeting-trigger" onclick="startNextWave()">INICIAR ONDA</button>
             <button id="btn-auto-wave" class="btn-action magnet-btn targeting-trigger" onclick="toggleAutoWave()">AUTO-WAVE: OFF</button>
-            <button id="btn-skip-shop" class="btn-action magnet-btn targeting-trigger" onclick="toggleSkipShop()" style="display:none; background:#3f3f46; color:#a1a1aa; margin-top:10px;">PULAR LOJA: OFF</button>
+            <button id="btn-skip-shop" class="btn-action magnet-btn targeting-trigger" onclick="toggleSkipShop()">PULAR LOJA: OFF</button>
+            <button id="btn-give-up" class="btn-action magnet-btn targeting-trigger" onclick="giveUp()" style="background: linear-gradient(45deg, #7f1d1d, #991b1b); border: 1px solid #ef4444; color: #fca5a5; margin-top: 8px;">
+                DESISTIR (VER SCORE)
+            </button>
         </div>
     </div>
 
@@ -612,6 +646,33 @@
     <canvas id="battle-rays-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; mix-blend-mode: screen; opacity: 0.35;"></canvas>
     
     <canvas id="gameCanvas"></canvas>
+
+    <div id="giveup-overlay" style="
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(5, 5, 10, 0.95); backdrop-filter: blur(10px);
+        display: none; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 99999; opacity: 0; transition: opacity 0.3s ease;">
+        
+        <div style="background: linear-gradient(180deg, #18181b, #0f1115); 
+            border: 1px solid #3f3f46; border-radius: 16px; padding: 40px; 
+            max-width: 450px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.9);">
+            
+            <div style="font-size: 45px; color: #ef4444; margin-bottom: 20px; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            
+            <h2 style="color: #f4f4f5; margin: 0 0 15px 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">Aniquilação Total?</h2>
+            <p style="color: #a1a1aa; font-size: 15px; margin-bottom: 30px; line-height: 1.5;">
+                Tem certeza que deseja destruir sua própria base e encerrar a partida agora? Essa ação não tem volta.
+            </p>
+            
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button class="btn-action magnet-btn" onclick="cancelGiveUp()" style="background: #3f3f46; width: 160px;">CANCELAR</button>
+                <button class="btn-action magnet-btn" onclick="confirmGiveUp()" style="background: linear-gradient(45deg, #7f1d1d, #ef4444); width: 160px; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);">DESTRUIR</button>
+            </div>
+        </div>
+    </div>
+
 
     <div id="gameover-overlay" style="
         position:fixed; top:0; left:0; width:100%; height:100%;
@@ -1738,7 +1799,7 @@
                             if (btnAuto) { btnAuto.innerText = 'AUTO-WAVE: OFF'; btnAuto.classList.remove('on'); }
                             
                             let btnSkip = document.getElementById('btn-skip-shop');
-                            if (btnSkip) { btnSkip.innerText = 'PULAR LOJA: OFF'; btnSkip.classList.remove('on'); btnSkip.style.display = 'none'; }
+                            if (btnSkip) { btnSkip.innerText = 'PULAR LOJA: OFF'; btnSkip.classList.remove('on'); btnSkip.classList.remove('visible'); }
                             
                             // Joga um texto vermelho na tela pra avisar o jogador
                             floatingTexts.push(new FloatingText(canvas.width/2, canvas.height * 0.35, "AUTO-WAVE CANCELADO!", '#ef4444', true));
@@ -3344,14 +3405,42 @@
             }
         }
 
+        function giveUp() {
+            let modal = document.getElementById('giveup-overlay');
+            modal.style.display = 'flex';
+            // Esse reflow força a transição de opacidade a funcionar na mesma hora
+            void modal.offsetWidth; 
+            modal.style.opacity = '1';
+        }
+
+        function cancelGiveUp() {
+            let modal = document.getElementById('giveup-overlay');
+            modal.style.opacity = '0';
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
+        }
+
+        function confirmGiveUp() {
+            cancelGiveUp();
+            hp = 0;
+            gameOver = true;
+            updateUI();
+        }
+
         function toggleAutoWave() {
             autoWave = !autoWave;
             let btn = document.getElementById('btn-auto-wave');
             btn.innerText = autoWave ? 'AUTO-WAVE: ON' : 'AUTO-WAVE: OFF';
             if(autoWave) btn.classList.add('on'); else btn.classList.remove('on');
+            
             let skipBtn = document.getElementById('btn-skip-shop');
-            skipBtn.style.display = autoWave ? 'block' : 'none';
-            if(!autoWave) { skipShop = false; skipBtn.innerText = 'PULAR LOJA: OFF'; skipBtn.classList.remove('on'); }
+            if(autoWave) { 
+                skipBtn.classList.add('visible'); 
+            } else { 
+                skipShop = false; 
+                skipBtn.innerText = 'PULAR LOJA: OFF'; 
+                skipBtn.classList.remove('on'); 
+                skipBtn.classList.remove('visible'); 
+            }
         }
         function toggleSkipShop() {
             skipShop = !skipShop;
@@ -3578,6 +3667,7 @@
             if(gameOver) { return; }
             if(e.button !== 0) return; // só botão esquerdo coloca torres
             if(isShopOpen || dragElement || e.clientX < 300) return;
+            if(document.getElementById('giveup-overlay') && document.getElementById('giveup-overlay').style.display === 'flex') return;
             let pos = screenToGrid(e.clientX, e.clientY);
             
             let clickedLock = getLocks().find(l => l.gx === pos.x && l.gy === pos.y);
@@ -3638,7 +3728,7 @@
             setTimeout(() => go.style.opacity = '1', 50);
             document.getElementById('go-wave').innerText = wave;
             
-            let score = wave * 100 + statEnemiesKilled * 10 + Math.floor(statTotalDmgDealt / 10);
+            let score = (wave - 1) * 100 + statEnemiesKilled * 10 + Math.floor(statTotalDmgDealt / 10);
 
             // ── FUNÇÃO COUNTUP VANILLA (Substitui a lib React) ──
             function animCountUp(elId, targetVal, durationMs = 2000, suffix = '') {
