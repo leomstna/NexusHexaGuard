@@ -4315,15 +4315,6 @@
             recalcShopScale();
         });
 
-        function skipTutorial() {
-            isTutorialActive = false; // <-- ADICIONE ISTO AQUI
-            let overlay = document.getElementById('tutorial-overlay');
-            if (overlay) {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 500);
-            }
-        }
-
         applyMagnetEffect('.magnet-btn');
         spawnQueue = buildSpawnQueue(wave);
         enemiesToSpawn = spawnQueue.length;
