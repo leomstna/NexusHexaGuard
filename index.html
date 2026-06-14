@@ -520,7 +520,7 @@
                     <div style="font-size: 40px; color: #a335ee; margin: 15px 0;">
                         <i class="fa-solid fa-cards"></i> 🃏
                     </div>
-                    <p>No fim de cada onda, a loja abre. Compre cartas com ouro e elas irão para a sua mão (na parte inferior da tela).<br><br><strong>Arraste as cartas da mão e solte em cima das torres</strong> para aplicar os upgrades. Cada torre suporta até 5 efeitos.</p>
+                    <p>No fim de cada onda, a loja abre. Compre cartas com ouro e elas irão para a sua mão (na parte inferior da tela).<br><br><strong>Arraste as cartas da mão e solte em cima das torres</strong> para aplicar os upgrades. Cada torre suporta até 3 efeitos.</p>
                 </div>
             </div>
 
@@ -540,6 +540,7 @@
             <span>Nexus Hexa Guard</span>
         </div>
 
+        <!-- SEÇÃO 1: STATUS DO JOGADOR -->
         <!-- SEÇÃO 1: STATUS DO JOGADOR -->
         <div class="hud-section">
             <div class="hud-section-label">JOGADOR</div>
@@ -562,16 +563,6 @@
                 <span class="hud-icon">🏷️</span>
                 <span class="hud-key">Vendas</span>
                 <span id="sells" class="hud-val" style="color:#60a5fa;">1</span>
-            </div>
-            <div class="hud-row" id="align-row-light">
-                <span class="hud-icon">✨</span>
-                <span class="hud-key">Luz</span>
-                <span id="align-light" class="hud-val" style="color:#fef08a;">0</span>
-            </div>
-            <div class="hud-row" id="align-row-dark">
-                <span class="hud-icon">🩸</span>
-                <span class="hud-key">Trevas</span>
-                <span id="align-dark" class="hud-val" style="color:#c084fc;">0</span>
             </div>
         </div>
 
@@ -687,17 +678,34 @@
             <div style="background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(15,17,21,0.8));
                 border:1px solid rgba(239,68,68,0.4); border-radius:16px; padding:24px; margin-bottom:24px;">
                 <div style="color:#a1a1aa;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">SCORE FINAL</div>
+                
+                <!-- Tag de Novo Recorde (Invisível por padrão) -->
+                <div id="new-record-badge" style="display:none; color:#22c55e; font-weight:900; font-size:18px; margin-bottom:10px; text-transform:uppercase; letter-spacing:2px; text-shadow: 0 0 10px #22c55e;">🏆 NOVO RECORDE 🏆</div>
+                
                 <div id="go-score" style="font-size:52px;font-weight:900;color:#fde047;
                     text-shadow:0 0 20px rgba(253,224,71,0.5);">0</div>
                 
                 <div id="go-build-class" style="font-size:22px; font-weight:900; margin-top: 15px; text-transform: uppercase; letter-spacing: 2px;"></div>
             </div>
+            
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;" id="go-stats-grid"></div>
+            
             <div style="background:rgba(20,22,28,0.9);border:1px solid #2d313b;
                 border-radius:12px;padding:20px;margin-bottom:24px;text-align:left;">
                 <div style="color:#a1a1aa;font-size:12px;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;">TORRES UTILIZADAS</div>
                 <div id="go-towers-list"></div>
             </div>
+
+            <!-- NOVA CAIXA: Histórico de Partidas -->
+            <div style="background:rgba(20,22,28,0.9);border:1px solid #2d313b;
+                border-radius:12px;padding:20px;margin-bottom:24px;text-align:left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <div style="color:#a1a1aa;font-size:12px;letter-spacing:3px;text-transform:uppercase;">ÚLTIMAS PARTIDAS</div>
+                    <div style="color:#fde047;font-size:12px;font-weight:bold; letter-spacing:1px;">RECORDE GERAL: <span id="go-highscore-display">0</span></div>
+                </div>
+                <div id="go-history-list"></div>
+            </div>
+
             <button onclick="location.reload()" style="
                 background:linear-gradient(45deg,#7f1d1d,#ef4444); color:#fff;
                 border:none; border-radius:10px; padding:16px 48px;
@@ -1428,8 +1436,8 @@
                         hp += 5; floatingTexts.push(new FloatingText(screenX, screenY, "+5 Vida", '#22c55e'));
                         createParticles(t.gridX, t.gridY, '#22c55e', 30); updateUI(); playerHand.splice(draggingCardIndex, 1);
                     } else {
-                        if (t.effects.length >= 5) { 
-                            floatingTexts.push(new FloatingText(screenX, screenY, "MÁXIMO 5 EFEITOS", '#ef4444')); applyShake(4); 
+                        if (t.effects.length >= 3) { 
+                            floatingTexts.push(new FloatingText(screenX, screenY, "MÁXIMO 3 EFEITOS", '#ef4444')); applyShake(4); 
                             returnCardToHand(); return; 
                         } 
                         else { t.levelUp(card); statCardsUsed++; createParticles(t.gridX, t.gridY, '#f0d000', 30); playerHand.splice(draggingCardIndex, 1); }
@@ -1440,6 +1448,7 @@
             }
             returnCardToHand(); // Soltou no vazio, volta pro deck
         }
+        
 
         class UIParticle {
             constructor(sx, sy, val) {
@@ -2761,89 +2770,89 @@
         function createCard(name, rarity, icon, desc, buff, debuff, apply) { return { name, rarity, icon, desc, buff, debuff, apply }; }
 
         const arcanasPool = [
-            createCard("Mira Ajustada", "common", '<i class="fa-solid fa-crosshairs"></i>', "Um leve ajuste nas lentes.", "+15% Alcance", "Nenhum", t => t.modRange += 0.15),
-            createCard("Óleo Mecânico", "common", '<i class="fa-solid fa-oil-can"></i>', "Engrenagens mais lisas.", "+15% Vel. Ataque", "Nenhum", t => t.modRate -= 0.15),
-            createCard("Parafusos Reforçados", "common", '<i class="fa-solid fa-screwdriver"></i>', "Estrutura mais firme.", "+15% Dano", "Nenhum", t => t.modDmg += 0.15),
-            createCard("Treinamento Básico", "common", '<i class="fa-solid fa-person-military-rifle"></i>', "Foco no que importa.", "+10% Dano, +10% Vel", "Nenhum", t => {t.modDmg+=0.10; t.modRate-=0.10;}),
+            createCard("Mira Ajustada", "common", '<i class="fa-solid fa-crosshairs"></i>', "Um leve ajuste nas lentes.", "+15% Alcance", "-5% Dano", t => {t.modRange += 0.15; t.modDmg -= 0.05;}),
+            createCard("Óleo Mecânico", "common", '<i class="fa-solid fa-oil-can"></i>', "Engrenagens mais lisas.", "+15% Vel. Ataque", "-5% Alcance", t => {t.modRate -= 0.15; t.modRange -= 0.05;}),
+            createCard("Parafusos Reforçados", "common", '<i class="fa-solid fa-screwdriver"></i>', "Estrutura mais firme.", "+15% Dano", "-5% Vel. Ataque", t => {t.modDmg += 0.15; t.modRate += 0.05;}),
+            createCard("Treinamento Básico", "common", '<i class="fa-solid fa-person-military-rifle"></i>', "Foco no que importa.", "+10% Dano, +10% Vel", "-5% Alcance", t => {t.modDmg+=0.10; t.modRate-=0.10; t.modRange -= 0.05;}),
             createCard("Pólvora Extra", "common", '<i class="fa-solid fa-fire"></i>', "Mais boom por tiro.", "+20% Dano", "-5% Vel. Ataque", t => {t.modDmg+=0.20; t.modRate+=0.05;}),
             createCard("Molas Novas", "common", '<i class="fa-solid fa-ring"></i>', "Recuo mais suave.", "+20% Vel. Ataque", "-5% Dano", t => {t.modRate-=0.20; t.modDmg-=0.05;}),
-            createCard("Peças Recicladas", "common", '<i class="fa-solid fa-recycle"></i>', "Custo benefício.", "+5% Dano, +5% Alcance", "Nenhum", t => {t.modDmg+=0.05; t.modRange+=0.05;}),
-            createCard("Afiamento", "common", '<i class="fa-solid fa-gavel"></i>', "Corta o ar.", "+5% Crit Chance", "Nenhum", t => t.critChance += 0.05),
+            createCard("Peças Recicladas", "common", '<i class="fa-solid fa-recycle"></i>', "Custo benefício.", "+5% Dano, +5% Alcance", "-5% Crit", t => {t.modDmg+=0.05; t.modRange+=0.05; t.critChance-=0.05;}),
+            createCard("Afiamento", "common", '<i class="fa-solid fa-gavel"></i>', "Corta o ar.", "+5% Crit Chance", "-5% Vel. Ataque", t => {t.critChance += 0.05; t.modRate += 0.05;}),
             createCard("Binóculo Compacto", "common", '<i class="fa-solid fa-binoculars"></i>', "Enxerga mais longe.", "+25% Alcance", "-5% Vel. Ataque", t => {t.modRange+=0.25; t.modRate+=0.05;}),
-            createCard("Ajuste Fino", "common", '<i class="fa-solid fa-wrench"></i>', "Tudo nos conformes.", "+10% Dano", "Nenhum", t => t.modDmg += 0.10),
-            createCard("Kit de Reparos", "common", '<i class="fa-solid fa-toolbox"></i>', "Manutenção básica.", "+10% Vel. Ataque", "Nenhum", t => t.modRate -= 0.10),
-            createCard("Caixa de Ferramentas", "common", '<i class="fa-solid fa-hammer"></i>', "Básico do básico.", "+5% Dano, Vel, Alcance", "Nenhum", t => {t.modDmg+=0.05; t.modRate-=0.05; t.modRange+=0.05;}),
-            createCard("Bronze Polido", "common", '<i class="fa-solid fa-medal"></i>', "Bonito e funcional.", "+10% Mult. Ouro", "Nenhum", t => t.goldMultiplier += 0.10),
+            createCard("Ajuste Fino", "common", '<i class="fa-solid fa-wrench"></i>', "Tudo nos conformes.", "+10% Dano", "-5% Alcance", t => {t.modDmg += 0.10; t.modRange -= 0.05;}),
+            createCard("Kit de Reparos", "common", '<i class="fa-solid fa-toolbox"></i>', "Manutenção básica.", "+10% Vel. Ataque", "-5% Dano", t => {t.modRate -= 0.10; t.modDmg -= 0.05;}),
+            createCard("Caixa de Ferramentas", "common", '<i class="fa-solid fa-hammer"></i>', "Básico do básico.", "+5% Dano, Vel, Alcance", "-5% Crit", t => {t.modDmg+=0.05; t.modRate-=0.05; t.modRange+=0.05; t.critChance-=0.05;}),
+            createCard("Bronze Polido", "common", '<i class="fa-solid fa-medal"></i>', "Bonito e funcional.", "+10% Mult. Ouro", "-10% Dano", t => {t.goldMultiplier += 0.10; t.modDmg -= 0.10;}),
             createCard("Lubrificação Extrema", "common", '<i class="fa-solid fa-droplet"></i>', "Escorrega e vai.", "+25% Vel. Ataque", "-10% Dano", t => {t.modRate-=0.25; t.modDmg-=0.10;}),
-            createCard("Visor Simples", "common", '<i class="fa-solid fa-eye"></i>', "Sem erro.", "+15% Alcance, +5% Crit", "Nenhum", t => {t.modRange+=0.15; t.critChance+=0.05;}),
+            createCard("Visor Simples", "common", '<i class="fa-solid fa-eye"></i>', "Sem erro.", "+15% Alcance, +5% Crit", "-5% Vel. Ataque", t => {t.modRange+=0.15; t.critChance+=0.05; t.modRate+=0.05;}),
             createCard("Carga Econômica", "common", '<i class="fa-solid fa-battery-quarter"></i>', "Gasta menos, ganha mais.", "+1 Ouro por Abate", "-10% Dano", t => {t.goldPerKill+=1; t.modDmg-=0.10;}),
-            createCard("Armadura Leve", "common", '<i class="fa-solid fa-shield-halved"></i>', "Proteção simples.", "+15% Vida Base", "Nenhum", t => { if(!t.isPreview) { hp += 3; updateUI(); } }),
-            createCard("Alinhamento", "common", '<i class="fa-solid fa-ruler-combined"></i>', "Tiro reto.", "+10% Vel. Projétil", "Nenhum", t => t.projectileSpeed *= 1.10),
-            createCard("Calibração", "common", '<i class="fa-solid fa-compass-drafting"></i>', "Na mosca.", "+10% Crit Damage", "Nenhum", t => t.critDamage += 0.10),
-            createCard("Moeda da Sorte", "common", '<i class="fa-solid fa-coins"></i>', "Sorte.", "+15 Ouro (Imediato)", "Nenhum", t => { if(!t.isPreview) { gold += 15; updateUI(); } }),
+            createCard("Armadura Leve", "common", '<i class="fa-solid fa-shield-halved"></i>', "Proteção simples.", "+15% Vida Base", "-5% Dano", t => { t.modDmg-=0.05; if(!t.isPreview) { hp += 3; updateUI(); } }),
+            createCard("Alinhamento", "common", '<i class="fa-solid fa-ruler-combined"></i>', "Tiro reto.", "+10% Vel. Projétil", "-5% Vel. Ataque", t => {t.projectileSpeed *= 1.10; t.modRate+=0.05;}),
+            createCard("Calibração", "common", '<i class="fa-solid fa-compass-drafting"></i>', "Na mosca.", "+10% Crit Damage", "-5% Alcance", t => {t.critDamage += 0.10; t.modRange -= 0.05;}),
+            createCard("Moeda da Sorte", "common", '<i class="fa-solid fa-coins"></i>', "Sorte.", "+15 Ouro (Imediato)", "-1 Vida Base", t => { if(!t.isPreview) { gold += 15; hp -= 1; updateUI(); } }),
 
             createCard("Munição Perfurante", "rare", '<i class="fa-solid fa-angles-right"></i>', "Atravessa alvos.", "Ataque Perfurante", "-15% Dano", t => {t.flags.add('piercing'); t.modDmg-=0.15;}),
             createCard("Radar Militar", "rare", '<i class="fa-solid fa-satellite-dish"></i>', "Visão além do alcance.", "+50% Alcance", "-10% Vel. Ataque", t => {t.modRange+=0.50; t.modRate+=0.10;}),
             createCard("Turbo Compressor", "rare", '<i class="fa-solid fa-fan"></i>', "Atira como louco.", "+50% Vel. Ataque", "-15% Dano", t => {t.modRate-=0.50; t.modDmg-=0.15;}),
-            createCard("Bateria de Íons", "rare", '<i class="fa-solid fa-car-battery"></i>', "Choque puro.", "Ataque de Raio", "Nenhum", t => t.flags.add('lightning')),
+            createCard("Bateria de Íons", "rare", '<i class="fa-solid fa-car-battery"></i>', "Choque puro.", "Ataque de Raio", "-10% Dano", t => {t.flags.add('lightning'); t.modDmg-=0.10;}),
             createCard("Microfusão", "rare", '<i class="fa-solid fa-atom"></i>', "Dano denso.", "+40% Dano", "-10% Alcance", t => {t.modDmg+=0.40; t.modRange-=0.10;}),
-            createCard("Mecanismo Duplo", "rare", '<i class="fa-solid fa-layer-group"></i>', "O dobro de eficiência.", "+30% Dano, +30% Vel", "Nenhum", t => {t.modDmg+=0.30; t.modRate-=0.30;}),
-            createCard("Núcleo Rubi", "rare", '<i class="fa-solid fa-gem"></i>', "Esquenta tudo.", "Ataque Fogo (DoT)", "Nenhum", t => t.flags.add('fire')),
+            createCard("Mecanismo Duplo", "rare", '<i class="fa-solid fa-layer-group"></i>', "O dobro de eficiência.", "+30% Dano, +30% Vel", "-20% Alcance", t => {t.modDmg+=0.30; t.modRate-=0.30; t.modRange-=0.20;}),
+            createCard("Núcleo Rubi", "rare", '<i class="fa-solid fa-gem"></i>', "Esquenta tudo.", "Ataque Fogo (DoT)", "-10% Vel. Ataque", t => {t.flags.add('fire'); t.modRate+=0.10;}),
             createCard("Telescópio Militar", "rare", '<i class="fa-solid fa-microscope"></i>', "Acha o ponto fraco.", "+20% Crit Chance", "-10% Vel. Ataque", t => {t.critChance+=0.20; t.modRate+=0.10;}),
-            createCard("Cartucho Magnum", "rare", '<i class="fa-solid fa-box-archive"></i>', "Tiro pesado.", "+50% Crit Damage", "Nenhum", t => t.critDamage+=0.50),
-            createCard("Circuito Rápido", "rare", '<i class="fa-solid fa-microchip"></i>', "Velocidade da luz.", "+40% Vel. Projétil", "Nenhum", t => t.projectileSpeed*=1.40),
+            createCard("Cartucho Magnum", "rare", '<i class="fa-solid fa-box-archive"></i>', "Tiro pesado.", "+50% Crit Damage", "-15% Vel. Ataque", t => {t.critDamage+=0.50; t.modRate+=0.15;}),
+            createCard("Circuito Rápido", "rare", '<i class="fa-solid fa-microchip"></i>', "Velocidade da luz.", "+40% Vel. Projétil", "-10% Dano", t => {t.projectileSpeed*=1.40; t.modDmg-=0.10;}),
             createCard("Núcleo de Safira", "rare", '<i class="fa-regular fa-snowflake"></i>', "Congela até a alma.", "Ataque Gelo (Slow)", "-10% Dano", t => {t.flags.add('frost'); t.modDmg-=0.10;}),
             createCard("Tiro Concentrado", "rare", '<i class="fa-solid fa-bullseye"></i>', "Dano bruto.", "+50% Dano", "-20% Vel. Ataque", t => {t.modDmg+=0.50; t.modRate+=0.20;}),
-            createCard("Foco Balístico", "rare", '<i class="fa-solid fa-location-crosshairs"></i>', "Equilíbrio.", "+25% Dano, +25% Alcance", "Nenhum", t => {t.modDmg+=0.25; t.modRange+=0.25;}),
-            createCard("Amplificador Tático", "rare", '<i class="fa-solid fa-tower-broadcast"></i>', "Suporte focado.", "+30% Vel. Ataque", "Nenhum", t => t.modRate-=0.30),
-            createCard("Reator Compacto", "rare", '<i class="fa-solid fa-plug"></i>', "Energia limpa.", "+20% Ouro Mult.", "Nenhum", t => t.goldMultiplier+=0.20),
+            createCard("Foco Balístico", "rare", '<i class="fa-solid fa-location-crosshairs"></i>', "Equilíbrio.", "+25% Dano, +25% Alcance", "-20% Vel. Ataque", t => {t.modDmg+=0.25; t.modRange+=0.25; t.modRate+=0.20;}),
+            createCard("Amplificador Tático", "rare", '<i class="fa-solid fa-tower-broadcast"></i>', "Suporte focado.", "+30% Vel. Ataque", "-15% Dano", t => {t.modRate-=0.30; t.modDmg-=0.15;}),
+            createCard("Reator Compacto", "rare", '<i class="fa-solid fa-plug"></i>', "Energia limpa.", "+20% Ouro Mult.", "-15% Dano", t => {t.goldMultiplier+=0.20; t.modDmg-=0.15;}),
             createCard("Câmaras Duplas", "rare", '<i class="fa-solid fa-yin-yang"></i>', "Mais tiro por vez.", "+1 Ricochete", "-10% Dano", t => {t.chainTargets+=1; t.modDmg-=0.10; t.flags.add('chain');}),
-            createCard("Arsenal Aprimorado", "rare", '<i class="fa-solid fa-boxes-stacked"></i>', "Tudo de bom.", "+20% Dano/Vel/Alcance", "Nenhum", t => {t.modDmg+=0.20; t.modRate-=0.20; t.modRange+=0.20;}),
+            createCard("Arsenal Aprimorado", "rare", '<i class="fa-solid fa-boxes-stacked"></i>', "Tudo de bom.", "+20% Dano/Vel/Alcance", "-15% Crit Chance", t => {t.modDmg+=0.20; t.modRate-=0.20; t.modRange+=0.20; t.critChance-=0.15;}),
             createCard("Visão Longa", "rare", '<i class="fa-solid fa-glasses"></i>', "Muito longe.", "+60% Alcance", "-15% Dano", t => {t.modRange+=0.60; t.modDmg-=0.15;}),
             createCard("Carregador Industrial", "rare", '<i class="fa-solid fa-industry"></i>', "Não para nunca.", "+60% Vel. Ataque", "-20% Dano", t => {t.modRate-=0.60; t.modDmg-=0.20;}),
-            createCard("Gerador de Campo", "rare", '<i class="fa-solid fa-shield-virus"></i>', "Regeneração.", "+0.1 Roubo de Vida", "Nenhum", t => t.lifeSteal+=0.1),
+            createCard("Gerador de Campo", "rare", '<i class="fa-solid fa-shield-virus"></i>', "Regeneração.", "+0.1 Roubo de Vida", "-10% Dano", t => {t.lifeSteal+=0.1; t.modDmg-=0.10;}),
 
-            createCard("Morteiro Incendiário", "epic", '<i class="fa-solid fa-fire-flame-curved"></i>', "Fogo em área.", "Fogo + Área", "Nenhum", t => {t.flags.add('fire'); t.flags.add('explosion'); t.splashRadius+=1.5;}),
-            createCard("Canhão de Plasma", "epic", '<i class="fa-solid fa-biohazard"></i>', "Aquece a cada tiro.", "Ataque Plasma", "Nenhum", t => t.flags.add('plasma')),
-            createCard("Reator Instável", "epic", '<i class="fa-solid fa-burst"></i>', "Explode tudo.", "+100% Dano Base", "Nenhum", t => t.modDmg+=1.0),
+            createCard("Morteiro Incendiário", "epic", '<i class="fa-solid fa-fire-flame-curved"></i>', "Fogo em área.", "Fogo + Área", "-15% Vel. Ataque", t => {t.flags.add('fire'); t.flags.add('explosion'); t.splashRadius+=1.5; t.modRate+=0.15;}),
+            createCard("Canhão de Plasma", "epic", '<i class="fa-solid fa-biohazard"></i>', "Aquece a cada tiro.", "Ataque Plasma", "-10% Alcance", t => {t.flags.add('plasma'); t.modRange-=0.10;}),
+            createCard("Reator Instável", "epic", '<i class="fa-solid fa-burst"></i>', "Explode tudo.", "+100% Dano Base", "-30% Vel. Ataque", t => {t.modDmg+=1.0; t.modRate+=0.30;}),
             createCard("Rajada Frenética", "epic", '<i class="fa-solid fa-hurricane"></i>', "Máquina de costura.", "+100% Vel. Ataque", "-30% Dano", t => {t.modRate-=0.50; t.modDmg-=0.30;}),
             createCard("Fragmentação", "epic", '<i class="fa-solid fa-star-of-david"></i>', "Dano espalhado.", "+2 Ricochetes", "-20% Dano", t => {t.chainTargets+=2; t.flags.add('chain'); t.modDmg-=0.20;}),
-            createCard("Campo Eletromagnético", "epic", '<i class="fa-solid fa-magnet"></i>', "Prende os inimigos.", "Ataque Chain", "Nenhum", t => t.flags.add('chain')),
+            createCard("Campo Eletromagnético", "epic", '<i class="fa-solid fa-magnet"></i>', "Prende os inimigos.", "Ataque Chain", "-15% Dano", t => {t.flags.add('chain'); t.modDmg-=0.15;}),
             createCard("Munição Nuclear", "epic", '<i class="fa-solid fa-radiation"></i>', "Sombra de cogumelo.", "Ataque Nuclear", "-50% Vel. Ataque", t => {t.flags.add('nuclear'); t.modRate+=0.50;}),
-            createCard("Cristal Arcano", "epic", '<i class="fa-regular fa-gem"></i>', "Poder bruto.", "Ataque Arcano", "Nenhum", t => t.flags.add('arcane')),
-            createCard("Olho de Águia", "epic", '<i class="fa-brands fa-earlybirds"></i>', "Sem erro.", "+50% Crit Chance", "Nenhum", t => t.critChance+=0.5),
+            createCard("Cristal Arcano", "epic", '<i class="fa-regular fa-gem"></i>', "Poder bruto.", "Ataque Arcano", "-15% Vel. Ataque", t => {t.flags.add('arcane'); t.modRate+=0.15;}),
+            createCard("Olho de Águia", "epic", '<i class="fa-brands fa-earlybirds"></i>', "Sem erro.", "+50% Crit Chance", "-20% Vel. Ataque", t => {t.critChance+=0.5; t.modRate+=0.20;}),
             createCard("Tempestade de Ferro", "epic", '<i class="fa-solid fa-cloud-showers-heavy"></i>', "Chuva de balas.", "+3 Perfurar", "-20% Dano", t => {t.flags.add('piercing'); t.chainTargets+=3; t.modDmg-=0.20;}),
             createCard("Buraco Negro Compacto", "epic", '<i class="fa-solid fa-circle-notch"></i>', "Suga a vida.", "Ataque Void", "-40% Vel. Ataque", t => {t.flags.add('void'); t.modRate+=0.40;}),
-            createCard("Fogo Grego", "epic", '<i class="fa-solid fa-fire-burner"></i>', "Chama verde.", "+200% Dano Fogo", "Nenhum", t => {if(t.flags.has('fire')) t.modDmg+=2.0; else {t.flags.add('fire'); t.modDmg+=0.50;}}),
-            createCard("Tempestade Arcana", "epic", '<i class="fa-solid fa-wand-magic-sparkles"></i>', "Dano mágico.", "+100% Dano, Magia", "Nenhum", t => {t.flags.add('arcane'); t.modDmg+=1.0;}),
-            createCard("Colapso Quântico", "epic", '<i class="fa-solid fa-cubes-stacked"></i>', "Dobra os status.", "+60% Dano, +50% Alcance, +40% Vel.", "Nenhum", t => {t.modDmg+=0.60; t.modRate-=0.40; t.modRange+=0.50;}),
-            createCard("Coração Vulcânico", "epic", '<i class="fa-solid fa-volcano"></i>', "Magma.", "+3 Área de Dano", "Nenhum", t => t.splashRadius+=3),
+            createCard("Fogo Grego", "epic", '<i class="fa-solid fa-fire-burner"></i>', "Chama verde.", "+200% Dano Fogo", "-20% Alcance", t => {t.modRange-=0.20; if(t.flags.has('fire')) t.modDmg+=2.0; else {t.flags.add('fire'); t.modDmg+=0.50;}}),
+            createCard("Tempestade Arcana", "epic", '<i class="fa-solid fa-wand-magic-sparkles"></i>', "Dano mágico.", "+100% Dano, Magia", "-20% Vel. Ataque", t => {t.flags.add('arcane'); t.modDmg+=1.0; t.modRate+=0.20;}),
+            createCard("Colapso Quântico", "epic", '<i class="fa-solid fa-cubes-stacked"></i>', "Dobra os status.", "+60% Dano, +50% Alcance, +40% Vel.", "-30% Crit Chance", t => {t.modDmg+=0.60; t.modRate-=0.40; t.modRange+=0.50; t.critChance-=0.30;}),
+            createCard("Coração Vulcânico", "epic", '<i class="fa-solid fa-volcano"></i>', "Magma.", "+3 Área de Dano", "-20% Vel. Ataque", t => {t.splashRadius+=3; t.modRate+=0.20;}),
             createCard("Fusão Instável", "epic", '<i class="fa-solid fa-arrows-to-circle"></i>', "Risco e recompensa.", "+150% Crit Dmg, +30% Crit", "-20% Dano Base", t => {t.critDamage+=1.5; t.critChance+=0.3; t.modDmg-=0.20;}),
-            createCard("Campo Temporal", "epic", '<i class="fa-solid fa-hourglass-half"></i>', "Paralisa.", "Frost + AoE", "Nenhum", t => {t.flags.add('frost'); t.splashRadius+=2;}),
-            createCard("Arsenal Experimental", "epic", '<i class="fa-solid fa-flask-vial"></i>', "Testando... 123.", "+100% Vel. Projétil", "Nenhum", t => t.projectileSpeed*=2.0),
-            createCard("Núcleo Prismático", "epic", '<i class="fa-solid fa-circle-nodes"></i>', "Dinheiro vivo.", "+50% Ouro Mult.", "Nenhum", t => t.goldMultiplier+=0.5),
-            createCard("Eco Dimensional", "epic", '<i class="fa-solid fa-podcast"></i>', "Tiro duplo.", "+2 Ricochetes, +50% Vel", "Nenhum", t => {t.chainTargets+=2; t.modRate-=0.50; t.flags.add('chain');}),
+            createCard("Campo Temporal", "epic", '<i class="fa-solid fa-hourglass-half"></i>', "Paralisa.", "Frost + AoE", "-15% Dano", t => {t.flags.add('frost'); t.splashRadius+=2; t.modDmg-=0.15;}),
+            createCard("Arsenal Experimental", "epic", '<i class="fa-solid fa-flask-vial"></i>', "Testando... 123.", "+100% Vel. Projétil", "-15% Dano", t => {t.projectileSpeed*=2.0; t.modDmg-=0.15;}),
+            createCard("Núcleo Prismático", "epic", '<i class="fa-solid fa-circle-nodes"></i>', "Dinheiro vivo.", "+50% Ouro Mult.", "-20% Dano", t => {t.goldMultiplier+=0.5; t.modDmg-=0.20;}),
+            createCard("Eco Dimensional", "epic", '<i class="fa-solid fa-podcast"></i>', "Tiro duplo.", "+2 Ricochetes, +50% Vel", "-25% Dano", t => {t.chainTargets+=2; t.modRate-=0.50; t.flags.add('chain'); t.modDmg-=0.25;}),
 
-            createCard("Coração do Dragão", "legendary", '<i class="fa-solid fa-dragon"></i>', "Fogo e destruição global.", "Nuclear + Fire", "Nenhum", t => {t.flags.add('nuclear'); t.flags.add('fire'); t.splashRadius+=4; t.modDmg+=2.0;}),
-            createCard("Tempestade Divina", "legendary", '<i class="fa-solid fa-cloud-bolt"></i>', "Ira dos deuses.", "Ataque Storm", "Nenhum", t => {t.flags.add('storm'); t.modDmg+=3.0; t.modRate+=0.50;}),
-            createCard("Olho do Apocalipse", "legendary", '<i class="fa-solid fa-eye-low-vision"></i>', "Certeiro e letal.", "100% Crit, +300% Dmg", "Nenhum", t => {t.critChance=1.0; t.critDamage+=3.0;}),
-            createCard("Sol Artificial", "legendary", '<i class="fa-solid fa-sun"></i>', "Derrete o mapa.", "Plasma + Área", "Nenhum", t => {t.flags.add('plasma'); t.splashRadius+=3; t.modDmg+=2.0;}),
-            createCard("Motor Infinito", "legendary", '<i class="fa-solid fa-infinity"></i>', "Metralhadora laser.", "+300% Vel. Ataque", "Nenhum", t => t.modRate-=0.75),
-            createCard("Arsenal Supremo", "legendary", '<i class="fa-solid fa-gun"></i>', "Todas as armas.", "+200% Dano/Vel/Alcance", "Nenhum", t => {t.modDmg+=2.0; t.modRate-=0.67; t.modRange+=2.0;}),
+            createCard("Coração do Dragão", "legendary", '<i class="fa-solid fa-dragon"></i>', "Fogo e destruição global.", "Nuclear + Fire", "-30% Vel. Ataque", t => {t.flags.add('nuclear'); t.flags.add('fire'); t.splashRadius+=4; t.modDmg+=2.0; t.modRate+=0.30;}),
+            createCard("Tempestade Divina", "legendary", '<i class="fa-solid fa-cloud-bolt"></i>', "Ira dos deuses.", "Ataque Storm", "-10% Alcance", t => {t.flags.add('storm'); t.modDmg+=3.0; t.modRate+=0.50; t.modRange-=0.10;}),
+            createCard("Olho do Apocalipse", "legendary", '<i class="fa-solid fa-eye-low-vision"></i>', "Certeiro e letal.", "100% Crit, +300% Dmg", "-40% Vel. Ataque", t => {t.critChance=1.0; t.critDamage+=3.0; t.modRate+=0.40;}),
+            createCard("Sol Artificial", "legendary", '<i class="fa-solid fa-sun"></i>', "Derrete o mapa.", "Plasma + Área", "-20% Alcance", t => {t.flags.add('plasma'); t.splashRadius+=3; t.modDmg+=2.0; t.modRange-=0.20;}),
+            createCard("Motor Infinito", "legendary", '<i class="fa-solid fa-infinity"></i>', "Metralhadora laser.", "+300% Vel. Ataque", "-40% Dano", t => {t.modRate-=0.75; t.modDmg-=0.40;}),
+            createCard("Arsenal Supremo", "legendary", '<i class="fa-solid fa-gun"></i>', "Todas as armas.", "+200% Dano/Vel/Alcance", "-50% Crit Chance", t => {t.modDmg+=2.0; t.modRate-=0.67; t.modRange+=2.0; t.critChance-=0.50;}),
             createCard("Núcleo Estelar", "legendary", '<i class="fa-solid fa-meteor"></i>', "O fim está próximo.", "Ataque Meteor", "Vel. Lenta", t => {t.flags.add('meteor'); t.modDmg+=4.0; t.modRate+=1.50;}),
-            createCard("Caos Controlado", "legendary", '<i class="fa-solid fa-dice-d20"></i>', "Imprevisível.", "+5 Ricochetes", "Nenhum", t => {t.chainTargets+=5; t.flags.add('chain'); t.modDmg+=1.0;}),
-            createCard("Torre Viva", "legendary", '<i class="fa-solid fa-tree"></i>', "Absorve a alma.", "+1 Roubo Vida, +200% Dano", "Nenhum", t => {t.lifeSteal+=1.0; t.modDmg+=2.0;}),
-            createCard("Singularidade", "legendary", '<i class="fa-brands fa-galactic-senate"></i>', "Engole os fracos.", "Void Absoluto", "Nenhum", t => {t.flags.add('void'); t.splashRadius+=2; t.modRate+=0.20;}),
-            createCard("Deus da Guerra", "legendary", '<i class="fa-solid fa-khanda"></i>', "Força bruta.", "+250% Dano Base", "Nenhum", t => t.modDmg+=2.5),
-            createCard("Estrela Colapsante", "legendary", '<i class="fa-solid fa-star-half-stroke"></i>', "Puxa e explode.", "Nuclear + Chain", "Nenhum", t => {t.flags.add('nuclear'); t.chainTargets+=2; t.modDmg+=1.0;}),
-            createCard("Eclipse Eterno", "legendary", '<i class="fa-solid fa-moon"></i>', "Escuridão.", "Frost + Void", "Nenhum", t => {t.flags.add('void'); t.flags.add('frost'); t.modRate-=0.50; t.modDmg+=1.0;}),
-            createCard("Trono Arcano", "legendary", '<i class="fa-solid fa-chess-rook"></i>', "Mágica suprema.", "Arcane em Área", "Nenhum", t => {t.flags.add('arcane'); t.splashRadius+=2.5; t.modDmg+=1.5;}),
+            createCard("Caos Controlado", "legendary", '<i class="fa-solid fa-dice-d20"></i>', "Imprevisível.", "+5 Ricochetes", "-15% Alcance", t => {t.chainTargets+=5; t.flags.add('chain'); t.modDmg+=1.0; t.modRange-=0.15;}),
+            createCard("Torre Viva", "legendary", '<i class="fa-solid fa-tree"></i>', "Absorve a alma.", "+1 Roubo Vida, +200% Dano", "-20% Vel. Ataque", t => {t.lifeSteal+=1.0; t.modDmg+=2.0; t.modRate+=0.20;}),
+            createCard("Singularidade", "legendary", '<i class="fa-brands fa-galactic-senate"></i>', "Engole os fracos.", "Void Absoluto", "-25% Dano", t => {t.flags.add('void'); t.splashRadius+=2; t.modRate+=0.20; t.modDmg-=0.25;}),
+            createCard("Deus da Guerra", "legendary", '<i class="fa-solid fa-khanda"></i>', "Força bruta.", "+250% Dano Base", "-30% Vel. Ataque", t => {t.modDmg+=2.5; t.modRate+=0.30;}),
+            createCard("Estrela Colapsante", "legendary", '<i class="fa-solid fa-star-half-stroke"></i>', "Puxa e explode.", "Nuclear + Chain", "-20% Alcance", t => {t.flags.add('nuclear'); t.chainTargets+=2; t.modDmg+=1.0; t.modRange-=0.20;}),
+            createCard("Eclipse Eterno", "legendary", '<i class="fa-solid fa-moon"></i>', "Escuridão.", "Frost + Void", "-15% Alcance", t => {t.flags.add('void'); t.flags.add('frost'); t.modRate-=0.50; t.modDmg+=1.0; t.modRange-=0.15;}),
+            createCard("Trono Arcano", "legendary", '<i class="fa-solid fa-chess-rook"></i>', "Mágica suprema.", "Arcane em Área", "-25% Vel. Ataque", t => {t.flags.add('arcane'); t.splashRadius+=2.5; t.modDmg+=1.5; t.modRate+=0.25;}),
             createCard("Mente Colmeia", "legendary", '<i class="fa-solid fa-network-wired"></i>', "Multiplica tiros.", "+10 Ricochetes", "-10% Dano", t => {t.chainTargets+=10; t.flags.add('chain'); t.modDmg-=0.10;}),
-            createCard("Anomalia Temporal", "legendary", '<i class="fa-solid fa-clock-rotate-left"></i>', "O tempo para.", "Frost Severo AoE", "Nenhum", t => {t.flags.add('frost'); t.splashRadius+=5; t.modRate-=0.50;}),
-            createCard("Chuva de Meteoros", "legendary", '<i class="fa-solid fa-meteor"></i>', "Apocalipse aéreo.", "Storm + Meteor", "Nenhum", t => {t.flags.add('storm'); t.flags.add('meteor'); t.modDmg+=3.0; t.splashRadius+=2;}),
-            createCard("Núcleo Universal", "legendary", '<i class="fa-solid fa-globe"></i>', "Dinheiro bom.", "+100% Ouro Mult. (cap 3x)", "Nenhum", t => t.goldMultiplier+=1.0),
-            createCard("Portal do Vazio", "legendary", '<i class="fa-solid fa-door-open"></i>', "Atravessa tudo.", "+10 Perfurar, +100% Dmg", "Nenhum", t => {t.flags.add('piercing'); t.chainTargets+=10; t.modDmg+=1.0;}),
-            createCard("Máquina Divina", "legendary", '<i class="fa-solid fa-robot"></i>', "Sem falhas.", "+500% Vel. Ataque", "Nenhum", t => t.modRate-=0.40)
+            createCard("Anomalia Temporal", "legendary", '<i class="fa-solid fa-clock-rotate-left"></i>', "O tempo para.", "Frost Severo AoE", "-30% Dano", t => {t.flags.add('frost'); t.splashRadius+=5; t.modRate-=0.50; t.modDmg-=0.30;}),
+            createCard("Chuva de Meteoros", "legendary", '<i class="fa-solid fa-meteor"></i>', "Apocalipse aéreo.", "Storm + Meteor", "-30% Vel. Ataque", t => {t.flags.add('storm'); t.flags.add('meteor'); t.modDmg+=3.0; t.splashRadius+=2; t.modRate+=0.30;}),
+            createCard("Núcleo Universal", "legendary", '<i class="fa-solid fa-globe"></i>', "Dinheiro bom.", "+100% Ouro Mult. (cap 3x)", "-30% Dano", t => {t.goldMultiplier+=1.0; t.modDmg-=0.30;}),
+            createCard("Portal do Vazio", "legendary", '<i class="fa-solid fa-door-open"></i>', "Atravessa tudo.", "+10 Perfurar, +100% Dmg", "-20% Vel. Ataque", t => {t.flags.add('piercing'); t.chainTargets+=10; t.modDmg+=1.0; t.modRate+=0.20;}),
+            createCard("Máquina Divina", "legendary", '<i class="fa-solid fa-robot"></i>', "Sem falhas.", "+500% Vel. Ataque", "-50% Dano", t => {t.modRate-=0.40; t.modDmg-=0.50;})
         ];
 
         arcanasPool.push(createCard("Pílula de Venda", "common", '<i class="fa-solid fa-capsules"></i>', "Vende a torre, recupera Ouro.", "Ganha Ouro", "Destrói Torre", null));
@@ -2880,29 +2889,29 @@
 
         // ══ CARTAS ANGELICAIS (LUZ) ══
         const angelicCards = [
-            createCard("Pena Luminosa", "common", '<i class="fa-solid fa-feather"></i>', "Um toque de luz divina.", "+15% Alcance", "Nenhum", t => t.modRange += 0.15),
-            createCard("Sopro Divino", "common", '<i class="fa-solid fa-wind"></i>', "Acelera os justos.", "+15% Vel. Ataque", "Nenhum", t => t.modRate -= 0.15),
+            createCard("Pena Luminosa", "common", '<i class="fa-solid fa-feather"></i>', "Um toque de luz divina.", "+15% Alcance", "-5% Dano", t => {t.modRange += 0.15; t.modDmg -= 0.05;}),
+            createCard("Sopro Divino", "common", '<i class="fa-solid fa-wind"></i>', "Acelera os justos.", "+15% Vel. Ataque", "-5% Alcance", t => {t.modRate -= 0.15; t.modRange -= 0.05;}),
             createCard("Escudo da Fé", "common", '<i class="fa-solid fa-shield"></i>', "Proteção menor.", "+1 Vida Base", "-5% Dano", t => { t.modDmg -= 0.05; if (!t.isPreview) { hp += 1; updateUI(); } }),
-            createCard("Canto Angelical", "common", '<i class="fa-solid fa-music"></i>', "Harmonia no campo.", "+10% Dano, +5% Vel", "Nenhum", t => { t.modDmg += 0.10; t.modRate -= 0.05; }),
-            createCard("Bênção Financeira", "common", '<i class="fa-solid fa-hand-holding-dollar"></i>', "Os deuses pagam bem.", "+10 Ouro, +5% Ouro Mult.", "Nenhum", t => { t.goldMultiplier += 0.05; if (!t.isPreview) { gold += 10; updateUI(); } }),
+            createCard("Canto Angelical", "common", '<i class="fa-solid fa-music"></i>', "Harmonia no campo.", "+10% Dano, +5% Vel", "-5% Alcance", t => { t.modDmg += 0.10; t.modRate -= 0.05; t.modRange -= 0.05; }),
+            createCard("Bênção Financeira", "common", '<i class="fa-solid fa-hand-holding-dollar"></i>', "Os deuses pagam bem.", "+10 Ouro, +5% Ouro Mult.", "-5% Dano", t => { t.goldMultiplier += 0.05; t.modDmg -= 0.05; if (!t.isPreview) { gold += 10; updateUI(); } }),
 
-            createCard("Raio Purificador", "rare", '<i class="fa-solid fa-bolt-lightning"></i>', "Limpa a escuridão.", "Ataque Arcano, +10% Dano", "Nenhum", t => { t.flags.add('arcane'); t.modDmg += 0.10; }),
-            createCard("Graça Restauradora", "rare", '<i class="fa-solid fa-heart-pulse"></i>', "Cura constante.", "+3 Vida Base", "Nenhum", t => { if (!t.isPreview) { hp += 3; updateUI(); } }),
-            createCard("Aura de Proteção", "rare", '<i class="fa-solid fa-sun"></i>', "Cega os inimigos.", "+30% Alcance", "Nenhum", t => t.modRange += 0.30),
+            createCard("Raio Purificador", "rare", '<i class="fa-solid fa-bolt-lightning"></i>', "Limpa a escuridão.", "Ataque Arcano, +10% Dano", "-10% Vel. Ataque", t => { t.flags.add('arcane'); t.modDmg += 0.10; t.modRate += 0.10; }),
+            createCard("Graça Restauradora", "rare", '<i class="fa-solid fa-heart-pulse"></i>', "Cura constante.", "+3 Vida Base", "-10% Dano", t => { t.modDmg-=0.10; if (!t.isPreview) { hp += 3; updateUI(); } }),
+            createCard("Aura de Proteção", "rare", '<i class="fa-solid fa-sun"></i>', "Cega os inimigos.", "+30% Alcance", "-10% Vel. Ataque", t => {t.modRange += 0.30; t.modRate += 0.10;}),
             createCard("Martelo Sagrado", "rare", '<i class="fa-solid fa-gavel"></i>', "Justiça pesada.", "+40% Dano", "-10% Vel. Ataque", t => { t.modDmg += 0.40; t.modRate += 0.10; }),
-            createCard("Visão Celestial", "rare", '<i class="fa-solid fa-eye"></i>', "Nada escapa.", "+30% Crit Chance", "Nenhum", t => t.critChance += 0.3),
+            createCard("Visão Celestial", "rare", '<i class="fa-solid fa-eye"></i>', "Nada escapa.", "+30% Crit Chance", "-10% Vel. Ataque", t => {t.critChance += 0.3; t.modRate+=0.10;}),
 
-            createCard("Julgamento Divino", "epic", '<i class="fa-solid fa-scale-balanced"></i>', "A balança pesa.", "Storm + 50% Crit Dmg", "Nenhum", t => { t.flags.add('storm'); t.critDamage += 0.5; }),
-            createCard("Presença Angélica", "legendary", '<i class="fa-solid fa-hands-praying"></i>', "Inspiração divina.", "+67% Vel. Ataque", "Nenhum", t => t.modRate -= 0.67),
-            createCard("Ressurreição Parcial", "epic", '<i class="fa-solid fa-cross"></i>', "A base se ergue.", "+10 Vida Base", "Nenhum", t => { if (!t.isPreview) { hp += 10; updateUI(); } }),
-            createCard("Santuário", "epic", '<i class="fa-solid fa-place-of-worship"></i>', "Zona segura.", "+0.3 Roubo Vida", "Nenhum", t => t.lifeSteal += 0.3),
-            createCard("Fúria dos Céus", "epic", '<i class="fa-solid fa-cloud-sun"></i>', "Trovões impiedosos.", "Lightning + Piercing", "Nenhum", t => { t.flags.add('lightning'); t.flags.add('piercing'); }),
+            createCard("Julgamento Divino", "epic", '<i class="fa-solid fa-scale-balanced"></i>', "A balança pesa.", "Storm + 50% Crit Dmg", "-15% Vel. Ataque", t => { t.flags.add('storm'); t.critDamage += 0.5; t.modRate+=0.15; }),
+            createCard("Presença Angélica", "legendary", '<i class="fa-solid fa-hands-praying"></i>', "Inspiração divina.", "+67% Vel. Ataque", "-20% Dano", t => {t.modRate -= 0.67; t.modDmg-=0.20;}),
+            createCard("Ressurreição Parcial", "epic", '<i class="fa-solid fa-cross"></i>', "A base se ergue.", "+10 Vida Base", "-15% Dano", t => { t.modDmg-=0.15; if (!t.isPreview) { hp += 10; updateUI(); } }),
+            createCard("Santuário", "epic", '<i class="fa-solid fa-place-of-worship"></i>', "Zona segura.", "+0.3 Roubo Vida", "-15% Dano", t => {t.lifeSteal += 0.3; t.modDmg-=0.15;}),
+            createCard("Fúria dos Céus", "epic", '<i class="fa-solid fa-cloud-sun"></i>', "Trovões impiedosos.", "Lightning + Piercing", "-20% Vel. Ataque", t => { t.flags.add('lightning'); t.flags.add('piercing'); t.modRate+=0.20; }),
 
-            createCard("Ira de Deus", "legendary", '<i class="fa-solid fa-hands-holding-circle"></i>', "Dano supremo, alcance global.", "+200% Alcance, +200% Dano", "Nenhum", t => { t.modRange += 2.0; t.modDmg += 2.0; }),
-            createCard("Avatar da Luz", "legendary", '<i class="fa-solid fa-user-astronaut"></i>', "Forma pura.", "Plasma + Arcane AoE", "Nenhum", t => { t.flags.add('plasma'); t.flags.add('arcane'); t.splashRadius += 3; }),
-            createCard("Portões do Paraíso", "legendary", '<i class="fa-solid fa-torii-gate"></i>', "Ouro e vida fartos.", "+20 Vida, +300 Ouro", "Nenhum", t => { if (!t.isPreview) { hp += 20; gold += 300; updateUI(); } }),
-            createCard("Milagre Supremo", "legendary", '<i class="fa-solid fa-dove"></i>', "Impossível de morrer.", "+1.5 Roubo Vida, +100% Vel", "Nenhum", t => { t.lifeSteal += 1.5; t.modRate -= 0.50; }),
-            createCard("Arcanjo Guardião", "legendary", '<i class="fa-solid fa-person-burst"></i>', "EXCLUSIVA DA LUZ.", "Dano Triplo, +100% Crit", "Nenhum", t => { t.modDmg += 2.0; t.critChance = 1.0; })
+            createCard("Ira de Deus", "legendary", '<i class="fa-solid fa-hands-holding-circle"></i>', "Dano supremo, alcance global.", "+200% Alcance, +200% Dano", "-40% Vel. Ataque", t => { t.modRange += 2.0; t.modDmg += 2.0; t.modRate+=0.40; }),
+            createCard("Avatar da Luz", "legendary", '<i class="fa-solid fa-user-astronaut"></i>', "Forma pura.", "Plasma + Arcane AoE", "-20% Vel. Ataque", t => { t.flags.add('plasma'); t.flags.add('arcane'); t.splashRadius += 3; t.modRate+=0.20; }),
+            createCard("Portões do Paraíso", "legendary", '<i class="fa-solid fa-torii-gate"></i>', "Ouro e vida fartos.", "+20 Vida, +300 Ouro", "-30% Dano", t => { t.modDmg-=0.30; if (!t.isPreview) { hp += 20; gold += 300; updateUI(); } }),
+            createCard("Milagre Supremo", "legendary", '<i class="fa-solid fa-dove"></i>', "Impossível de morrer.", "+1.5 Roubo Vida, +100% Vel", "-30% Dano", t => { t.lifeSteal += 1.5; t.modRate -= 0.50; t.modDmg-=0.30; }),
+            createCard("Arcanjo Guardião", "legendary", '<i class="fa-solid fa-person-burst"></i>', "EXCLUSIVA DA LUZ.", "Dano Triplo, +100% Crit", "-50% Vel. Ataque", t => { t.modDmg += 2.0; t.critChance = 1.0; t.modRate+=0.50; })
         ];
         angelicCards.forEach(c => { c.alignment = 'angelic'; arcanasPool.push(c); });
 
@@ -2910,30 +2919,30 @@
         const demonicCards = [
             createCard("Pacto de Sangue", "common", '<i class="fa-solid fa-file-contract"></i>', "Dano bruto.", "+30% Dano", "-1 Vida Base", t => { t.modDmg += 0.30; if (!t.isPreview) { hp -= 1; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Fogo Fátuo", "common", '<i class="fa-solid fa-fire-flame-simple"></i>', "Queima leve.", "Aplica Fogo", "-10% Alcance", t => { t.flags.add('fire'); t.modRange -= 0.10; }),
-            createCard("Garra Sombria", "common", '<i class="fa-solid fa-hand-lizard"></i>', "Rasga a carne.", "30% Sangramento", "Nenhum", t => t.flags.add('bleed')),
+            createCard("Garra Sombria", "common", '<i class="fa-solid fa-hand-lizard"></i>', "Rasga a carne.", "30% Sangramento", "-10% Alcance", t => {t.flags.add('bleed'); t.modRange-=0.10;}),
             createCard("Sussurro Abissal", "common", '<i class="fa-solid fa-ear-listen"></i>', "Acelera o fim.", "+20% Vel. Ataque", "-1 Vida Base", t => { t.modRate -= 0.20; if (!t.isPreview) { hp -= 1; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Chifre Quebrado", "common", '<i class="fa-solid fa-tooth"></i>', "Ganha uns trocados.", "+35 Ouro", "-2 Vida Base", t => { if (!t.isPreview) { gold += 35; hp -= 2; updateUI(); if(hp<=0) gameOver=true; } }),
 
             createCard("Sacrifício Menor", "rare", '<i class="fa-solid fa-droplet"></i>', "Mais sangue, mais poder.", "+70% Dano", "-3 Vida Base", t => { t.modDmg += 0.70; if (!t.isPreview) { hp -= 3; updateUI(); if(hp<=0) gameOver=true; } }),
-            createCard("Marca da Maldição", "rare", '<i class="fa-solid fa-skull"></i>', "Dor dupla.", "+40% Crit Dmg, Sangramento", "Nenhum", t => { t.critDamage += 0.4; t.flags.add('bleed'); }),
+            createCard("Marca da Maldição", "rare", '<i class="fa-solid fa-skull"></i>', "Dor dupla.", "+40% Crit Dmg, Sangramento", "-10% Vel. Ataque", t => { t.critDamage += 0.4; t.flags.add('bleed'); t.modRate+=0.10; }),
             createCard("Olho do Abismo", "rare", '<i class="fa-solid fa-eye-slash"></i>', "Alcance sombrio.", "+50% Alcance", "-2 Vida Base", t => { t.modRange += 0.50; if (!t.isPreview) { hp -= 2; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Sede de Sangue", "rare", '<i class="fa-solid fa-vial"></i>', "Frenesi.", "+60% Vel. Ataque", "-3 Vida Base", t => { t.modRate -= 0.60; if (!t.isPreview) { hp -= 3; updateUI(); if(hp<=0) gameOver=true; } }),
-            createCard("Aura Putrefata", "rare", '<i class="fa-solid fa-bugs"></i>', "Todos adoecem.", "Poison + Epidemic", "Nenhum", t => { t.flags.add('poison'); t.flags.add('epidemic'); }),
+            createCard("Aura Putrefata", "rare", '<i class="fa-solid fa-bugs"></i>', "Todos adoecem.", "Poison + Epidemic", "-15% Dano", t => { t.flags.add('poison'); t.flags.add('epidemic'); t.modDmg-=0.15; }),
 
             createCard("Pacto Sombrio", "epic", '<i class="fa-solid fa-scroll"></i>', "Sangue por poder.", "+200% Dano, Penetra Armadura", "-5 Vida Base", t => { t.modDmg += 2.0; t.flags.add('piercing'); if (!t.isPreview) { hp -= 5; updateUI(); if(hp<=0) gameOver=true; } }),
-            createCard("Tormento", "epic", '<i class="fa-solid fa-face-dizzy"></i>', "Caos em área.", "Explosion + Fire", "Nenhum", t => { t.flags.add('explosion'); t.flags.add('fire'); }),
-            createCard("Alma Corrompida", "epic", '<i class="fa-solid fa-ghost"></i>', "Tiros assombrados.", "Void + 2 Ricochetes", "Nenhum", t => { t.flags.add('void'); t.chainTargets += 2; t.flags.add('chain'); }),
+            createCard("Tormento", "epic", '<i class="fa-solid fa-face-dizzy"></i>', "Caos em área.", "Explosion + Fire", "-20% Vel. Ataque", t => { t.flags.add('explosion'); t.flags.add('fire'); t.modRate+=0.20; }),
+            createCard("Alma Corrompida", "epic", '<i class="fa-solid fa-ghost"></i>', "Tiros assombrados.", "Void + 2 Ricochetes", "-15% Dano", t => { t.flags.add('void'); t.chainTargets += 2; t.flags.add('chain'); t.modDmg-=0.15; }),
             createCard("Chama do Inferno", "epic", '<i class="fa-solid fa-fire-burner"></i>', "Queima o mapa.", "+200% Dano Fogo", "-4 Vida Base", t => { t.flags.add('fire'); t.modDmg += 2.0; if (!t.isPreview) { hp -= 4; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Fenda Abissal", "epic", '<i class="fa-solid fa-burst"></i>', "Tudo de uma vez.", "+100% Vel e Dano", "-7 Vida Base", t => { t.modRate -= 0.50; t.modDmg += 1.0; if (!t.isPreview) { hp -= 7; updateUI(); if(hp<=0) gameOver=true; } }),
 
             createCard("Despertar do Demônio", "legendary", '<i class="fa-solid fa-spaghetti-monster-flying"></i>', "O verdadeiro monstro.", "+400% Dano, Fogo+Sangramento", "-6 Vida Base", t => { t.modDmg += 4.0; t.flags.add('fire'); t.flags.add('bleed'); if (!t.isPreview) { hp -= 6; updateUI(); if(hp<=0) gameOver=true; } }),
             createCard("Ritual de Sangue", "legendary", '<i class="fa-solid fa-syringe"></i>', "Venda sua alma.", "+800 Ouro", "-8 Vida Base", t => { if (!t.isPreview) { gold += 800; hp -= 8; updateUI(); if(hp<=0) gameOver=true; } }),
-            createCard("Apocalipse Sombrio", "legendary", '<i class="fa-solid fa-volcano"></i>', "Fogo e Morte.", "Meteor + Void", "Nenhum", t => { t.flags.add('meteor'); t.flags.add('void'); t.modDmg += 2.0; }),
-            createCard("Devorador de Mundos", "legendary", '<i class="fa-solid fa-teeth-open"></i>', "Insaciável.", "+5 Roubo Vida, Sangramento AoE", "Nenhum", t => { t.lifeSteal += 5.0; t.flags.add('bleed'); t.splashRadius += 2; }),
+            createCard("Apocalipse Sombrio", "legendary", '<i class="fa-solid fa-volcano"></i>', "Fogo e Morte.", "Meteor + Void", "-20% Vel. Ataque", t => { t.flags.add('meteor'); t.flags.add('void'); t.modDmg += 2.0; t.modRate+=0.20; }),
+            createCard("Devorador de Mundos", "legendary", '<i class="fa-solid fa-teeth-open"></i>', "Insaciável.", "+5 Roubo Vida, Sangramento AoE", "-25% Vel. Ataque", t => { t.lifeSteal += 5.0; t.flags.add('bleed'); t.splashRadius += 2; t.modRate+=0.25; }),
             createCard("Senhor do Abismo", "legendary", '<i class="fa-solid fa-khanda"></i>', "EXCLUSIVA DAS TREVAS. Aniquila Bosses.", "Void+Chain+Nuclear, +15x vs Boss, -10 HP", "Quase Morte", t => { 
                 t.flags.add('void'); t.flags.add('chain'); t.flags.add('nuclear'); 
                 t.chainTargets += 10; t.modDmg += 11.0; 
-                t.bossKiller = true; // flag consultada no handleKill para bonus vs boss
+                t.bossKiller = true;
                 if (!t.isPreview) { hp -= 10; updateUI(); if(hp<=0) gameOver=true; } 
             })
         ];
@@ -3453,20 +3462,27 @@
         let currentTutStep = 0;
         const totalTutSteps = 4;
 
+        // Executa assim que a página carrega pra esconder se já viu
+        window.addEventListener('DOMContentLoaded', () => {
+            if(localStorage.getItem('nexus_tutorial_done') === 'true') {
+                isTutorialActive = false;
+                document.getElementById('tutorial-overlay').style.display = 'none';
+            }
+        });
+
         function changeTutStep(dir) {
             let oldStep = currentTutStep;
             currentTutStep += dir;
 
-            // Se completou o último passo, fecha o tutorial
             if (currentTutStep >= totalTutSteps) {
-                isTutorialActive = false; // <-- ADICIONE ISTO AQUI
+                isTutorialActive = false; 
+                localStorage.setItem('nexus_tutorial_done', 'true'); // Salva que já viu
                 let overlay = document.getElementById('tutorial-overlay');
                 overlay.style.opacity = '0';
                 setTimeout(() => overlay.remove(), 500);
                 return;
             }
 
-            // Atualiza o conteúdo (slide)
             document.getElementById(`tut-step-${oldStep}`).classList.remove('active');
             if (dir > 0) { document.getElementById(`tut-step-${oldStep}`).classList.add('exit-left'); }
             
@@ -3474,7 +3490,6 @@
             newStepEl.classList.remove('exit-left');
             newStepEl.classList.add('active');
 
-            // Atualiza os dots e linhas
             for (let i = 0; i < totalTutSteps; i++) {
                 let dot = document.getElementById(`dot-${i}`);
                 if (i < currentTutStep) {
@@ -3487,7 +3502,6 @@
                     dot.className = 'tut-step-indicator';
                     dot.innerHTML = i + 1;
                 }
-
                 if (i < totalTutSteps - 1) {
                     let line = dot.nextElementSibling;
                     if (i < currentTutStep) line.classList.add('completed');
@@ -3495,20 +3509,24 @@
                 }
             }
 
-            // Atualiza Botões
             let btnPrev = document.getElementById('tut-btn-prev');
             let btnNext = document.getElementById('tut-btn-next');
-            
             btnPrev.style.visibility = currentTutStep === 0 ? 'hidden' : 'visible';
             btnNext.innerText = currentTutStep === totalTutSteps - 1 ? 'Jogar Agora' : 'Próximo';
             if(currentTutStep === totalTutSteps - 1) {
-                btnNext.style.background = '#16a34a'; // Verde no botão final
-                btnNext.style.color = '#fff';
-                btnNext.style.boxShadow = '0 5px 15px rgba(22, 163, 74, 0.4)';
+                btnNext.style.background = '#16a34a'; btnNext.style.color = '#fff'; btnNext.style.boxShadow = '0 5px 15px rgba(22, 163, 74, 0.4)';
             } else {
-                btnNext.style.background = '#eab308'; // Amarelo tático
-                btnNext.style.color = '#000';
-                btnNext.style.boxShadow = '0 4px 10px rgba(234, 179, 8, 0.3)';
+                btnNext.style.background = '#eab308'; btnNext.style.color = '#000'; btnNext.style.boxShadow = '0 4px 10px rgba(234, 179, 8, 0.3)';
+            }
+        }
+
+        function skipTutorial() {
+            isTutorialActive = false; 
+            localStorage.setItem('nexus_tutorial_done', 'true'); // Salva que já viu
+            let overlay = document.getElementById('tutorial-overlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 500);
             }
         }
 
@@ -3613,8 +3631,8 @@
                 } else if (hoveredTower && dragElement && draggingCardIndex >= 0) {
                     // ── MODO PREVIEW: mostra stats atuais + delta da carta sendo arrastada ──
                     let card = playerHand[draggingCardIndex];
-                    if(card && !card.isPill && !card.isApple && !card.isEcon) {
-                        let after = previewCardStats(hoveredTower, card);
+                    if(card && !card.isPill && !card.isApple && !card.isEcon && hoveredDropTower.effects.length < 3) {
+                        let after = previewCardStats(hoveredDropTower, card);
                         let b = hoveredTower; // before
 
                         function deltaSpan(before, after, invert) {
@@ -3730,26 +3748,7 @@
             
             let score = (wave - 1) * 100 + statEnemiesKilled * 10 + Math.floor(statTotalDmgDealt / 10);
 
-            // ── FUNÇÃO COUNTUP VANILLA (Substitui a lib React) ──
-            function animCountUp(elId, targetVal, durationMs = 2000, suffix = '') {
-                let el = document.getElementById(elId);
-                if(!el) return;
-                let start = null;
-                function step(timestamp) {
-                    if(!start) start = timestamp;
-                    let progress = Math.min((timestamp - start) / durationMs, 1);
-                    // Easing easeOutQuart: freia suavemente perto do final do giro
-                    let ease = 1 - Math.pow(1 - progress, 4); 
-                    let current = Math.floor(ease * targetVal);
-                    el.innerText = current.toLocaleString('pt-BR') + suffix;
-                    
-                    if(progress < 1) requestAnimationFrame(step);
-                    else el.innerText = targetVal.toLocaleString('pt-BR') + suffix;
-                }
-                requestAnimationFrame(step);
-            }
-
-            // ── SISTEMA DE CLASSIFICAÇÃO DE BUILD COM ALINHAMENTO E FALLBACK ──
+            // ── SISTEMA DE CLASSIFICAÇÃO DE BUILD (Inalterado) ──
             let buildClass = "Estrategista Versátil";
             let colorClass = "#38bdf8";
             let fireCount = 0, magicCount = 0, stormCount = 0, poisonCount = 0;
@@ -3764,7 +3763,6 @@
             let totalAlign = alignmentLight + alignmentDark;
             let lightPct = totalAlign > 0 ? alignmentLight / totalAlign : 0.5;
 
-            // 1. Fallbacks antigos (se o jogador não pegar cartas de Luz/Trevas suficientes)
             if (statGoldEarned > wave * 120) { buildClass = "Capitalista Selvagem"; colorClass = "#fde047"; } 
             else if (fireCount >= 3) { buildClass = "Piromaníaco do Caos"; colorClass = "#f97316"; } 
             else if (magicCount >= 3) { buildClass = "Arquimago do Vazio"; colorClass = "#c084fc"; } 
@@ -3773,7 +3771,6 @@
             else if (statTowersBuilt >= 10) { buildClass = "Engenheiro Industrial"; colorClass = "#60a5fa"; } 
             else if (statCrits > statEnemiesKilled * 1.5) { buildClass = "Atirador de Elite"; colorClass = "#ef4444"; }
 
-            // 2. Classificações baseadas no balanço Luz/Trevas (Sobrescrevem os antigos)
             if (totalAlign >= 5) {
                 if (lightPct >= 0.9) { buildClass = "Arcanjo Supremo"; colorClass = "#fef08a"; }
                 else if (lightPct >= 0.7) { buildClass = "Guardião Celestial"; colorClass = "#fde047"; }
@@ -3784,7 +3781,6 @@
                 else { buildClass = "Equilíbrio Cósmico"; colorClass = "#a855f7"; }
             }
 
-            // 3. Sobrescritas Extremas (Combinam cartas brutas com alinhamento)
             if (totalAlign >= 15 && lightPct >= 0.8 && statCrits > 80) { buildClass = "Juiz do Fim"; colorClass = "#fbbf24"; }
             else if (totalAlign >= 15 && lightPct <= 0.2 && statTotalDmgDealt > 10000) { buildClass = "Entidade Primordial"; colorClass = "#4c1d95"; }
             else if (totalAlign >= 10 && Math.abs(lightPct - 0.5) < 0.15 && fireCount > 0 && magicCount > 0) { buildClass = "Anjo Caído"; colorClass = "#9333ea"; }
@@ -3794,7 +3790,73 @@
             classEl.style.color = colorClass;
             classEl.style.textShadow = `0 0 15px ${colorClass}80`;
 
-            // stats grid com IDs definidos para o manipulador achar os elementos
+
+            // ── LÓGICA DE LOCALSTORAGE (RECORDE E HISTÓRICO) ──
+            let highScore = parseInt(localStorage.getItem('nexus_highscore') || '0');
+            let isNewRecord = score > highScore;
+
+            if (isNewRecord && score > 0) {
+                highScore = score;
+                localStorage.setItem('nexus_highscore', score.toString());
+                document.getElementById('new-record-badge').style.display = 'block'; // Mostra a tag
+            }
+            
+            document.getElementById('go-highscore-display').innerText = highScore.toLocaleString('pt-BR');
+
+            // Salva a partida atual no Array do localStorage (só se pontuou algo pra não poluir)
+            let historyArray = JSON.parse(localStorage.getItem('nexus_history') || '[]');
+            if (score > 0) {
+                let dataAtual = new Date();
+                let dataFormatada = dataAtual.toLocaleDateString('pt-BR') + ' ' + dataAtual.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+                
+                historyArray.unshift({
+                    date: dataFormatada,
+                    score: score,
+                    wave: wave,
+                    buildClass: buildClass,
+                    color: colorClass
+                });
+                
+                // Mantém só as últimas 5 partidas
+                if (historyArray.length > 5) historyArray.pop();
+                localStorage.setItem('nexus_history', JSON.stringify(historyArray));
+            }
+
+            // Renderiza o histórico na tela
+            let hList = document.getElementById('go-history-list');
+            if (historyArray.length === 0) {
+                hList.innerHTML = '<span style="color:#52525b">Nenhuma partida anterior registrada.</span>';
+            } else {
+                hList.innerHTML = historyArray.map(match => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #1f1f23;">
+                        <div>
+                            <div style="font-weight:bold; color:#f4f4f5;">Score: <span style="color:#fde047">${match.score.toLocaleString('pt-BR')}</span></div>
+                            <div style="font-size:12px; color:${match.color}; font-weight:bold; text-shadow: 0 0 5px ${match.color}50;">${match.buildClass} (Onda ${match.wave})</div>
+                        </div>
+                        <div style="color:#52525b; font-size:12px; font-weight:bold;">${match.date}</div>
+                    </div>
+                `).join('');
+            }
+
+
+            // ── ANIMAÇÃO DE COUNTUP ──
+            function animCountUp(elId, targetVal, durationMs = 2000, suffix = '') {
+                let el = document.getElementById(elId);
+                if(!el) return;
+                let start = null;
+                function step(timestamp) {
+                    if(!start) start = timestamp;
+                    let progress = Math.min((timestamp - start) / durationMs, 1);
+                    let ease = 1 - Math.pow(1 - progress, 4); 
+                    let current = Math.floor(ease * targetVal);
+                    el.innerText = current.toLocaleString('pt-BR') + suffix;
+                    
+                    if(progress < 1) requestAnimationFrame(step);
+                    else el.innerText = targetVal.toLocaleString('pt-BR') + suffix;
+                }
+                requestAnimationFrame(step);
+            }
+
             let grid = document.getElementById('go-stats-grid');
             let avgDmgPerWave = wave > 0 ? Math.floor(statTotalDmgDealt / wave) : 0;
             let diffFinal = Math.round(adaptiveMult * 100);
@@ -3819,15 +3881,14 @@
                 + '</div>'
             ).join('');
             
-            // Ativa o CountUp com um delay cascata agradável
             setTimeout(() => animCountUp('go-score', score, 2500), 100);
             statsData.forEach((s, i) => {
                 setTimeout(() => animCountUp(s.id, s.val, 1500, s.suffix), 300 + i * 80);
             });
 
-            // Lista de torres
+            // Lista de torres (Inalterado)
             let tList = document.getElementById('go-towers-list');
-            let allTowers = [...towers, ...soldTowers]; // Junta as ativas com as mortas
+            let allTowers = [...towers, ...soldTowers]; 
             
             if(allTowers.length === 0) { tList.innerHTML = '<span style="color:#52525b">Nenhuma torre construída.</span>'; }
             else {
@@ -4032,7 +4093,7 @@
             // ── NOVO: DESENHA O PREVIEW DE ALCANCE DURANTE O DRAG DA CARTA ──
             if (dragElement && hoveredDropTower && draggingCardIndex >= 0) {
                 let card = playerHand[draggingCardIndex];
-                if (card && !card.isPill && !card.isApple && !card.isEcon && hoveredDropTower.effects.length < 5) {
+                if (card && !card.isPill && !card.isApple && !card.isEcon && hoveredDropTower.effects.length < 3) {
                     let clone = previewCardStats(hoveredDropTower, card);
                     let prevRange = hoveredDropTower.range;
                     let newRange = clone.range;
