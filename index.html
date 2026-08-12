@@ -3705,6 +3705,19 @@
             }
         }
 
+        // Rede de segurança: se o cursor sair de vez da lista de torres, libera o tooltip
+        // mesmo que initMenu() tenha reconstruído o item hover no meio do caminho e perdido
+        // o evento mouseleave de algum item individual.
+        (function() {
+            const listSafety = document.getElementById('tower-list');
+            if(listSafety) {
+                listSafety.addEventListener('mouseleave', () => {
+                    tt._sidebarOwned = false;
+                    tt.classList.remove('visible');
+                });
+            }
+        })();
+
         function initMenu() {
             try {
                 const list = document.getElementById('tower-list'); 
@@ -3714,7 +3727,16 @@
                     let t = towerTypes[k]; let d = document.createElement('div');
                     d.className = `tower-option targeting-trigger ${k===selectedTowerKey?'active':''}`;
                     d.innerHTML = `<span class="tower-name">${t.name}</span><span class="tower-cost">${t.cost} Ouro</span>`;
-                    d.onclick = () => { selectedTowerKey = k; initMenu(); };
+                    d.onclick = () => {
+                        // Clicar reconstrói a lista inteira (initMenu recria os elementos),
+                        // então o item antigo some do DOM sem disparar 'mouseleave'.
+                        // Sem isto, tt._sidebarOwned ficava travado em true e o tooltip
+                        // nunca mais era escondido enquanto o jogador jogava no canvas.
+                        clearTimeout(tipTimer); tipTimer = null;
+                        tt._sidebarOwned = false;
+                        tt.classList.remove('visible');
+                        selectedTowerKey = k; initMenu();
+                    };
 
                     // tooltip com stats base
                     let tipTimer = null;
@@ -4133,15 +4155,15 @@
             if(!keys['w'] && !keys['s'] && !keys['a'] && !keys['d']) { camVX *= CAM_DRAG; camVY *= CAM_DRAG; }
 
             // ── ZOOM suavizado ──
-            let prevZoom = zoom;
+            // O zoom já é centralizado no centro da tela pela transformação do canvas
+            // (ctx.translate(canvas.width/2, ...) mais abaixo), então não é necessário
+            // nenhum ajuste extra de câmera aqui. A versão antiga tentava "zoom no cursor"
+            // usando mouseX/mouseY, mas recalculava isso a cada frame da suavização —
+            // se o mouse se movesse durante a transição, a câmera "perseguia" um alvo que
+            // mudava a cada frame, fazendo o mapa derrapar. E no toque (pinça), mouseX/mouseY
+            // nunca eram atualizados, então o zoom sempre puxava a câmera pro canto (0,0).
             zoom += (zoomTarget - zoom) * ZOOM_SMOOTH;
             zoom = Math.max(0.4, Math.min(zoom, 3.0));
-            // compensa câmera para zoom ser centrado no centro da tela
-            if(Math.abs(zoom - prevZoom) > 0.0001) {
-                let mx = mouseX - canvas.width/2; let my = mouseY - canvas.height/2;
-                camX += (mx / zoom) - (mx / prevZoom);
-                camY += (my / zoom) - (my / prevZoom);
-            }
             frameCount++; towers.forEach(t => t.updateVisuals());
 
             if(!isShopOpen && waveActive) {
@@ -4456,11 +4478,6 @@
             }
             requestAnimationFrame(render);
         }
-
-        applyMagnetEffect('.magnet-btn');
-        spawnQueue = buildSpawnQueue(wave);
-        enemiesToSpawn = spawnQueue.length;
-        initMenu(); updateUI(); renderHand();
 
         // ── ESCALA DINÂMICA DA LOJA ──────────────────────────────────────
         // Calcula scale para que as cartas caibam sem scroll em qualquer resolução
