@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>Nexus Hexa Guard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='85'>🏰</text></svg>">
     
@@ -468,6 +469,77 @@
             outline: none;
             box-shadow: none;
         }
+
+        /* ==================================================================
+           PORT MOBILE - layout responsivo
+           ================================================================== */
+
+        #sidebar-toggle {
+            display: none; position: fixed; top: 16px; left: 16px; z-index: 1002;
+            width: 46px; height: 46px; border-radius: 12px;
+            background: var(--panel-bg); border: 1px solid var(--border-color);
+            color: #f0d000; font-size: 18px; align-items: center; justify-content: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7); backdrop-filter: blur(10px);
+        }
+        #sidebar-backdrop {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+            z-index: 998; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+        }
+        #sidebar-backdrop.visible { opacity: 1; pointer-events: all; }
+
+        #sidebar { touch-action: pan-y; }
+        #shop-overlay { touch-action: pan-y; }
+        #gameCanvas { touch-action: none; }
+
+        @media (max-width: 900px) {
+            #sidebar-toggle { display: flex; }
+
+            #sidebar {
+                position: fixed; top: 0; left: 0; height: 100%; max-height: 100%;
+                width: min(82vw, 300px); border-radius: 0 18px 18px 0;
+                padding-top: 76px; z-index: 999;
+                transform: translateX(-105%);
+                transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                box-shadow: 20px 0 40px rgba(0,0,0,0.6);
+            }
+            #sidebar.open { transform: translateX(0); }
+
+            #controls-hint {
+                top: auto; bottom: 155px; right: 10px; left: 10px; width: auto;
+                text-align: center; font-size: 11px; padding: 8px 10px; line-height: 1.4;
+            }
+
+            #hand-container {
+                bottom: 10px; padding: 8px; gap: 8px; max-width: 92vw;
+                overflow-x: auto; -webkit-overflow-scrolling: touch;
+            }
+            .hand-card { width: 58px; height: 82px; font-size: 9px; flex-shrink: 0; }
+            .hand-card .mini-icon { font-size: 20px; margin-bottom: 2px; }
+
+            #tooltip { width: min(300px, 88vw); padding: 16px; }
+
+            .card-wrapper { width: 165px; height: 250px; }
+            .card { padding: 14px 10px; }
+            .card-header { font-size: 15px; padding-bottom: 6px; }
+            .card-icon { font-size: 30px; margin: 8px auto; }
+            .card-desc { font-size: 11px; }
+            .card-stats { font-size: 12px; }
+            .cards-container { gap: 10px; }
+            #shop-title { font-size: 20px; padding: 0 15px; text-align: center; }
+            #shop-buttons { flex-wrap: wrap; padding: 0 10px; }
+            #shop-buttons > div { flex-wrap: wrap; justify-content: center; gap: 10px !important; }
+            #reroll-btn, #lootbox-btn { padding: 12px 18px; font-size: 14px; }
+
+            .tutorial-container { max-width: 92vw; margin: 0 16px; }
+            .tut-header { padding: 55px 20px 15px; }
+            .tut-content-wrapper { height: 300px; }
+            .tut-step { padding: 0 20px; }
+            .tut-footer { padding: 15px 20px 25px; }
+        }
+
+        @media (pointer: coarse) {
+            #custom-cursor { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -532,6 +604,11 @@
     </div>
 
     <div id="custom-cursor"></div>
+
+    <button id="sidebar-toggle" aria-label="Abrir menu">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+    <div id="sidebar-backdrop"></div>
 
     <div id="sidebar">
         <!-- TÍTULO -->
@@ -991,6 +1068,104 @@
             const delta = e.deltaY > 0 ? -0.18 : 0.18;
             zoomTarget = Math.max(0.4, Math.min(zoomTarget + delta, 3.0));
         }, { passive: false });
+
+        // ── CONTROLES TOUCH (mobile) ─────────────────────────────────────
+        // 1 dedo no canvas = arrasta câmera (equivalente ao botão direito no PC)
+        // 2 dedos = pinça para zoom
+        let touchPanActive = false; let touchLastX = 0; let touchLastY = 0;
+        let pinchStartDist = 0; let pinchStartZoom = 1;
+
+        function touchDistance(t0, t1) {
+            return Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        }
+
+        canvas.addEventListener('touchstart', e => {
+            if(isTutorialActive || gameOver || isShopOpen) return;
+            if(e.touches.length === 1) {
+                touchPanActive = true; isDragging = true;
+                touchLastX = e.touches[0].clientX; touchLastY = e.touches[0].clientY;
+                dragVX = 0; dragVY = 0;
+            } else if(e.touches.length === 2) {
+                touchPanActive = false; isDragging = false;
+                pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
+                pinchStartZoom = zoomTarget;
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', e => {
+            if(isTutorialActive || gameOver || isShopOpen) return;
+            if(e.touches.length === 1 && touchPanActive) {
+                let dx = e.touches[0].clientX - touchLastX; let dy = e.touches[0].clientY - touchLastY;
+                dragVX = dx * DRAG_SENS; dragVY = dy * DRAG_SENS;
+                camX += dragVX / zoom; camY += dragVY / zoom;
+                touchLastX = e.touches[0].clientX; touchLastY = e.touches[0].clientY;
+                e.preventDefault();
+            } else if(e.touches.length === 2) {
+                const dist = touchDistance(e.touches[0], e.touches[1]);
+                if(pinchStartDist > 0) {
+                    const ratio = dist / pinchStartDist;
+                    zoomTarget = Math.max(0.4, Math.min(pinchStartZoom * ratio, 3.0));
+                }
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', e => {
+            if(e.touches.length === 0) { touchPanActive = false; isDragging = false; }
+        }, { passive: true });
+        canvas.addEventListener('touchcancel', () => { touchPanActive = false; isDragging = false; }, { passive: true });
+
+        // ── SIDEBAR MOBILE (gaveta) ──────────────────────────────────────
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+        const sidebarEl = document.getElementById('sidebar');
+
+        function setSidebarOpen(open) {
+            sidebarEl.classList.toggle('open', open);
+            sidebarBackdrop.style.display = open ? 'block' : 'none';
+            sidebarBackdrop.classList.toggle('visible', open);
+            sidebarToggleBtn.innerHTML = open ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-bars"></i>';
+        }
+        if(sidebarToggleBtn) {
+            sidebarToggleBtn.addEventListener('click', () => setSidebarOpen(!sidebarEl.classList.contains('open')));
+        }
+        if(sidebarBackdrop) {
+            sidebarBackdrop.addEventListener('click', () => setSidebarOpen(false));
+        }
+
+        // Fecha a gaveta automaticamente ao iniciar/pular onda em telas pequenas
+        ['btn-start-wave','btn-auto-wave','btn-skip-shop'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('click', () => { if(window.innerWidth <= 900) setSidebarOpen(false); });
+        });
+
+        // Texto de controles adaptado para toque
+        if(window.matchMedia('(pointer: coarse)').matches) {
+            const hint = document.getElementById('controls-hint');
+            if(hint) {
+                hint.innerHTML = '<strong>1 dedo</strong> Mover Câmera<br>'
+                    + '<strong>Pinça</strong> Zoom<br>'
+                    + 'Arraste cartas para as Torres.<br>'
+                    + '<strong>Segure a carta p/ Detalhes!</strong>';
+            }
+        }
+
+        // Mantém o #tooltip sempre dentro da tela em qualquer tamanho
+        (function clampTooltipLoop() {
+            const tt = document.getElementById('tooltip');
+            if(tt && tt.classList.contains('visible')) {
+                const margin = 8;
+                const rect = tt.getBoundingClientRect();
+                let left = rect.left; let top = rect.top;
+                if(rect.right > window.innerWidth - margin) left -= (rect.right - (window.innerWidth - margin));
+                if(left < margin) left = margin;
+                if(rect.bottom > window.innerHeight - margin) top -= (rect.bottom - (window.innerHeight - margin));
+                if(top < margin) top = margin;
+                tt.style.left = left + 'px';
+                tt.style.top = top + 'px';
+            }
+            requestAnimationFrame(clampTooltipLoop);
+        })();
 
         const TILE_W = 64; const TILE_H = 32;
         let hp = 20; let gold = 70; let wave = 1;
@@ -3719,13 +3894,24 @@
             }
         });
 
-        // ── HACK PARA RODAR EM SEGUNDO PLANO (WEB WORKER) ──
-        const clockCode = `setInterval(() => postMessage('tick'), 16);`;
-        const clockBlob = new Blob([clockCode], { type: 'application/javascript' });
-        const workerClock = new Worker(URL.createObjectURL(clockBlob));
-        workerClock.onmessage = () => {
-            gameLoop();
-        };
+        // ── HACK PARA RODAR EM SEGUNDO PLANO (WEB WORKER, com fallback) ──
+        (function setupBackgroundClock() {
+            try {
+                const clockCode = `setInterval(() => postMessage('tick'), 16);`;
+                const clockBlob = new Blob([clockCode], { type: 'application/javascript' });
+                const workerClock = new Worker(URL.createObjectURL(clockBlob));
+                workerClock.onmessage = () => { gameLoop(); };
+                workerClock.onerror = () => {
+                    // ambiente bloqueou o worker depois de criado — cai pro fallback
+                    workerClock.terminate();
+                    setInterval(gameLoop, 16);
+                };
+            } catch (err) {
+                // ambientes sandboxed (ex: preview de artifacts) bloqueiam Worker via blob:
+                // usa um timer normal na thread principal como alternativa
+                setInterval(gameLoop, 16);
+            }
+        })();
         
         function drawTile(gx, gy, type, hovered) {
             let p = cartToIso(gx, gy);
