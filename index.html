@@ -750,9 +750,6 @@
 
     <!-- MÚSICA DE FUNDO (PLAYLIST) -->
     <audio id="bg-music"></audio>
-        <!-- BAIXE A MÚSICA DO SUNO (MP3) E COLOQUE O NOME DO ARQUIVO AQUI: -->
-        <source src="Mossy Save File.mp3" type="audio/mpeg">
-    </audio>
 
     <script>
         // ── ENGINE DE ÁUDIO 8-BIT RAIZ (CHIPTUNE) ──
@@ -4261,45 +4258,51 @@
         
         let currentTrack = 0;
         
-        // Já engatilha a primeira música
+        // Engatilha a primeira música
         if(bgMusic) bgMusic.src = playlist[currentTrack];
 
-        // O segredo do loop da playlist: acabou uma, puxa a próxima
+        // Loop da playlist: acabou uma, puxa a próxima
         if(bgMusic) {
             bgMusic.addEventListener('ended', () => {
                 currentTrack++;
-                // Se passou da última música, volta pra zero (primeira)
                 if (currentTrack >= playlist.length) {
-                    currentTrack = 0;
+                    currentTrack = 0; // Volta pra primeira
                 }
                 bgMusic.src = playlist[currentTrack];
                 bgMusic.volume = parseFloat(musicSlider.value);
-                bgMusic.play().catch(e => console.log("Erro ao pular de faixa."));
+                bgMusic.play().catch(e => console.error("Erro ao pular faixa:", e));
             });
         }
 
-        // Autoplay bloqueado pelo navegador até o player dar o primeiro clique
+        // Tenta tocar a música assim que o jogador clicar na tela
         let musicStarted = false;
         window.addEventListener('mousedown', () => {
             if(!musicStarted && bgMusic) {
                 bgMusic.volume = parseFloat(musicSlider.value);
-                bgMusic.play().catch(e => console.log("Aguardando interação pra tocar a música."));
-                musicStarted = true;
+                let playPromise = bgMusic.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        musicStarted = true; // Só marca como tocando se deu certo
+                    }).catch(error => {
+                        console.error("Navegador bloqueou ou o arquivo não existe:", error);
+                    });
+                }
             }
-        }, { once: true });
+        });
 
         musicCtrl.addEventListener('mousedown', (e) => {
             if (e.target === musicSlider) return; 
             SFX.ui_click();
             sliderMusicCont.classList.toggle('visible');
-            document.getElementById('slider-container-sfx').classList.remove('visible'); // fecha o outro
+            document.getElementById('slider-container-sfx').classList.remove('visible');
         });
 
         musicSlider.addEventListener('input', (e) => {
             let vol = parseFloat(e.target.value);
             if(bgMusic) bgMusic.volume = vol;
             if(vol === 0) {
-                musicIcon.style.color = '#ef4444'; // Fica vermelho se mutar
+                musicIcon.style.color = '#ef4444';
             } else {
                 musicIcon.style.color = '#f4f4f5';
             }
