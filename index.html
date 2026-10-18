@@ -220,10 +220,14 @@
         }
         #btn-start-wave { background: linear-gradient(45deg, #16a34a, #22c55e); }
         #btn-auto-wave { background: #3f3f46; color: #a1a1aa; margin-top: 8px;}
-        #btn-auto-wave.on, #btn-skip-shop.on { 
-            background: linear-gradient(45deg, #ca8a04, #eab308); 
-            color: #000; 
+        #btn-auto-wave.on, #btn-skip-shop.on {
+            background: linear-gradient(45deg, #9a3412, #c2410c);
+            color: #ffedd5;
+            border: 1px solid #ea580c;
+            box-shadow: 0 0 14px rgba(234, 88, 12, 0.35), 0 5px 15px rgba(0,0,0,0.4);
         }
+        #btn-auto-wave.on:hover, #btn-skip-shop.on:hover { background: linear-gradient(45deg, #c2410c, #ea580c); color: #fff7ed; }
+        #btn-auto-wave.on:active, #btn-skip-shop.on:active { background: #7c2d12; color: #ffedd5; }
 
         #btn-skip-shop {
             max-height: 0;
@@ -479,7 +483,106 @@
         }
 
         .btn-action:focus { outline: none; box-shadow: none; }
+
+        /* ═══ NEXUS FX: estética dungeon pixel-art ═══ */
+        #gameCanvas { position: relative; z-index: 1; }
+        #battle-rays-canvas { image-rendering: pixelated; }
+        #fx-gl { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; image-rendering: pixelated; }
+        #sidebar-title, .btn-action, #shop-title, .hud-section-label, #tooltip b { font-family: 'Press Start 2P', monospace !important; }
+        #sidebar-title { font-size: 11px; color: #fde047; text-shadow: 2px 2px 0 #7f1d1d, 0 0 14px rgba(253,224,71,.5); }
+        .btn-action { font-size: 10px !important; letter-spacing: 1px; text-shadow: 2px 2px 0 rgba(0,0,0,.7); }
+        .hud-section-label { font-size: 8px !important; }
+        #fx-px span { position: absolute; bottom: -2px; right: 2px; font: 7px 'Press Start 2P', monospace; color: #fde047; }
+        .fx-banner { position: fixed; left: 50%; top: 24%; transform: translate(-50%,-50%); z-index: 99990; pointer-events: none; white-space: nowrap;
+            font: 34px 'Press Start 2P', monospace; text-shadow: 4px 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 0 30px currentColor;
+            animation: fxBan 1.9s cubic-bezier(.2,1.6,.4,1) forwards; }
+        .fx-banner.sm { font-size: 20px; animation-duration: 1.3s; }
+        @keyframes fxBan { 0% { transform: translate(-50%,-50%) scale(3) rotate(-6deg); opacity: 0; } 12% { transform: translate(-50%,-50%) scale(1) rotate(2deg); opacity: 1; }
+            20% { transform: translate(-50%,-50%) scale(1.08) rotate(-1deg); } 80% { opacity: 1; transform: translate(-50%,-55%) scale(1); } 100% { opacity: 0; transform: translate(-50%,-90%) scale(.9); } }
+        #fx-combo { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 9500; pointer-events: none; opacity: 0; transition: opacity .3s;
+            font: 18px 'Press Start 2P', monospace; color: #fde047; text-shadow: 3px 3px 0 #7f1d1d, 0 0 18px #f97316; }
+        #fx-combo.pop { animation: fxPop .25s ease-out; } @keyframes fxPop { 0% { transform: translateX(-50%) scale(1.8); } 100% { transform: translateX(-50%) scale(1); } }
+        #splash { position: fixed; inset: 0; z-index: 100001; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; text-align: center;
+            background: radial-gradient(ellipse at 50% 110%, #5b1d2a 0%, #1a0b26 45%, #07040c 100%); transition: opacity .6s, transform .6s; overflow: hidden; }
+        #splash.out { opacity: 0; transform: scale(1.3); pointer-events: none; }
+        .sp-embers { position: absolute; inset: 0; pointer-events: none; } .sp-embers i { position: absolute; bottom: -10px; background: #f97316; box-shadow: 0 0 8px #f97316; animation: spUp linear infinite; }
+        @keyframes spUp { to { transform: translateY(-110vh) translateX(40px); opacity: 0; } }
+        .sp-logo { font: clamp(28px,6vw,64px)/1.25 'Press Start 2P', monospace; color: #fde047; position: relative; letter-spacing: 3px;
+            text-shadow: 0 6px 0 #b45309, 0 12px 0 #7f1d1d, 0 0 50px rgba(249,115,22,.7); animation: spLogo 2.4s ease-in-out infinite; }
+        @keyframes spLogo { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-10px) rotate(1deg); } }
+        .sp-sub { font: clamp(10px,1.6vw,16px) 'Press Start 2P', monospace; color: #c4b5fd; text-shadow: 3px 3px 0 #000; animation: spBlink 1.2s steps(2) infinite; }
+        @keyframes spBlink { 50% { color: #f0abfc; } }
+        #splash button { font: 18px 'Press Start 2P', monospace; padding: 18px 44px; color: #1a0b26; background: #fde047; border: 0; cursor: pointer; z-index: 2;
+            box-shadow: 0 6px 0 #b45309, 0 0 40px rgba(253,224,71,.6); transition: transform .1s; } #splash button:hover { transform: translateY(3px) scale(1.05); box-shadow: 0 3px 0 #b45309, 0 0 60px rgba(253,224,71,.9); }
+        #splash small { font: 9px 'Press Start 2P', monospace; color: #71717a; line-height: 2; z-index: 2; }
+
+        /* ═══ TÍTULO DA SIDEBAR (corrigido: antes estourava a largura e quebrava o emoji) ═══ */
+        #sidebar-title { gap: 10px; letter-spacing: 1px; line-height: 1.7; font-size: 10px; text-transform: uppercase; }
+        #sidebar-title .st-ico { font-size: 24px; line-height: 1; text-shadow: none;
+            font-family: 'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif !important; flex-shrink: 0; }
+        #sidebar-title .st-txt { min-width: 0; white-space: nowrap; }
+
+        /* ═══ FILTRO PIXEL POR CIMA DE TUDO (HUD, cartas, loja, menus, modais) ═══ */
+        #fx-over { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; --px: 2px;
+            background:
+                radial-gradient(ellipse at 50% 50%, transparent 58%, rgba(8,3,16,.5) 100%),
+                repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0, rgba(0,0,0,.14) var(--px), transparent var(--px), transparent calc(var(--px) * 2)),
+                repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0, rgba(255,255,255,.04) 1px, transparent 1px, transparent var(--px));
+            -webkit-backdrop-filter: contrast(1.1) saturate(1.22); backdrop-filter: contrast(1.1) saturate(1.22); }
+        #fx-over::after { content: ''; position: absolute; inset: 0; opacity: .07; mix-blend-mode: overlay; image-rendering: pixelated;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='96' height='96' filter='url(%23n)'/></svg>"); }
+
+        /* ═══ MENU PRINCIPAL ═══ */
+        #splash { gap: 18px; }
+        #splash.out { visibility: hidden; transition: opacity .6s, transform .6s, visibility 0s .6s; }
+        #splash.out * { animation-play-state: paused !important; }
+        .sp-status { font: 9px 'Press Start 2P', monospace; color: #fb923c; text-shadow: 2px 2px 0 #000; min-height: 12px; z-index: 2; }
+        .sp-menu { display: flex; flex-direction: column; gap: 12px; width: min(360px, 84vw); z-index: 2; }
+        .sp-row { display: flex; gap: 12px; }
+        .sp-row button { flex: 1; min-width: 0; }
+        #splash .sp-menu button.sp-main { width: 100%; font-size: 16px; padding: 16px 10px; }
+        #splash .sp-menu button.sp-sec { font: 9px 'Press Start 2P', monospace; padding: 13px 8px; color: #e9d5ff; background: #2a1540; border: 2px solid #6d28d9;
+            box-shadow: 0 4px 0 #1a0b26; letter-spacing: 0; line-height: 1.4; transition: transform .1s, background .15s, color .15s, border-color .15s; }
+        #splash .sp-menu button.sp-sec:hover { transform: translateY(2px); background: #c2410c; border-color: #fb923c; color: #fff7ed; box-shadow: 0 2px 0 #7c2d12; }
+        #splash .sp-menu button.sp-sec:active { transform: translateY(4px); box-shadow: none; background: #9a3412; }
+        @media (max-height: 720px) { #splash { gap: 10px; } .sp-logo { font-size: clamp(22px, 4.6vw, 44px) !important; } #splash small { display: none; } }
+
+        /* ═══ MODAIS (estatísticas, opções, créditos, confirmação) ═══ */
+        .nx-modal { position: fixed; inset: 0; z-index: 100003; display: none; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;
+            background: rgba(5,3,10,.82); }
+        .nx-modal.open { display: flex; animation: nxFade .2s ease-out; }
+        @keyframes nxFade { from { opacity: 0; } to { opacity: 1; } }
+        .nx-box { width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column; background: linear-gradient(180deg, #1c0f2b, #0f0818);
+            border: 2px solid #7c3aed; box-shadow: 0 0 0 4px #1a0b26, 0 0 50px rgba(124,58,237,.35), 0 25px 60px rgba(0,0,0,.8); }
+        .nx-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 2px solid #3b1d63; }
+        #nx-title { font: 12px 'Press Start 2P', monospace; color: #fde047; text-shadow: 2px 2px 0 #7f1d1d; line-height: 1.5; }
+        .nx-x { font: 12px 'Press Start 2P', monospace; background: #2a1540; color: #e9d5ff; border: 2px solid #6d28d9; padding: 8px 10px; cursor: pointer; }
+        .nx-x:hover { background: #c2410c; border-color: #fb923c; color: #fff7ed; }
+        #nx-body { padding: 16px; overflow-y: auto; color: #d4d4d8; font-size: 14px; line-height: 1.55; }
+        #nx-body::-webkit-scrollbar { width: 6px; } #nx-body::-webkit-scrollbar-thumb { background: #4c1d95; }
+        .nx-sec { font: 9px 'Press Start 2P', monospace; color: #fb923c; margin: 18px 0 10px; letter-spacing: 1px; } .nx-sec:first-child { margin-top: 0; }
+        .nx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .nx-stat { background: #160c24; border: 1px solid #3b1d63; padding: 10px 12px; }
+        .nx-stat b { display: block; font: 13px 'Press Start 2P', monospace; color: #fde047; margin-bottom: 6px; word-break: break-all; }
+        .nx-stat span { font-size: 12px; color: #a1a1aa; }
+        .nx-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid #2a1540; }
+        .nx-row:last-child { border-bottom: none; }
+        .nx-row label { flex: 1; color: #e4e4e7; }
+        .nx-row small { display: block; color: #71717a; font-size: 11px; }
+        .nx-row input[type=range] { width: 170px; accent-color: #ea580c; cursor: pointer; }
+        .nx-seg { display: flex; } .nx-seg button { margin: 0 -1px 0 0; }
+        .nx-btn { font: 9px 'Press Start 2P', monospace; padding: 10px 12px; color: #e9d5ff; background: #2a1540; border: 2px solid #6d28d9; cursor: pointer; transition: background .15s, color .15s; }
+        .nx-btn:hover { background: #7c2d12; border-color: #fb923c; color: #fff7ed; }
+        .nx-btn.on { background: linear-gradient(45deg, #9a3412, #c2410c); border-color: #ea580c; color: #ffedd5; }
+        .nx-btn.danger { border-color: #b91c1c; color: #fca5a5; background: #2a0f12; } .nx-btn.danger:hover { background: #991b1b; color: #fff; border-color: #ef4444; }
+        .nx-hist { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a1540; font-size: 13px; }
+        .nx-keys { list-style: none; padding: 0; margin: 0; } .nx-keys li { padding: 6px 0; border-bottom: 1px solid #2a1540; }
+        .nx-keys kbd { font: 9px 'Press Start 2P', monospace; background: #2a1540; border: 1px solid #6d28d9; color: #fde047; padding: 4px 6px; margin-right: 6px; }
+        .nx-credits { text-align: center; } .nx-credits .big { font: 16px/1.5 'Press Start 2P', monospace; color: #fde047; text-shadow: 3px 3px 0 #7f1d1d; margin: 6px 0 14px; }
+        .nx-credits p { margin: 4px 0; }
+        .nx-actions { display: flex; gap: 12px; justify-content: center; margin-top: 18px; }
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
     <div style="font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; visibility: hidden; pointer-events: none;">\uf05b\uf135\uf0e7</div>
@@ -497,6 +600,8 @@
                 <div class="tut-step-indicator" id="dot-2">3</div>
                 <div class="tut-line"></div>
                 <div class="tut-step-indicator" id="dot-3">4</div>
+                <div class="tut-line"></div>
+                <div class="tut-step-indicator" id="dot-4">5</div>
             </div>
 
             <div class="tut-content-wrapper">
@@ -523,7 +628,7 @@
                     <div style="font-size: 40px; color: #22c55e; margin: 15px 0;">
                         <i class="fa-solid fa-hammer"></i>
                     </div>
-                    <p>Selecione uma torre no menu lateral e <strong>clique em um espaço vazio (verde escuro)</strong> no mapa para construir.<br><br>Você também pode gastar ouro nos <strong>Cadeados</strong> (<i class="fa-solid fa-lock" style="color: #a1a1aa;"></i>) no fim do caminho para expandir o mapa!</p>
+                    <p>Selecione uma torre no menu lateral e <strong>clique em um espaço vazio (roxo escuro)</strong> no mapa para construir.<br><br>Você também pode gastar ouro nos <strong>Cadeados</strong> (<i class="fa-solid fa-lock" style="color: #a1a1aa;"></i>) no fim do caminho para expandir o mapa!</p>
                 </div>
 
                 <div class="tut-step" id="tut-step-3">
@@ -532,6 +637,18 @@
                         <i class="fa-solid fa-cards"></i> 🃏
                     </div>
                     <p>No fim de cada onda, a loja abre. Compre cartas com ouro e elas irão para a sua mão (na parte inferior da tela).<br><br><strong>Arraste as cartas da mão e solte em cima das torres</strong> para aplicar os upgrades. Cada torre suporta até 3 efeitos.</p>
+                </div>
+
+                <div class="tut-step" id="tut-step-4">
+                    <h2>Atalhos &amp; Dicas</h2>
+                    <div style="font-size: 36px; color: #fb923c; margin: 10px 0;"><i class="fa-solid fa-keyboard"></i></div>
+                    <ul style="list-style:none; text-align:left; background:#18181b; padding:12px 22px; border-radius:10px; border:1px solid #27272a; display:inline-block; font-size:13px; line-height:1.9; margin:0;">
+                        <li><strong style="color:#fde047">[ESC]</strong> abre o menu e pausa o jogo.</li>
+                        <li><strong style="color:#fde047">[P]</strong> troca o filtro pixel (OFF / 2x / 3x / 4x).</li>
+                        <li><strong style="color:#fb923c">AUTO-WAVE</strong> inicia as ondas sozinho.</li>
+                        <li><strong style="color:#fb923c">PULAR LOJA</strong> ignora a loja no auto-wave.</li>
+                        <li>O jogo <strong>salva sozinho</strong> entre as ondas.</li>
+                    </ul>
                 </div>
             </div>
 
@@ -542,13 +659,30 @@
         </div>
     </div>
 
+    <div id="splash"><div class="sp-embers"></div>
+    <div class="sp-logo">NEXUS<br>HEXA GUARD</div>
+    <div class="sp-status"></div>
+    <div class="sp-menu">
+        <button class="sp-main" data-act="play">▶ JOGAR</button>
+        <button class="sp-sec" data-act="new">↻ NOVO JOGO</button>
+        <div class="sp-row">
+            <button class="sp-sec" data-act="stats">ESTATÍSTICAS</button>
+            <button class="sp-sec" data-act="how">COMO JOGAR</button>
+        </div>
+        <div class="sp-row">
+            <button class="sp-sec" data-act="opts">OPÇÕES</button>
+            <button class="sp-sec" data-act="credits">CRÉDITOS</button>
+        </div>
+    </div>
+    <small>⚡ RAIOS &nbsp; ☄ METEOROS &nbsp; 🔥 FOGO &nbsp; ↯ RICOCHETES<br>[P] filtro pixel-art &nbsp; [ESC] menu</small></div>
+    <div id="fx-combo"></div>
     <div id="custom-cursor"></div>
 
     <div id="sidebar">
         <!-- TÍTULO -->
         <div id="sidebar-title">
-            <span style="font-size:20px;">🏰</span>
-            <span>Nexus Hexa Guard</span>
+            <span class="st-ico">🏰</span>
+            <span class="st-txt">Nexus<br>Hexa Guard</span>
         </div>
 
         <!-- SEÇÃO 1: STATUS DO JOGADOR -->
@@ -609,6 +743,7 @@
 
     <div id="controls-hint">
         <strong>[W][A][S][D]</strong> Mover Câmera<br>
+        <strong>[ESC]</strong> Menu / Pausa<br>
         <strong>[Scroll]</strong> Zoom Direcionado<br>
         Arraste cartas para as Torres.<br>
         <strong>Pouse 1s na carta p/ Detalhes!</strong><br>
@@ -714,7 +849,7 @@
                 <div id="go-history-list"></div>
             </div>
 
-            <button onclick="location.reload()" style="
+            <button onclick="nxRetry()" style="
                 background:linear-gradient(45deg,#7f1d1d,#ef4444); color:#fff;
                 border:none; border-radius:10px; padding:16px 48px;
                 font-size:18px; font-weight:bold; cursor:pointer;
@@ -1098,19 +1233,19 @@
             const G = _tiles.G, W2 = TILE_W / 2, H2 = TILE_H / 2;
             ctx.save();
             ctx.translate(canvas.width / 2 + camX, canvas.height / 4 + camY);
-            ctx.fillStyle = '#022c22'; ctx.fill(G.l0);
-            ctx.fillStyle = '#0a0a0a'; ctx.fill(G.l1);
-            ctx.fillStyle = '#034031'; ctx.fill(G.r0);
-            ctx.fillStyle = '#111111'; ctx.fill(G.r1);
-            ctx.fillStyle = '#065f46'; ctx.fill(G.g0);
-            ctx.fillStyle = '#064e3b'; ctx.fill(G.g1);
-            ctx.fillStyle = '#047857'; ctx.fill(G.g2);
-            ctx.fillStyle = '#1c1917'; ctx.fill(G.t1);
+            ctx.fillStyle = '#1b1530'; ctx.fill(G.l0);
+            ctx.fillStyle = '#140c0c'; ctx.fill(G.l1);
+            ctx.fillStyle = '#251c3d'; ctx.fill(G.r0);
+            ctx.fillStyle = '#1d1111'; ctx.fill(G.r1);
+            ctx.fillStyle = '#33284f'; ctx.fill(G.g0);
+            ctx.fillStyle = '#2d2347'; ctx.fill(G.g1);
+            ctx.fillStyle = '#3a2e5a'; ctx.fill(G.g2);
+            ctx.fillStyle = '#2a1717'; ctx.fill(G.t1);
             ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.stroke(G.stroke);
             if (hy >= 0 && hy < map.length && hx >= 0 && hx < map[hy].length && map[hy][hx] === 0) {
                 const px = (hx - hy) * W2, py = (hx + hy) * H2;
                 ctx.beginPath(); ctx.moveTo(px, py - H2); ctx.lineTo(px + W2, py); ctx.lineTo(px, py + H2); ctx.lineTo(px - W2, py); ctx.closePath();
-                ctx.fillStyle = '#34d399'; ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#a78bfa'; ctx.fill(); ctx.stroke();
             }
             ctx.restore();
         }
@@ -1140,7 +1275,7 @@
 
         window.addEventListener('mousedown', e => {
             if(e.button === 2) {
-                if(isTutorialActive || gameOver || isShopOpen) return;
+                if(menuActive || isTutorialActive || gameOver || isShopOpen) return;
                 isDragging = true; dragLastX = e.clientX; dragLastY = e.clientY;
                 dragVX = 0; dragVY = 0;
                 e.preventDefault();
@@ -1159,7 +1294,7 @@
         });
 
         window.addEventListener('wheel', e => {
-            if(isTutorialActive || gameOver) return
+            if(menuActive || isTutorialActive || gameOver) return
             if(e.clientX < 310) return; 
             if(isShopOpen) return;
             e.preventDefault();
@@ -1187,6 +1322,9 @@
         let statRerolls = 0; let gameOverAlpha = 0; let isShopOpen = false; let waveActive = false;
         let rerollCost = 15;
         let isTutorialActive = true; 
+        let menuActive = true; let nxStarted = false;
+        const NXO = (function () { let o = {}; try { o = JSON.parse(localStorage.getItem('nexus_opts') || '{}') || {}; } catch (e) {}
+            return Object.assign({ music: 0.3, sfx: 1, px: 2, shake: true, dmg: true, flash: true }, o); })();
 
         const shopMods = {
             rareBonusChance:   0,   
@@ -1266,7 +1404,7 @@
             const adjX = unzoomedX - offX; const adjY = unzoomedY - offY;
             return { x: Math.round((adjY / (TILE_H / 2) + adjX / (TILE_W / 2)) / 2), y: Math.round((adjY / (TILE_H / 2) - adjX / (TILE_W / 2)) / 2) };
         }
-        function applyShake(amt) { screenShake = Math.max(screenShake, amt); }
+        function applyShake(amt) { if (NXO.shake === false) return; screenShake = Math.max(screenShake, amt); }
 
         function getLocks() {
             let endP = waypoints[waypoints.length - 1]; let locks = [];
@@ -1605,7 +1743,7 @@
                         } 
                         else { 
                             SFX.card_drop();
-                            t.levelUp(card); statCardsUsed++; createParticles(t.gridX, t.gridY, '#f0d000', 30); playerHand.splice(draggingCardIndex, 1); 
+                            let _bf = new Set(t.flags); t.levelUp(card); fxCardApply(t, card, _bf); statCardsUsed++; createParticles(t.gridX, t.gridY, '#f0d000', 30); playerHand.splice(draggingCardIndex, 1); 
                         }
                     }
                     if(dragElement) dragElement.remove(); dragElement = null; draggingCardIndex = -1; document.body.style.cursor = ''; renderHand();
@@ -1655,6 +1793,132 @@
                 ctx.shadowBlur = 0;
             }
         }
+
+// ═══════════ NEXUS FX ENGINE (raios, meteoros, ricochetes, fogo, shader pixel-art) ═══════════
+const FX={hitstop:0,slowmo:0,flash:0,px:2,combo:0,comboT:0,list:[],parts:[],decals:[],zones:[]};
+const R=(a,b)=>a+Math.random()*(b-a), PI2=Math.PI*2, ISO=(x,y)=>cartToIso(x,y);
+const scr=(gx,gy,dy=0)=>{const p=ISO(gx,gy),cx=canvas.width/2,cy=canvas.height/2;return{x:(p.x-cx)*zoom+cx,y:(p.y+dy-cy)*zoom+cy};};
+const hs=n=>{FX.hitstop=Math.max(FX.hitstop,n)}, fl=n=>{if(NXO.flash===false)return;FX.flash=Math.max(FX.flash,n)};
+function fxP(gx,gy,z,vx,vy,vz,col,life,sz,g,add,shrink){if(FX.parts.length>1400)return;FX.parts.push({gx,gy,z,vx,vy,vz,col,life,max:life,sz,g:g==null?.25:g,add,shrink});}
+function fxBurst(gx,gy,z,n,cols,spd,up,life,sz,g,add,shrink){for(let i=0;i<n;i++){const a=R(0,PI2),s=R(.3,1)*spd;fxP(gx,gy,z,Math.cos(a)*s,Math.sin(a)*s,R(.3,1)*up,cols[i%cols.length],R(.6,1)*life,sz*R(.6,1.4),g,add,shrink);}}
+function fxDecal(gx,gy,r,col,a){const pts=[];for(let i=0;i<6;i++)pts.push({x:R(-r,r),y:R(-r,r)*.5,r:R(.25,.65)*r});FX.decals.push({gx,gy,col,a,pts});if(FX.decals.length>150)FX.decals.shift();}
+function fxAdd(life,draw,gx,gy,end){FX.list.push({life,max:life,draw,gx,gy,end});}
+function fxShock(gx,gy,col,max,w=8){fxAdd(24,p=>{const o=ISO(gx,gy),e=1-Math.pow(1-p,3);ctx.globalAlpha=1-p;ctx.strokeStyle=col;ctx.lineWidth=w*(1-p)+1;ctx.beginPath();ctx.ellipse(o.x,o.y,max*e,max*e/2,0,0,PI2);ctx.stroke();ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(o.x,o.y,max*e*.7,max*e*.35,0,0,PI2);ctx.stroke();});}
+function fxFlameDraw(x,y,s,fc){for(let i=0;i<5;i++){const h=(6+(Math.sin(fc*.35+i*1.9)+1)*5)*s,w=3.2*s,xx=x+(i-2)*w*1.1;ctx.fillStyle='#dc2626';ctx.fillRect((xx-w/2)|0,(y-h)|0,w+1,h);ctx.fillStyle='#f97316';ctx.fillRect((xx-w/2+.5)|0,(y-h*.72)|0,w-1,h*.72);ctx.fillStyle='#fde047';ctx.fillRect((xx-.5)|0,(y-h*.4)|0,w*.5,h*.4);}}
+function fxZone(gx,gy,r,dmg,life){FX.zones.push({gx,gy,r,dmg,life,max:life});}
+// ── RAIO: cai do céu com ramificações, flash e chamuscado ──
+function fxBolt(gx,gy,big){
+  const pts=[{x:R(-70,70),y:-760}],n=10;for(let i=1;i<n;i++){const t=i/n;pts.push({x:pts[0].x*(1-t)+R(-28,28)*(1-t*.6),y:-760*(1-t)});}pts.push({x:0,y:-6});
+  const br=[];for(let k=0;k<4;k++){const s=pts[2+(Math.random()*6|0)],b=[{x:s.x,y:s.y}];let x=s.x,y=s.y;for(let j=0;j<4;j++){x+=R(-34,34)+(k%2?28:-28);y+=R(18,55);b.push({x,y});}br.push(b);}
+  fxAdd(18,p=>{const o=ISO(gx,gy),a=p<.4?1:(Math.random()<.55?1:.3)*(1-p);ctx.save();ctx.translate(o.x,o.y);ctx.globalAlpha=a;ctx.lineJoin='miter';ctx.globalCompositeOperation='lighter';
+    [[16,'rgba(59,130,246,.45)'],[8,'#fde047'],[3,'#fff']].forEach(([w,c])=>{ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.stroke();ctx.lineWidth=w*.45;br.forEach(b=>{ctx.beginPath();b.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.stroke();});});
+    const g=ctx.createRadialGradient(0,0,2,0,0,60*(1-p*.4));g.addColorStop(0,'rgba(255,255,255,.9)');g.addColorStop(1,'rgba(96,165,250,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,0,60,30,0,0,PI2);ctx.fill();ctx.restore();},gx,gy);
+  fl(big?.42:.28);applyShake(big?14:8);hs(2);fxShock(gx,gy,'#7dd3fc',90);fxBurst(gx,gy,4,22,['#fff','#fde047','#7dd3fc'],.14,4.5,24,3,.3,true);fxDecal(gx,gy,22,'#050308',.55);try{SFX.shoot_tesla()}catch(e){}
+}
+function fxArc(a,b,col='#a5f3fc'){const pa=ISO(a.x,a.y),pb=ISO(b.x,b.y),pts=[];for(let i=0;i<=7;i++){const t=i/7;pts.push({x:pa.x+(pb.x-pa.x)*t+(i&&i<7?R(-9,9):0),y:pa.y-18+(pb.y-pa.y)*t+(i&&i<7?R(-9,9):0)});}
+  fxAdd(9,p=>{ctx.globalAlpha=1-p;ctx.globalCompositeOperation='lighter';[[7,col],[2,'#fff']].forEach(([w,c])=>{ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.stroke();});ctx.globalCompositeOperation='source-over';});}
+// ── METEORO: cai em diagonal, aviso no chão, cratera, fogo persistente ──
+function fxMeteor(getPos,onLand,life=32){const tr=[];
+  fxAdd(life,p=>{const g=getPos(),o=ISO(g.x,g.y),e=p*p,x=o.x+(1-e)*340,y=o.y-(1-e)*680-10;
+    ctx.globalAlpha=.25+p*.5;ctx.strokeStyle='#ef4444';ctx.lineWidth=2;ctx.fillStyle='rgba(239,68,68,.18)';ctx.beginPath();ctx.ellipse(o.x,o.y,14+p*30,7+p*15,0,0,PI2);ctx.fill();ctx.stroke();
+    tr.push({x,y});if(tr.length>14)tr.shift();ctx.globalAlpha=1;
+    tr.forEach((q,i)=>{const s=(i+1)/tr.length;ctx.globalAlpha=s*.8;ctx.fillStyle=i%3?'#f97316':'#fde047';const r=3+s*13;ctx.fillRect((q.x-r/2+R(-3,3))|0,(q.y-r/2+R(-3,3))|0,r,r);});
+    ctx.globalAlpha=1;ctx.save();ctx.translate(x,y);ctx.rotate(p*6);ctx.shadowColor='#f97316';ctx.shadowBlur=24;ctx.fillStyle='#3b2318';ctx.fillRect(-14,-14,28,28);ctx.fillStyle='#7c2d12';ctx.fillRect(-14,-14,14,14);ctx.fillStyle='#f97316';ctx.fillRect(2,-8,9,9);ctx.fillStyle='#fde047';ctx.fillRect(-8,4,6,6);ctx.restore();},0,0,onLand);}
+function fxBoom(gx,gy,r,col='#f97316'){const rr=30+r*28;fxShock(gx,gy,col,rr*1.6,10);
+  fxAdd(20,p=>{const o=ISO(gx,gy),s=rr*(.4+p*.9);ctx.globalAlpha=1-p;const g=ctx.createRadialGradient(o.x,o.y-s*.4,1,o.x,o.y-s*.4,s);g.addColorStop(0,'#fff');g.addColorStop(.35,'#fde047');g.addColorStop(.7,col);g.addColorStop(1,'rgba(127,29,29,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(o.x,o.y-s*.35,s,s*.8,0,0,PI2);ctx.fill();},gx,gy);
+  fxBurst(gx,gy,6,30,['#fde047','#f97316','#ef4444','#fff'],.2,5,34,4,.25,true,true);fxBurst(gx,gy,4,10,['#44403c','#292524'],.1,2.2,60,7,.04,false,false);}
+function fxMeteorImpact(gx,gy,r,dmg){fxBoom(gx,gy,r||1.5);fl(.5);applyShake(18);hs(4);
+  for(let i=0;i<14;i++)fxP(gx,gy,6,R(-.18,.18),R(-.18,.18),R(3,8),['#3b2318','#57534e','#7c2d12'][i%3],R(50,90),R(4,8),.35);
+  fxDecal(gx,gy,30,'#1c0a05',.7);fxDecal(gx,gy,48,'#0a0503',.4);fxZone(gx,gy,(r||1.5)*.9,(dmg||30)*.03,260);try{SFX.base_dmg()}catch(e){}}
+// ── RICOCHETE: bala viaja de alvo em alvo com faísca e brilho ──
+function fxHit(pr,crit,dmg){const t=pr.tgt,c=pr.color||'#fbbf24',bounce=pr.hitEnemies.size>1;
+  fxBurst(t.x,t.y,12,crit?16:6,[c,'#fff'],.12,2.5,16,3,.25,true,true);
+  if(crit){hs(2);fl(.15);fxShock(t.x,t.y,'#fde047',46,4);}
+  if(bounce){const o={x:t.x,y:t.y},n=pr.hitEnemies.size;fxAdd(10,p=>{const q=ISO(o.x,o.y);ctx.globalAlpha=1-p;ctx.strokeStyle='#e0f2fe';ctx.lineWidth=3-p*2;ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4+n,r0=6+p*8,r1=14+p*30*(i%2?.5:1);ctx.moveTo(q.x+Math.cos(a)*r0,q.y-14+Math.sin(a)*r0*.5);ctx.lineTo(q.x+Math.cos(a)*r1,q.y-14+Math.sin(a)*r1*.5);}ctx.stroke();});}}
+function fxChain(pr,nx){if(pr.type==='lightning'||pr.type==='storm')return fxArc(pr.tgt,nx);
+  const a=ISO(pr.tgt.x,pr.tgt.y),b=ISO(nx.x,nx.y),s=scr(pr.tgt.x,pr.tgt.y,-50);floatingTexts.push(new FloatingText(s.x,s.y,'RICOCHET x'+pr.hitEnemies.size,'#7dd3fc',false));
+  fxAdd(12,p=>{ctx.globalAlpha=(1-p)*.7;ctx.strokeStyle='#bae6fd';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(a.x,a.y-15);ctx.lineTo(b.x,b.y-15);ctx.stroke();ctx.setLineDash([]);});}
+function fxRicochetDemo(t){const pts=[];for(let i=0;i<5;i++)pts.push({x:t.gridX+R(-2.6,2.6),y:t.gridY+R(-2.6,2.6)});const seg=9,L=seg*(pts.length-1);
+  fxAdd(L,p=>{const f=p*(pts.length-1),i=Math.min(pts.length-2,f|0),u=f-i,A=ISO(pts[i].x,pts[i].y),B=ISO(pts[i+1].x,pts[i+1].y),x=A.x+(B.x-A.x)*u,y=A.y-15+(B.y-A.y)*u;
+    ctx.strokeStyle='#7dd3fc';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(A.x,A.y-15);ctx.lineTo(x,y);ctx.stroke();ctx.fillStyle='#fff';ctx.shadowColor='#38bdf8';ctx.shadowBlur=14;ctx.fillRect(x-4,y-4,8,8);ctx.shadowBlur=0;
+    if(u<.15){ctx.globalAlpha=1-u*6;ctx.strokeStyle='#fff';ctx.beginPath();ctx.arc(A.x,A.y-15,10+u*60,0,PI2);ctx.stroke();}});
+  pts.forEach((q,i)=>setTimeout(()=>fxBurst(q.x,q.y,12,10,['#fff','#7dd3fc'],.1,2.4,16,3,.25,true,true),i*150));}
+// ── MORTE (gibs, sangue, combo), muzzle, status ──
+const COMBOS={5:['KILLING SPREE!','#fde047'],10:['MASSACRE!','#fb923c'],20:['IMPARÁVEL!!','#f43f5e'],35:['NOSSA, QUE JOGO FODA!!!','#a855f7'],50:['LENDÁRIO!!!!','#22d3ee']};
+function fxBanner(txt,col,small){const d=document.createElement('div');d.className='fx-banner'+(small?' sm':'');d.textContent=txt;d.style.color=col||'#fde047';document.body.appendChild(d);setTimeout(()=>d.remove(),small?1300:1900);}
+function fxDeath(e){const t=ENEMY_TYPES[e.enemyType],boss=e.enemyType==='boss',st=e.statusEffects.map(s=>s.type);
+  for(let i=0,n=boss?38:13;i<n;i++)fxP(e.x,e.y,R(8,20),R(-.13,.13),R(-.13,.13),R(2,6),[t.color,'#7f1d1d','#b91c1c','#3f0d0d'][i%4],R(45,90),R(3,6),.3);
+  fxDecal(e.x,e.y,boss?34:14,'#5b0b0b',.55);
+  if(st.includes('fire')){fxBurst(e.x,e.y,10,14,['#f97316','#fde047'],.1,3,30,3,.2,true,true);fxDecal(e.x,e.y,16,'#0a0503',.5);}
+  if(st.includes('frost'))fxBurst(e.x,e.y,12,16,['#e0f2fe','#7dd3fc','#fff'],.18,4,40,4,.3);
+  if(st.includes('poison'))fxBurst(e.x,e.y,10,10,['#4ade80','#166534'],.1,2,40,4,.05,false,true);
+  hs(boss?10:1);
+  if(boss){FX.slowmo=80;fl(1);applyShake(28);fxShock(e.x,e.y,'#f97316',160,12);fxBanner('BOSS ELIMINADO!','#f97316');}
+  FX.combo++;FX.comboT=110;const c=COMBOS[FX.combo];if(c){fxBanner(c[0],c[1]);gold+=FX.combo;updateUI();}}
+function fxMuzzle(t){const p=ISO(t.gridX,t.gridY),sn=t.type==='sniper',x=p.x+Math.cos(t.angle)*16,y=p.y-30+Math.sin(t.angle)*8,a=t.angle,c=t.proj;
+  fxAdd(sn?7:4,q=>{ctx.globalAlpha=1-q;ctx.fillStyle='#fff';const s=(sn?16:9)*(1-q*.5);ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.fillRect(0,-s/4,s*1.6,s/2);ctx.fillStyle=c;ctx.fillRect(-s/3,-s/2,s/2,s);ctx.restore();});
+  fxP(t.gridX,t.gridY,30,Math.cos(a+1.6)*.04+R(-.02,.02),Math.sin(a+1.6)*.04,R(1.5,3),sn?'#ef4444':'#fbbf24',50,3,.3);
+  if(sn){applyShake(2);fxBurst(t.gridX,t.gridY,28,6,[c,'#fff'],.06,1,14,3,.2,true,true);}}
+function fxFireTick(e,ef){if(frameCount%3===0)fxP(e.x+R(-.2,.2),e.y+R(-.2,.2),R(10,24),0,0,R(.5,1.4),['#f97316','#fde047','#ef4444'][frameCount%3],R(20,35),R(2,4),-.01,true,true);
+  if(frameCount%40===0)for(const n of enemies)if(!n.dead&&n!==e&&Math.hypot(n.x-e.x,n.y-e.y)<1.2&&!n.statusEffects.some(s=>s.type==='fire')){n.statusEffects.push({type:'fire',dmg:ef.dmg*.6,duration:70});fxBurst(n.x,n.y,14,8,['#f97316','#fde047'],.1,3,20,3,.2,true,true);}}
+function fxStatusDraw(e,fz,po,bl,fi){const fc=frameCount,sh=e.statusEffects.some(s=>s.type==='shock');
+  if(fi)fxFlameDraw(0,-6,e.enemyType==='boss'?1.8:1.2,fc);
+  if(fz){ctx.fillStyle='rgba(186,230,253,.4)';ctx.fillRect(-13,-30,26,28);ctx.fillStyle='#e0f2fe';for(let i=0;i<5;i++){const a=i*1.26,x=Math.cos(a)*14,y=-16+Math.sin(a)*13;ctx.fillRect(x-2,y-5,4,10);ctx.fillRect(x-5,y-2,10,4);}}
+  if(po){ctx.fillStyle='#4ade80';for(let i=0;i<3;i++){const ph=(fc*.04+i*.33)%1;ctx.globalAlpha*=.8;ctx.fillRect(-9+i*8+Math.sin(fc*.2+i)*2,-6-ph*30,4,4);ctx.globalAlpha=1;}}
+  if(bl){ctx.fillStyle='#b91c1c';for(let i=0;i<3;i++){const ph=(fc*.06+i*.4)%1;ctx.fillRect(-8+i*8,-14+ph*18,3,4);}}
+  if(sh){ctx.strokeStyle='#fde047';ctx.lineWidth=2;for(let k=0;k<2;k++){ctx.beginPath();ctx.moveTo(R(-14,14),-34);for(let i=1;i<5;i++)ctx.lineTo(R(-14,14),-34+i*7);ctx.stroke();}}}
+// ── CARTA APLICADA: pilar de luz + demonstração do efeito ──
+function fxCardApply(t,card,bf){const col=rarityColors[card.rarity]||'#fff',gx=t.gridX,gy=t.gridY;
+  fxAdd(28,p=>{const o=ISO(gx,gy);ctx.globalAlpha=(1-p)*.9;ctx.globalCompositeOperation='lighter';const w=34*(1-p*.6),g=ctx.createLinearGradient(0,o.y-700,0,o.y);g.addColorStop(0,col+'00');g.addColorStop(1,col);ctx.fillStyle=g;ctx.fillRect(o.x-w/2,o.y-700,w,700);ctx.fillStyle='#fff';ctx.fillRect(o.x-w/6,o.y-700,w/3,700);ctx.globalCompositeOperation='source-over';},gx,gy);
+  fxShock(gx,gy,col,100,10);fxBurst(gx,gy,4,34,[col,'#fff'],.14,5,40,3,.18,true,true);fl(.3);applyShake(6);hs(3);
+  const s=scr(gx,gy,-70);floatingTexts.push(new FloatingText(s.x,s.y,card.name.toUpperCase(),col,true));
+  const nf=f=>t.flags.has(f)&&!bf.has(f);
+  setTimeout(()=>{if(nf('lightning')||nf('storm'))fxBolt(gx,gy,true);if(nf('meteor')){const tx=gx+2,ty=gy+2;fxMeteor(()=>({x:tx,y:ty}),()=>fxMeteorImpact(tx,ty,1.5,30));}
+    if(nf('fire')){fxBurst(gx,gy,6,40,['#f97316','#fde047','#ef4444'],.14,4,40,3,.1,true,true);fxZone(gx,gy,.8,0,90);}if(nf('chain'))fxRicochetDemo(t);
+    if(nf('frost'))fxBurst(gx,gy,8,40,['#e0f2fe','#7dd3fc','#fff'],.2,4,50,4,.15);if(nf('poison'))fxBurst(gx,gy,6,30,['#4ade80','#166534'],.1,2,60,4,.03,false,true);},350);}
+// ── LOOP: update / draw ──
+function fxUpdate(){FX.flash*=.86;if(FX.flash<.01)FX.flash=0;
+  for(let i=FX.list.length-1;i>=0;i--){const f=FX.list[i];if(--f.life<=0){f.end&&f.end();FX.list.splice(i,1);}}
+  for(let i=FX.parts.length-1;i>=0;i--){const p=FX.parts[i];p.gx+=p.vx;p.gy+=p.vy;p.z+=p.vz;p.vz-=p.g;if(p.z<0){p.z=0;p.vz*=-.4;p.vx*=.6;p.vy*=.6;if(Math.abs(p.vz)<.35)p.vz=0;}if(--p.life<=0)FX.parts.splice(i,1);}
+  for(let i=FX.zones.length-1;i>=0;i--){const z=FX.zones[i];if(--z.life<=0){FX.zones.splice(i,1);continue;}
+    if(z.life%10===0)for(const e of enemies)if(!e.dead&&Math.hypot(e.x-z.gx,e.y-z.gy)<z.r&&z.dmg>0&&!e.statusEffects.some(s=>s.type==='fire'))e.statusEffects.push({type:'fire',dmg:z.dmg,duration:50});
+    if(z.life%4===0)fxP(z.gx+R(-z.r,z.r)*.7,z.gy+R(-z.r,z.r)*.7,2,0,0,R(.6,1.5),['#f97316','#fde047'][z.life%2],R(18,30),R(2,4),-.01,true,true);}
+  if(FX.comboT>0){FX.comboT--;if(!FX.comboT)FX.combo=0;}const c=document.getElementById('fx-combo');if(c){const v=FX.combo>=3?FX.combo:0;if(c._v!==v){c._v=v;c.textContent=v?'x'+v+' COMBO':'';c.style.opacity=v?1:0;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop');}}}
+let _fd=null;
+function fxDrawDecals(){const k=map.length+'x'+map[0].length+waypoints.length;
+  if(!_fd||_fd.k!==k){const a=new Path2D(),b=new Path2D();for(let y=0;y<map.length;y++)for(let x=0;x<map[y].length;x++){const h=(x*73+y*151+x*y*7)%9,p=ISO(x,y);if(map[y][x]===1){if(h<4)b.rect(p.x-14+h*7,p.y-3+(h%3)*3,3,2);}else if(h<4){a.rect(p.x-18+h*9,p.y-4+(h%2)*6,2,2);if(h===0)a.rect(p.x+4,p.y+2,6,1);}}_fd={k,a,b,ox:camX,oy:camY};}
+  ctx.save();ctx.translate(camX-_fd.ox,camY-_fd.oy);ctx.fillStyle='rgba(255,255,255,.07)';ctx.fill(_fd.a);ctx.fillStyle='rgba(120,20,20,.35)';ctx.fill(_fd.b);ctx.restore();
+  for(const d of FX.decals){const o=ISO(d.gx,d.gy);ctx.globalAlpha=d.a;ctx.fillStyle=d.col;for(const q of d.pts){ctx.beginPath();ctx.ellipse(o.x+q.x,o.y+q.y,q.r,q.r*.5,0,0,PI2);ctx.fill();}}ctx.globalAlpha=1;
+  const fc=frameCount;for(const z of FX.zones){const o=ISO(z.gx,z.gy),f=Math.min(1,z.life/60);ctx.globalAlpha=f*.9;for(let k=0;k<6;k++)fxFlameDraw(o.x+Math.cos(k*1.05)*z.r*26,o.y+Math.sin(k*1.05)*z.r*13,.9,fc+k*7);}ctx.globalAlpha=1;}
+function fxDrawWorld(){ctx.save();for(const q of particles)q.draw();for(const f of FX.list){ctx.save();f.draw(1-f.life/f.max);ctx.restore();}
+  for(const p of FX.parts){const o=ISO(p.gx,p.gy),s=p.sz*(p.shrink?p.life/p.max:1);ctx.globalAlpha=Math.min(1,p.life/p.max*1.6);ctx.globalCompositeOperation=p.add?'lighter':'source-over';ctx.fillStyle=p.col;ctx.fillRect((o.x-s/2)|0,(o.y-p.z-s/2)|0,Math.max(1,s|0),Math.max(1,s|0));}ctx.restore();}
+FloatingText.prototype.draw=function(){if(NXO.dmg===false&&/^(⚡ )?\d+$/.test(this.text))return;const pop=this.life>.9?1+(this.life-.9)*7:1;ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,this.life*1.8));ctx.translate(Math.round(this.x),Math.round(this.y));ctx.scale(pop,pop);ctx.font=`${Math.round(this.size*.78)}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='#0a0410';ctx.strokeText(this.text,0,0);ctx.fillStyle=this.color;ctx.fillText(this.text,0,0);ctx.restore();};
+// ── SHADER: Pixelation + dithering + paleta + vinheta + aberração cromática ──
+let _gl=null;
+function fxInitGL(){try{const c=document.createElement('canvas');c.id='fx-gl';c.width=canvas.width;c.height=canvas.height;const gl=c.getContext('webgl',{alpha:false});if(!gl)return;
+  const mk=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o;},pr=gl.createProgram();
+  gl.attachShader(pr,mk(gl.VERTEX_SHADER,'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}'));
+  gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,`precision mediump float;uniform sampler2D t;uniform vec2 r;uniform float px,fl,ab,tm;
+float bay(vec2 p){vec2 q=mod(p,2.);float i=q.x+q.y*2.;return (i<.5?0.:i<1.5?.5:i<2.5?.75:.25)-.375;}
+void main(){vec2 f=gl_FragCoord.xy,b=floor(f/px),uv=(b+.5)*px/r;float o=ab/r.x;
+vec3 bg=mix(vec3(.035,.025,.06),vec3(.085,.05,.11),uv.y);vec4 s=texture2D(t,uv),sr=texture2D(t,uv+vec2(o,0.)),sb=texture2D(t,uv-vec2(o,0.));
+vec3 c=vec3(sr.r+bg.r*(1.-sr.a),s.g+bg.g*(1.-s.a),sb.b+bg.b*(1.-sb.a));
+float l=dot(c,vec3(.3,.59,.11));c=mix(vec3(l),c,1.28);c=(c-.5)*1.14+.5;c*=vec3(1.05,1.,1.07);
+c=floor(c*9.+.5+bay(b))/9.;vec2 q=f/r-.5;c*=1.-dot(q,q)*1.35;c*=(mod(b.y,2.)<1.?1.:.94);c+=fl*vec3(1.,.93,.75);gl_FragColor=vec4(c,1.);}`));
+  gl.linkProgram(pr);gl.useProgram(pr);const bf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);const al=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+  const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);[[gl.TEXTURE_MIN_FILTER,gl.NEAREST],[gl.TEXTURE_MAG_FILTER,gl.NEAREST],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]].forEach(([k,v])=>gl.texParameteri(gl.TEXTURE_2D,k,v));
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+  const U=n=>gl.getUniformLocation(pr,n);_gl={c,gl,r:U('r'),px:U('px'),fl:U('fl'),ab:U('ab'),tm:U('tm')};document.body.insertBefore(c,document.body.firstChild);}catch(e){console.warn('Shader pixel desativado:',e);_gl=null;}}
+function fxPost(){if(!_gl||FX.px<=1){if(_gl)_gl.c.style.display='none';canvas.style.opacity=1;return;}
+  const {c,gl}=_gl;c.style.display='block';if(c.width!==canvas.width||c.height!==canvas.height){c.width=canvas.width;c.height=canvas.height;gl.viewport(0,0,c.width,c.height);}
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);gl.uniform2f(_gl.r,c.width,c.height);gl.uniform1f(_gl.px,FX.px);gl.uniform1f(_gl.fl,Math.min(.9,FX.flash));gl.uniform1f(_gl.ab,Math.min(3,screenShake*.12+FX.flash*2.2));gl.uniform1f(_gl.tm,frameCount);gl.drawArrays(gl.TRIANGLES,0,6);
+  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();}
+function fxCyclePx(){FX.px=FX.px===2?3:FX.px===3?4:FX.px===4?1:2;const b=document.getElementById('fx-px');if(b)b.querySelector('span').textContent=FX.px>1?FX.px+'x':'OFF';if(window.nxPxChanged)nxPxChanged();}
+function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getElementById('splash');if(s)s.remove();}
+(function fxBoot(){fxInitGL();window.addEventListener('keydown',e=>{if(e.key==='p'||e.key==='P')fxCyclePx();});
+  const w=document.getElementById('audio-controls-wrapper'),b=document.createElement('div');b.id='fx-px';b.className='audio-btn targeting-trigger';b.title='Pixel shader [P]';b.innerHTML='<i class="fa-solid fa-border-all"></i><span>2x</span>';b.onclick=fxCyclePx;w&&w.appendChild(b);
+  const sp=document.getElementById('splash'),em=sp&&sp.querySelector('.sp-embers');if(em)for(let i=0;i<30;i++){const s=document.createElement('i');s.style.cssText=`left:${R(0,100)}%;animation-duration:${R(3,8)}s;animation-delay:${R(0,6)}s;width:${(R(2,5)|0)*2}px;height:${(R(2,5)|0)*2}px`;em.appendChild(s);}
+})();
 
         class Tower {
             constructor(gx, gy, key) {
@@ -1714,7 +1978,7 @@
                     let p1 = cartToIso(this.gridX, this.gridY); let p2 = cartToIso(tgt.x, tgt.y);
                     this.angle = Math.atan2(p2.y - (p1.y - 25), p2.x - p1.x);
                     if(this.cooldown === 0) {
-                        projectiles.push(new Projectile(this, tgt)); this.cooldown = Math.round(this.fireRate); this.scaleV -= 0.2; 
+                        projectiles.push(new Projectile(this, tgt)); fxMuzzle(this); this.cooldown = Math.round(this.fireRate); this.scaleV -= 0.2; 
                         
                         if (this.type === 'gatling') SFX.shoot_gatling();
                         else if (this.type === 'sniper') SFX.shoot_sniper();
@@ -1853,9 +2117,10 @@
 
                     if(ef.type === 'fire') {
                         this.hp -= ef.dmg;
-                        if(frameCount % 8 === 0) { createParticles(this.x, this.y, '#f97316', 1); createParticles(this.x, this.y, '#ef4444', 1); }
+                        fxFireTick(this, ef);
                     }
                     if(ef.type === 'frost') currentSpeedMod *= ef.slow;
+                    if(ef.type === 'shock') currentSpeedMod *= 0.25;
 
                     if(ef.type === 'poison') {
                         if(frameCount % 15 === 0) {
@@ -1895,7 +2160,7 @@
                 this.speed = this.baseSpeed * currentSpeedMod;
                 if(this.hp <= 0 && !this.dead) {
                     SFX.kill_enemy();
-                    this.dead = true;
+                    this.dead = true; fxDeath(this);
                     let goldDrop = this.goldReward;
                     
                     statGoldEarned += goldDrop;
@@ -2068,6 +2333,7 @@
                 ctx.fillText(cfg.icon, 0, -15);
                 ctx.shadowBlur = 0;
 
+                if(!this.dead) fxStatusDraw(this, isFrozen, isPoisoned, isBleeding, isOnFire);
                 if(!this.dead) {
                     let icons = [];
                     if(isPoisoned) icons.push({icon: '\uf7dd', color: '#4ade80'});
@@ -2092,7 +2358,7 @@
                 this.tower = tower; this.startX = startX !== null ? startX : tower.gridX; this.startY = startY !== null ? startY : tower.gridY;
                 this.x = this.startX; this.y = this.startY; this.tgt = tgt;
                 
-                this.dmg = tower.damage; this.color = tower.proj; this.type = tower.attackType;
+                this.dmg = tower.damage; this.color = tower.proj; this.type = tower.attackType; if(tower.flags.has('storm') && tower.flags.has('meteor') && Math.random()<0.5) this.type = 'meteor';
                 this.critChance = tower.critChance; this.critDamage = tower.critDamage;
                 this.splashRadius = tower.splashRadius; this.chainTargets = tower.chainTargets - chainHits;
                 this.goldMultiplier = tower.cappedGoldMult; this.goldPerKill = tower.goldPerKill; this.lifeSteal = tower.lifeSteal;
@@ -2106,6 +2372,12 @@
                 if(this.dead) return;
                 this.history.push({x: this.x, y: this.y}); if(this.history.length > 6) this.history.shift();
 
+                if(this.type === 'meteor') {
+                    if(!this.sky) { this.sky = 1; this.fall = 0; const me = this; fxMeteor(() => ({x: me.tgt.x, y: me.tgt.y}), null, 32); }
+                    if(++this.fall < 32) return;
+                    if(this.tgt.dead) { const rr = this.splashRadius > 0 ? this.splashRadius : 1.5; enemies.forEach(e => { if(!e.dead && Math.hypot(e.x-this.tgt.x, e.y-this.tgt.y) < rr) e.hp -= this.dmg*0.5; }); fxMeteorImpact(this.tgt.x, this.tgt.y, rr, this.dmg); this.dead = true; return; }
+                    this.x = this.tgt.x - 0.001; this.y = this.tgt.y;
+                }
                 if(this.tgt.dead) { this.dead = true; return; }
                 let dx = this.tgt.x - this.x; let dy = this.tgt.y - this.y; let dist = Math.hypot(dx, dy);
                 
@@ -2122,7 +2394,7 @@
                     if (this.tower.flags.has('plasma')) this.tower.modDmg = Math.min(5.0, this.tower.modDmg + 0.01);
 
                     this.tgt.hp -= finalDmg; this.tgt.hitTimer = 4; this.tgt.squash = 0.6; this.hitEnemies.add(this.tgt);
-                    statTotalDmgDealt += finalDmg;
+                    statTotalDmgDealt += finalDmg; fxHit(this, isCrit, finalDmg);
                     if(isCrit) statCrits++;
 
                     if(this.lifeSteal > 0) hp = Math.min(20, Math.floor(hp + this.lifeSteal));
@@ -2153,9 +2425,10 @@
                     
                     if(this.type === 'explosion' || this.type === 'nuclear' || this.type === 'meteor') {
                         applyShake(this.type === 'meteor' ? 10 : 6);
+                        if(this.type === 'meteor') fxMeteorImpact(this.tgt.x, this.tgt.y, this.splashRadius > 0 ? this.splashRadius : 1.5, this.dmg); else fxBoom(this.tgt.x, this.tgt.y, this.type === 'nuclear' ? 2.5 : (this.splashRadius || 1.2), this.type === 'nuclear' ? '#86efac' : '#f97316');
                         triggerImpactVFX(this, this.tgt.x, this.tgt.y);
                     } else if(this.type === 'lightning' || this.type === 'storm') {
-                        triggerImpactVFX(this, this.tgt.x, this.tgt.y);
+                        triggerImpactVFX(this, this.tgt.x, this.tgt.y); fxBolt(this.tgt.x, this.tgt.y, this.type === 'storm'); this.tgt.statusEffects.push({type:'shock', duration: 22});
                     } else if (this.tower.flags.size > 0) {
                         triggerImpactVFX(this, this.tgt.x, this.tgt.y);
                     } else {
@@ -2178,6 +2451,7 @@
                     if (this.chainTargets > 0) {
                         let nextTgt = enemies.find(e => !e.dead && e !== this.tgt && !this.hitEnemies.has(e) && Math.hypot(e.x - this.tgt.x, e.y - this.tgt.y) < 3);
                         if (nextTgt) {
+                            fxChain(this, nextTgt);
                             let newProj = new Projectile(this.tower, nextTgt, this.tgt.x, this.tgt.y, this.tower.chainTargets - this.chainTargets + 1);
                             newProj.hitEnemies = new Set(this.hitEnemies); projectiles.push(newProj);
                         }
@@ -2188,7 +2462,7 @@
 
             handleKill(enemy, sX, sY) {
                 SFX.kill_enemy();
-                enemy.dead = true;
+                enemy.dead = true; fxDeath(enemy);
                 statEnemiesKilled++;
                 waveEnemyHpKilled += enemy.maxHp;
                 waveEnemyHpKilled += enemy.maxHp;  
@@ -2215,7 +2489,7 @@
             draw() {
                 let pos = cartToIso(this.x, this.y); let tgtPos = cartToIso(this.tgt.x, this.tgt.y);
 
-                if(this.type === 'lightning' || this.type === 'storm') {
+                if(this.type === 'lightning' || this.type === 'storm') { return;
                     ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 4;
                     ctx.shadowColor = '#fde047'; ctx.shadowBlur = 10;
                     ctx.beginPath(); ctx.moveTo(tgtPos.x, tgtPos.y - 400); 
@@ -2225,7 +2499,7 @@
                     return;
                 }
 
-                if(this.type === 'meteor') {
+                if(this.type === 'meteor') { return;
                     let distTotal = Math.hypot(this.tgt.x - this.startX, this.tgt.y - this.startY);
                     let distAtual = Math.hypot(this.tgt.x - this.x, this.tgt.y - this.y);
                     let progress = 1 - (distAtual / distTotal);
@@ -2964,6 +3238,10 @@
             createCard("Coroa do Mercador Supremo","legendary",'<i class="fa-solid fa-crown"></i>',"O rei dos mercadores.", "Preços -25% Perm + Chance Lendária", "Nenhum", t=>{shopMods.priceReduction=Math.min(0.5,shopMods.priceReduction+0.25); shopMods.legendBonusChance+=0.05;}),
         ];
         econCards.forEach(c=>{ c.isEcon=true; arcanasPool.push(c); });
+        arcanasPool.push(createCard("Brasa Viva", "common", '<i class="fa-solid fa-fire"></i>', "Tudo que toca, queima.", "Queima + Espalha Fogo", "-5% Dano", t=>{t.flags.add('fire'); t.modDmg-=0.05;}));
+        arcanasPool.push(createCard("Ricochete Cromado", "rare", '<i class="fa-solid fa-arrows-split-up-and-left"></i>', "A bala quica de inimigo em inimigo.", "+3 Ricochetes", "-10% Dano", t=>{t.chainTargets+=3; t.flags.add('chain'); t.modDmg-=0.10;}));
+        arcanasPool.push(createCard("Pára-Raios", "epic", '<i class="fa-solid fa-bolt-lightning"></i>', "Raios caem do céu e saltam entre inimigos.", "Raio + 2 Saltos + Atordoa", "-15% Vel. Ataque", t=>{t.flags.add('lightning'); t.chainTargets+=2; t.modRate+=0.15;}));
+        arcanasPool.push(createCard("Pedra Cadente", "epic", '<i class="fa-solid fa-meteor"></i>', "Um meteorito pequeno, mas teimoso.", "Meteoro + Cratera em Chamas", "-40% Vel. Ataque", t=>{t.flags.add('meteor'); t.modDmg+=1.5; t.modRate+=0.40;}));
 
         const angelicCards = [
             createCard("Pena Luminosa", "common", '<i class="fa-solid fa-feather"></i>', "Um toque de luz divina.", "+15% Alcance", "-5% Dano", t => {t.modRange += 0.15; t.modDmg -= 0.05;}),
@@ -3461,7 +3739,7 @@
         }
 
         function startNextWave() {
-            SFX.ui_click();
+            SFX.ui_click(); fxBanner('⚔ ONDA ' + wave + ' ⚔', '#fde047');
             waveStartHp = hp; waveActive = true;
             document.getElementById('btn-start-wave').disabled = true;
             document.getElementById('btn-start-wave').innerText = "ONDA EM PROGRESSO...";
@@ -3523,7 +3801,7 @@
         }
 
         let currentTutStep = 0;
-        const totalTutSteps = 4;
+        const totalTutSteps = 5;
 
         window.addEventListener('DOMContentLoaded', () => {
             if(localStorage.getItem('nexus_tutorial_done') === 'true') {
@@ -3537,14 +3815,7 @@
             let oldStep = currentTutStep;
             currentTutStep += dir;
 
-            if (currentTutStep >= totalTutSteps) {
-                isTutorialActive = false; 
-                localStorage.setItem('nexus_tutorial_done', 'true'); 
-                let overlay = document.getElementById('tutorial-overlay');
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 500);
-                return;
-            }
+            if (currentTutStep >= totalTutSteps) { hideTutorial(); return; }
 
             document.getElementById(`tut-step-${oldStep}`).classList.remove('active');
             if (dir > 0) { document.getElementById(`tut-step-${oldStep}`).classList.add('exit-left'); }
@@ -3575,7 +3846,7 @@
             let btnPrev = document.getElementById('tut-btn-prev');
             let btnNext = document.getElementById('tut-btn-next');
             btnPrev.style.visibility = currentTutStep === 0 ? 'hidden' : 'visible';
-            btnNext.innerText = currentTutStep === totalTutSteps - 1 ? 'Jogar Agora' : 'Próximo';
+            btnNext.innerText = currentTutStep === totalTutSteps - 1 ? (window.__tutFromMenu ? 'Entendi' : 'Jogar Agora') : 'Próximo';
             if(currentTutStep === totalTutSteps - 1) {
                 btnNext.style.background = '#16a34a'; btnNext.style.color = '#fff'; btnNext.style.boxShadow = '0 5px 15px rgba(22, 163, 74, 0.4)';
             } else {
@@ -3585,13 +3856,7 @@
 
         function skipTutorial() {
             SFX.ui_click();
-            isTutorialActive = false; 
-            localStorage.setItem('nexus_tutorial_done', 'true'); 
-            let overlay = document.getElementById('tutorial-overlay');
-            if (overlay) {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 500);
-            }
+            hideTutorial();
         }
 
         function initMenu() {
@@ -3753,8 +4018,8 @@
         });
 
         window.addEventListener('mousedown', e => {
-            if(isTutorialActive || gameOver) { return; }
-            if(gameOver) { return; }
+            if(menuActive || isTutorialActive || gameOver) { return; }
+            if(e.target && e.target.closest && e.target.closest('#splash,.nx-modal,#tutorial-overlay,#giveup-overlay,#gameover-overlay,#lootbox-modal,#shop-overlay,#hand-container,#audio-controls-wrapper,#cheat-panel,#cat-modal')) return;
             if(e.button !== 0) return; 
             if(isShopOpen || dragElement || e.clientX < 300) return;
             if(document.getElementById('giveup-overlay') && document.getElementById('giveup-overlay').style.display === 'flex') return;
@@ -3804,7 +4069,7 @@
             if (dt > 250) dt = STEP_MS;              // voltou de outra aba / travou: não "acelera" o jogo
             _acc += dt;
             let steps = 0;
-            while (_acc >= STEP_MS && steps < 3) { gameUpdate(); _acc -= STEP_MS; steps++; }
+            while (_acc >= STEP_MS && steps < 3) { if (!menuActive) gameUpdate(); _acc -= STEP_MS; steps++; }
             if (_acc >= STEP_MS) _acc = 0;           // PC não acompanha: o jogo desacelera em vez de entrar em espiral
             if (steps > 0 && (!isShopOpen || (++_shopSkip % 3 === 0))) gameRender();   // loja aberta = só 1/3 dos frames (fundo quase invisível)
             adaptQuality(dt);
@@ -4025,7 +4290,9 @@
                 camX += (mx / zoom) - (mx / prevZoom);
                 camY += (my / zoom) - (my / prevZoom);
             }
-            frameCount++; towers.forEach(t => t.updateVisuals());
+            if(FX.hitstop>0){FX.hitstop--; fxUpdate(); return;}
+            if(FX.slowmo>0 && (FX.slowmo--&1)) return;
+            frameCount++; fxUpdate(); towers.forEach(t => t.updateVisuals());
 
             if(!isShopOpen && waveActive) {
                 spawnTimer++;
@@ -4058,13 +4325,13 @@
             ctx.translate(canvas.width/2, canvas.height/2); ctx.scale(zoom, zoom); ctx.translate(-canvas.width/2, -canvas.height/2);
 
             drawMapTiles(hoverGridX, hoverGridY);
+            fxDrawDecals();
 
             renderQueue.length = 0;
             getLocks().forEach(l => { renderQueue.push({ type: 'lock', x: l.gx, y: l.gy, dir: l.dir, d: l.gx + l.gy, o: 0 }); });
             for (let i = 0; i < towers.length; i++) { const t = towers[i]; renderQueue.push({ type: 'tower', x: t.gridX, y: t.gridY, obj: t, d: t.gridX + t.gridY, o: 3 }); }
             for (let i = 0; i < enemies.length; i++) { const e = enemies[i]; if (e.yOffset <= 30) renderQueue.push({ type: 'enemy', x: e.x, y: e.y, obj: e, d: e.x + e.y, o: 2 }); }
-            for (let i = 0; i < particles.length; i++) { const p = particles[i]; renderQueue.push({ type: 'particle', x: p.gx, y: p.gy, obj: p, d: p.gx + p.gy, o: 1 }); }
-            renderQueue.sort(_rqCmp);
+                        renderQueue.sort(_rqCmp);
 
             renderQueue.forEach(item => {
                 if(item.type === 'lock') {
@@ -4173,7 +4440,7 @@
                 }
             }
 
-            projectiles.forEach(p => p.draw()); 
+            projectiles.forEach(p => p.draw()); fxDrawWorld();
 
             if(confirmedDropTower) {
                 dropConfirmPulse += 0.10;
@@ -4211,6 +4478,7 @@
             }
             ctx.restore(); ctx.setTransform(1,0,0,1,0,0);
             uiParticles.forEach(p => p.draw()); floatingTexts.forEach(t => t.draw());
+            fxPost();
         }
 
         function initBattleRays() {
@@ -4466,6 +4734,273 @@
             if (!volCtrl.contains(e.target)) sliderSfxCont.classList.remove('visible');
             if (!musicCtrl.contains(e.target)) sliderMusicCont.classList.remove('visible');
         });
+    </script>
+    <div id="nx-modal" class="nx-modal"><div class="nx-box">
+        <div class="nx-head"><span id="nx-title"></span><button class="nx-x" id="nx-x">✕</button></div>
+        <div id="nx-body"></div>
+    </div></div>
+    <div id="fx-over"></div>
+    <script>
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const SAVE_KEY = 'nexus_save_v1', LIFE_KEY = 'nexus_life', OPT_KEY = 'nexus_opts';
+    const CREDITS_AUTHOR = 'Leonardo Macêdo';   // ← troque pelo seu nome / estúdio
+
+    const LS = {
+        get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+        set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+        del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+    };
+    const nf = n => Math.floor(n || 0).toLocaleString('pt-BR');
+    const fmtTime = s => { s = Math.floor(s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h ${m}min` : `${m}min ${s % 60}s`; };
+    const click = () => { try { SFX.ui_click(); } catch (e) {} };
+
+    /* ─────────────── OPÇÕES (persistentes) ─────────────── */
+    const ms = $('music-slider'), vs = $('volume-slider');
+    function saveOpts() {
+        NXO.music = +ms.value; NXO.sfx = +vs.value; NXO.px = FX.px;
+        LS.set(OPT_KEY, { music: NXO.music, sfx: NXO.sfx, px: NXO.px, shake: NXO.shake, dmg: NXO.dmg, flash: NXO.flash });
+    }
+    ms.addEventListener('change', saveOpts); vs.addEventListener('change', saveOpts);
+    ms.value = NXO.music; ms.dispatchEvent(new Event('input'));
+    vs.value = NXO.sfx;   vs.dispatchEvent(new Event('input'));
+    FX.px = NXO.px;
+
+    window.nxPxChanged = function () {
+        const o = $('fx-over');
+        if (o) { o.style.setProperty('--px', FX.px + 'px'); o.style.display = FX.px > 1 ? 'block' : 'none'; }
+        const sp = document.querySelector('#fx-px span'); if (sp) sp.textContent = FX.px > 1 ? FX.px + 'x' : 'OFF';
+        saveOpts();
+        if ($('nx-modal').classList.contains('open') && $('nx-title').dataset.k === 'opts') refreshOpts();
+    };
+
+    /* ─────────────── MODAL GENÉRICO ─────────────── */
+    function openModal(title, html, key) {
+        const t = $('nx-title'); t.textContent = title; t.dataset.k = key || '';
+        $('nx-body').innerHTML = html; $('nx-body').scrollTop = 0;
+        $('nx-modal').classList.add('open');
+    }
+    function closeModal() { $('nx-modal').classList.remove('open'); $('nx-title').dataset.k = ''; }
+    $('nx-modal').addEventListener('mousedown', e => { if (e.target === $('nx-modal')) closeModal(); });
+    $('nx-x').addEventListener('click', () => { click(); closeModal(); });
+
+    function confirmBox(title, text, yesLabel, onYes) {
+        openModal(title, `<p>${text}</p><div class="nx-actions"><button class="nx-btn" id="nx-no">CANCELAR</button><button class="nx-btn danger" id="nx-yes">${yesLabel}</button></div>`, 'confirm');
+        $('nx-no').onclick = () => { click(); closeModal(); };
+        $('nx-yes').onclick = () => { click(); closeModal(); onYes(); };
+    }
+
+    /* ─────────────── ESTATÍSTICAS ─────────────── */
+    const LIFE0 = { games: 0, bestWave: 0, waves: 0, kills: 0, dmg: 0, dmgTaken: 0, towers: 0, cards: 0, gold: 0, crits: 0, rerolls: 0, time: 0 };
+    const life = () => Object.assign({}, LIFE0, LS.get(LIFE_KEY, {}));
+    let sessAcc = 0;
+    function flushTime() { if (!sessAcc) return; const l = life(); l.time += sessAcc; sessAcc = 0; LS.set(LIFE_KEY, l); }
+    setInterval(() => { if (nxStarted && !menuActive && !gameOver && !document.hidden) { sessAcc++; if (sessAcc >= 15) flushTime(); } }, 1000);
+
+    function commitRun() {
+        const l = life();
+        l.games++; l.bestWave = Math.max(l.bestWave, wave); l.waves += Math.max(0, wave - 1);
+        l.kills += statEnemiesKilled; l.dmg += statTotalDmgDealt; l.dmgTaken += statTotalDmgTaken;
+        l.towers += statTowersBuilt; l.cards += statCardsUsed; l.gold += statGoldEarned; l.crits += statCrits; l.rerolls += statRerolls;
+        l.time += sessAcc; sessAcc = 0;
+        LS.set(LIFE_KEY, l);
+    }
+    const _sg = showGameOverScreen;
+    showGameOverScreen = function () { try { commitRun(); } catch (e) { console.warn(e); } LS.del(SAVE_KEY); return _sg.apply(this, arguments); };
+
+    const stat = (v, l) => `<div class="nx-stat"><b>${v}</b><span>${l}</span></div>`;
+    function showStats() {
+        flushTime();
+        const l = life(), hs = LS.get('nexus_highscore', 0), hist = LS.get('nexus_history', []);
+        let h = '';
+        if (nxStarted && !gameOver) {
+            h += `<div class="nx-sec">PARTIDA ATUAL</div><div class="nx-grid">${stat(wave, 'Onda')}${stat(nf(statEnemiesKilled), 'Inimigos derrotados')}${stat(nf(statTotalDmgDealt), 'Dano causado')}${stat(statTowersBuilt, 'Torres construídas')}${stat(statCardsUsed, 'Cartas usadas')}${stat(nf(statGoldEarned) + 'g', 'Ouro ganho')}</div>`;
+        }
+        h += `<div class="nx-sec">HISTÓRICO GERAL</div><div class="nx-grid">${stat(nf(hs), 'Recorde de score')}${stat(l.bestWave || '-', 'Melhor onda')}${stat(l.games, 'Partidas jogadas')}${stat(nf(l.kills), 'Inimigos derrotados')}${stat(nf(l.dmg), 'Dano total causado')}${stat(nf(l.dmgTaken), 'Dano sofrido')}${stat(nf(l.towers), 'Torres construídas')}${stat(nf(l.cards), 'Cartas usadas')}${stat(nf(l.gold) + 'g', 'Ouro ganho')}${stat(nf(l.crits), 'Críticos')}${stat(nf(l.rerolls), 'Rerolls na loja')}${stat(fmtTime(l.time), 'Tempo jogado')}</div>`;
+        h += `<div class="nx-sec">ÚLTIMAS PARTIDAS</div>`;
+        h += hist.length ? hist.map(m => `<div class="nx-hist"><span><b style="color:#fde047">${nf(m.score)}</b> · <span style="color:${m.color}">${m.buildClass}</span> (onda ${m.wave})</span><span style="color:#71717a">${m.date}</span></div>`).join('') : '<span style="color:#71717a">Nenhuma partida registrada ainda.</span>';
+        openModal('ESTATÍSTICAS', h, 'stats');
+    }
+
+    /* ─────────────── OPÇÕES (UI) ─────────────── */
+    const onoff = v => v ? 'ON' : 'OFF';
+    function optsHTML() {
+        const px = [1, 2, 3, 4].map(n => `<button class="nx-btn ${FX.px === n ? 'on' : ''}" data-px="${n}">${n === 1 ? 'OFF' : n + 'x'}</button>`).join('');
+        const tg = (k, t, d) => `<div class="nx-row"><label>${t}<small>${d}</small></label><button class="nx-btn ${NXO[k] ? 'on' : ''}" data-tg="${k}">${onoff(NXO[k])}</button></div>`;
+        return `<div class="nx-sec">ÁUDIO</div>
+            <div class="nx-row"><label>Música</label><input type="range" id="nx-mus" min="0" max="1" step="0.01" value="${ms.value}"></div>
+            <div class="nx-row"><label>Efeitos sonoros</label><input type="range" id="nx-sfx" min="0" max="1" step="0.01" value="${vs.value}"></div>
+            <div class="nx-sec">VÍDEO</div>
+            <div class="nx-row"><label>Filtro pixel-art<small>Atalho: tecla P</small></label><div class="nx-seg">${px}</div></div>
+            ${tg('shake', 'Tremor de tela', 'Desligue se a câmera tremendo incomoda')}
+            ${tg('dmg', 'Números de dano', 'Os números que sobem ao acertar inimigos')}
+            ${tg('flash', 'Flashes de luz', 'Clarões de explosões e raios (fotossensibilidade)')}
+            <div class="nx-row"><label>Tela cheia</label><button class="nx-btn" id="nx-fs">ALTERNAR</button></div>
+            <div class="nx-sec">DADOS</div>
+            <div class="nx-row"><label>Apagar progresso<small>Recorde, estatísticas, histórico e jogo salvo</small></label><button class="nx-btn danger" id="nx-wipe">APAGAR</button></div>`;
+    }
+    function bindOpts() {
+        const b = $('nx-body');
+        $('nx-mus').oninput = e => { ms.value = e.target.value; ms.dispatchEvent(new Event('input')); };
+        $('nx-mus').onchange = saveOpts;
+        $('nx-sfx').oninput = e => { vs.value = e.target.value; vs.dispatchEvent(new Event('input')); };
+        $('nx-sfx').onchange = () => { saveOpts(); click(); };
+        b.querySelectorAll('[data-px]').forEach(x => x.onclick = () => { click(); FX.px = +x.dataset.px; nxPxChanged(); });
+        b.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { click(); NXO[x.dataset.tg] = !NXO[x.dataset.tg]; saveOpts(); refreshOpts(); });
+        $('nx-fs').onclick = () => { click(); if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); };
+        $('nx-wipe').onclick = () => { click(); confirmBox('APAGAR PROGRESSO?', 'Isso apaga recorde, estatísticas, histórico e o jogo salvo. Não dá para desfazer.', 'APAGAR TUDO', () => { ['nexus_highscore', 'nexus_history', LIFE_KEY, SAVE_KEY].forEach(LS.del); refreshMenu(); showOpts(); }); };
+    }
+    function refreshOpts() { const sc = $('nx-body').scrollTop; $('nx-body').innerHTML = optsHTML(); bindOpts(); $('nx-body').scrollTop = sc; }
+    function showOpts() { openModal('OPÇÕES', optsHTML(), 'opts'); bindOpts(); }
+
+    /* ─────────────── CRÉDITOS ─────────────── */
+    function showCredits() {
+        openModal('CRÉDITOS', `<div class="nx-credits">
+            <div class="big">NEXUS<br>HEXA GUARD</div>
+            <p>Tower defense isométrico com cartas e evolução.</p>
+            <div class="nx-sec" style="margin-top:22px">CRIADO POR</div><p>${CREDITS_AUTHOR}</p>
+            <div class="nx-sec">TECNOLOGIA</div><p>HTML5 Canvas 2D · WebGL (shader pixel-art)<br>Web Audio API</p>
+            <div class="nx-sec">FONTE &amp; ÍCONES</div><p>Press Start 2P — CodeMan38 (Google Fonts)<br>Font Awesome 6 Free</p>
+            <div class="nx-sec">OBRIGADO POR JOGAR</div><p style="color:#fb923c">Boa sorte defendendo a base!</p></div>`, 'credits');
+    }
+
+    /* ─────────────── TUTORIAL = "COMO JOGAR" ─────────────── */
+    function resetTut() {
+        currentTutStep = 0;
+        document.querySelectorAll('.tut-step').forEach((el, i) => { el.classList.remove('exit-left'); el.classList.toggle('active', i === 0); });
+        for (let i = 0; i < totalTutSteps; i++) {
+            const d = $('dot-' + i); if (!d) continue;
+            d.className = 'tut-step-indicator' + (i === 0 ? ' active' : ''); d.innerHTML = i + 1;
+            if (d.nextElementSibling && d.nextElementSibling.classList.contains('tut-line')) d.nextElementSibling.classList.remove('completed');
+        }
+        $('tut-btn-prev').style.visibility = 'hidden';
+        const n = $('tut-btn-next'); n.innerText = 'Próximo'; n.style.background = '#eab308'; n.style.color = '#000'; n.style.boxShadow = '0 4px 10px rgba(234,179,8,.3)';
+    }
+    window.showTutorial = function (fromMenu) {
+        const o = $('tutorial-overlay'); if (!o) return;
+        window.__tutFromMenu = !!fromMenu; resetTut();
+        o.style.display = 'flex'; o.style.zIndex = fromMenu ? '100002' : ''; void o.offsetWidth; o.style.opacity = '1';
+        if (!fromMenu) isTutorialActive = true;
+    };
+    window.hideTutorial = function () {
+        isTutorialActive = false; LS.set('nexus_tutorial_done', true);
+        const o = $('tutorial-overlay'); if (!o) return;
+        o.style.opacity = '0';
+        setTimeout(() => { o.style.display = 'none'; o.style.zIndex = ''; window.__tutFromMenu = false; }, 400);
+    };
+
+    /* ─────────────── SALVAR / CARREGAR ─────────────── */
+    const T_SKIP = new Set(['effects', 'flags', 'cooldown', 'angle', 'scale', 'scaleV']);
+    function serTower(t) {
+        const p = {};
+        Object.keys(t).forEach(k => {
+            if (T_SKIP.has(k) || (k[0] === '_' && k !== '_critChance')) return;
+            const v = t[k];
+            if ((typeof v === 'number' && Number.isFinite(v)) || typeof v === 'string' || typeof v === 'boolean') p[k] = v;
+        });
+        return { p, flags: [...t.flags], effects: t.effects.map(c => c.name) };
+    }
+    function saveGame() {
+        if (!nxStarted || gameOver || waveActive || isShopOpen) return false;
+        if (enemies.some(e => !e.dead)) return false;
+        if (wave === 1 && towers.length === 0 && playerHand.length === 0) return false;
+        LS.set(SAVE_KEY, {
+            v: 1, t: Date.now(), hp, gold, wave, sellTokens, expansionsUsed, alignmentLight, alignmentDark, adaptiveMult, rerollCost, selectedTowerKey,
+            map, waypoints, camX, camY, zoom: zoomTarget, hand: playerHand.map(c => c.name), shopMods: Object.assign({}, shopMods),
+            stats: { statTotalDmgDealt, statTotalDmgTaken, statEnemiesKilled, statTowersBuilt, statCardsUsed, statGoldEarned, statCrits, statRerolls },
+            towers: towers.map(serTower)
+        });
+        return true;
+    }
+    function loadGame(d) {
+        hp = d.hp; gold = d.gold; wave = d.wave; sellTokens = d.sellTokens; expansionsUsed = d.expansionsUsed;
+        alignmentLight = d.alignmentLight; alignmentDark = d.alignmentDark; adaptiveMult = d.adaptiveMult; rerollCost = d.rerollCost;
+        if (towerTypes[d.selectedTowerKey]) selectedTowerKey = d.selectedTowerKey;
+        map = d.map; waypoints = d.waypoints; mapHeight = map.length; mapWidth = map[0].length;
+        camX = d.camX; camY = d.camY; zoom = zoomTarget = d.zoom;
+        Object.assign(shopMods, d.shopMods);
+        const byName = n => arcanasPool.find(c => c.name === n);
+        playerHand = d.hand.map(byName).filter(Boolean);
+        towers.length = 0; soldTowers.length = 0; enemies.length = 0; projectiles.length = 0; particles.length = 0; floatingTexts.length = 0;
+        d.towers.forEach(s => {
+            const t = new Tower(s.p.gridX, s.p.gridY, s.p.type);
+            Object.assign(t, s.p);
+            t.flags = new Set(s.flags); t.effects = s.effects.map(byName).filter(Boolean);
+            t.scale = 1; t.scaleV = 0; t._vfxCache = null; towers.push(t);
+        });
+        const st = d.stats || {};
+        statTotalDmgDealt = st.statTotalDmgDealt || 0; statTotalDmgTaken = st.statTotalDmgTaken || 0; statEnemiesKilled = st.statEnemiesKilled || 0;
+        statTowersBuilt = st.statTowersBuilt || 0; statCardsUsed = st.statCardsUsed || 0; statGoldEarned = st.statGoldEarned || 0;
+        statCrits = st.statCrits || 0; statRerolls = st.statRerolls || 0;
+        waveActive = false; isShopOpen = false; gameOverAlpha = 0; waveStartHp = hp;
+        spawnQueue = buildSpawnQueue(wave); enemiesToSpawn = spawnQueue.length; spawnTimer = 0;
+        const b = $('btn-start-wave'); b.disabled = false; b.innerText = wave > 1 ? 'INICIAR ONDA ' + wave : 'INICIAR ONDA';
+        updateUI(); renderHand(); initMenu();
+    }
+    setInterval(saveGame, 3000);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { saveGame(); flushTime(); } });
+    window.addEventListener('beforeunload', () => { saveGame(); flushTime(); });
+
+    window.nxRetry = function () { LS.del(SAVE_KEY); sessionStorage.setItem('nexus_autostart', '1'); location.reload(); };
+    function newGame() { LS.del(SAVE_KEY); flushTime(); sessionStorage.setItem('nexus_autostart', '1'); location.reload(); }
+
+    /* ─────────────── MENU PRINCIPAL ─────────────── */
+    const splash = () => $('splash');
+    function refreshMenu() {
+        const s = splash(); if (!s) return;
+        const save = LS.get(SAVE_KEY, null), inGame = nxStarted && !gameOver;
+        const main = s.querySelector('[data-act=play]'), nw = s.querySelector('[data-act=new]'), st = s.querySelector('.sp-status');
+        if (inGame) { main.textContent = '▶ CONTINUAR'; nw.style.display = ''; st.textContent = `ONDA ${wave} · ${nf(gold)} OURO`; }
+        else if (save) { main.textContent = '▶ CONTINUAR'; nw.style.display = ''; st.textContent = `JOGO SALVO: ONDA ${save.wave} · ${nf(save.gold)} OURO`; }
+        else { main.textContent = '▶ JOGAR'; nw.style.display = 'none'; st.textContent = ''; }
+    }
+    function closeMenu() { const s = splash(); menuActive = false; if (s) s.classList.add('out'); }
+    function openMenu() {
+        const s = splash(); if (!s || !nxStarted || gameOver || menuActive || dragElement) return;
+        menuActive = true; flushTime(); refreshMenu(); s.classList.remove('out');
+    }
+    function play() {
+        if (!nxStarted) { const save = LS.get(SAVE_KEY, null); if (save) { try { loadGame(save); } catch (e) { console.error('Falha ao carregar save:', e); LS.del(SAVE_KEY); } } nxStarted = true; }
+        closeMenu();
+    }
+    document.addEventListener('click', e => {
+        const b = e.target.closest && e.target.closest('#splash [data-act]'); if (!b) return;
+        click();
+        switch (b.dataset.act) {
+            case 'play': play(); break;
+            case 'new': (nxStarted || LS.get(SAVE_KEY, null))
+                ? confirmBox('NOVO JOGO?', 'O progresso atual (e o jogo salvo) será perdido.', 'COMEÇAR DE NOVO', newGame) : newGame(); break;
+            case 'stats': showStats(); break;
+            case 'how': showTutorial(true); break;
+            case 'opts': showOpts(); break;
+            case 'credits': showCredits(); break;
+        }
+    });
+    window.addEventListener('keydown', e => {
+        if (e.key !== 'Escape') return;
+        if ($('nx-modal').classList.contains('open')) { closeModal(); return; }
+        const tut = $('tutorial-overlay');
+        if (window.__tutFromMenu && tut && tut.style.display !== 'none') { hideTutorial(); return; }
+        if (menuActive) { if (nxStarted) closeMenu(); } else openMenu();
+    });
+
+    // botão de menu ao lado dos controles de áudio
+    const wrap = $('audio-controls-wrapper');
+    if (wrap) { const b = document.createElement('div'); b.id = 'nx-menu-btn'; b.className = 'audio-btn'; b.title = 'Menu [ESC]'; b.innerHTML = '<i class="fa-solid fa-bars"></i>'; b.onclick = () => { click(); openMenu(); }; wrap.insertBefore(b, wrap.firstChild); }
+
+    // overlay do filtro pixel sempre por último no <body>
+    const ov = $('fx-over'); document.body.appendChild(ov); nxPxChanged();
+    new MutationObserver(() => { if (document.body.lastElementChild !== ov) document.body.appendChild(ov); }).observe(document.body, { childList: true });
+
+    // reinício direto (NOVO JOGO / TENTAR NOVAMENTE) pula o menu
+    if (sessionStorage.getItem('nexus_autostart')) {
+        sessionStorage.removeItem('nexus_autostart');
+        nxStarted = true; menuActive = false;
+        const s = splash(); if (s) { s.style.transition = 'none'; s.classList.add('out'); setTimeout(() => s.style.transition = '', 100); }
+    }
+    refreshMenu();
+})();
     </script>
 </body>
 </html>
