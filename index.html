@@ -1720,7 +1720,7 @@
         function previewCardStats(tower, card) {
             if(!card || !card.apply) return { range: tower.range, damage: tower.damage, fireRate: tower.fireRate };
             let clone = {
-                isPreview: true, 
+                isPreview: true, modDur: tower.modDur || 1, modDecay: tower.modDecay || 1, durRegen: tower.durRegen || 0, dur: tower.dur, 
                 type: tower.type, level: tower.level,
                 baseDmg: tower.baseDmg, baseRate: tower.baseRate, baseRange: tower.baseRange,
                 modDmg: tower.modDmg, modRate: tower.modRate, modRange: tower.modRange,
@@ -1793,6 +1793,11 @@
                         hp += 5; floatingTexts.push(new FloatingText(screenX, screenY, "+5 Vida", '#22c55e'));
                         createParticles(t.gridX, t.gridY, '#22c55e', 30); updateUI(); playerHand.splice(draggingCardIndex, 1);
                     } else {
+                        if (t.dur <= 0) {
+                            SFX.ui_error();
+                            floatingTexts.push(new FloatingText(screenX, screenY, "TORRE QUEBRADA", '#ef4444')); applyShake(4);
+                            returnCardToHand(); return;
+                        }
                         if (t.effects.length >= 3) { 
                             SFX.ui_error();
                             floatingTexts.push(new FloatingText(screenX, screenY, "MÁXIMO 3 EFEITOS", '#ef4444')); applyShake(4); 
@@ -1901,7 +1906,7 @@ function fxRicochetDemo(t){const pts=[];for(let i=0;i<5;i++)pts.push({x:t.gridX+
     if(u<.15){ctx.globalAlpha=1-u*6;ctx.strokeStyle='#fff';ctx.beginPath();ctx.arc(A.x,A.y-15,10+u*60,0,PI2);ctx.stroke();}});
   pts.forEach((q,i)=>setTimeout(()=>fxBurst(q.x,q.y,12,10,['#fff','#7dd3fc'],.1,2.4,16,3,.25,true,true),i*150));}
 // ── MORTE (gibs, sangue, combo), muzzle, status ──
-const COMBOS={5:['KILLING SPREE!','#fde047'],10:['MASSACRE!','#fb923c'],20:['IMPARÁVEL!!','#f43f5e'],35:['INCRÍVEL!!!','#a855f7'],50:['LENDÁRIO!!!!','#22d3ee']};
+const COMBOS={5:['KILLING SPREE!','#fde047'],10:['MASSACRE!','#fb923c'],20:['IMPARÁVEL!!','#f43f5e'],35:['NOSSA, QUE JOGO FODA!!!','#a855f7'],50:['LENDÁRIO!!!!','#22d3ee']};
 function fxBanner(txt,col,small){const d=document.createElement('div');d.className='fx-banner'+(small?' sm':'');d.textContent=txt;d.style.color=col||'#fde047';document.body.appendChild(d);setTimeout(()=>d.remove(),small?1300:1900);}
 function fxDeath(e){const t=ENEMY_TYPES[e.enemyType],boss=e.enemyType==='boss',st=e.statusEffects.map(s=>s.type);
   for(let i=0,n=boss?38:13;i<n;i++)fxP(e.x,e.y,R(8,20),R(-.13,.13),R(-.13,.13),R(2,6),[t.color,'#7f1d1d','#b91c1c','#3f0d0d'][i%4],R(45,90),R(3,6),.3);
@@ -2042,7 +2047,7 @@ const _fxCA=fxCardApply;fxCardApply=function(t,card,bf){_fxCA(t,card,bf);const n
 // ── Rastros nas balas + auras passivas nas torres (por efeito aplicado) ──
 const _fxUpd=fxUpdate;fxUpdate=function(){_fxUpd();const fc=frameCount;
   for(const p of projectiles){if(p.dead||fc%2||p.type==='lightning'||p.type==='storm'||p.type==='meteor')continue;const f=[...p.tower.flags].find(x=>FXC[x]);if(f)fxP(p.x,p.y,16,R(-.01,.01),R(-.01,.01),R(.2,1),FXC[f][fc%3],R(10,18),f==='void'||f==='plasma'?4:3,-.01,true,true);}
-  for(const t of towers){if((fc+t.gridX*3+t.gridY)%7)continue;const fl2=[...t.flags].filter(x=>FXC[x]);if(!fl2.length)continue;const f=fl2[(fc/7|0)%fl2.length],c=FXC[f],a=FXA[f]||[.5,0],g=R(0,PI2);
+  for(const t of towers){if((fc+t.gridX*3+t.gridY)%7||t.dur<=0)continue;const fl2=[...t.flags].filter(x=>FXC[x]);if(!fl2.length)continue;const f=fl2[(fc/7|0)%fl2.length],c=FXC[f],a=FXA[f]||[.5,0],g=R(0,PI2);
     if(f==='void'||f==='plasma'){const d=.55;fxP(t.gridX+Math.cos(g)*d,t.gridY+Math.sin(g)*d,R(20,40),-Math.cos(g)*d/20,-Math.sin(g)*d/20,0,c[fc%3],20,3,0,true,true);}
     else fxP(t.gridX+R(-.3,.3),t.gridY+R(-.3,.3),f==='frost'||f==='bleed'?R(42,60):R(14,38),0,0,a[0]*R(.5,1.2),c[fc%3],R(20,34),3,a[1],true,true);}};
 (function(){const o=fxDrawWorld;fxDrawWorld=function(){ctx.save();fxDrawZones();for(const e of enemies)if(!e.dead&&e.yOffset<=30)fxStatusTop(e);ctx.restore();o();};})();
@@ -2050,6 +2055,16 @@ const _fxUpd=fxUpdate;fxUpdate=function(){_fxUpd();const fc=frameCount;
 const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);const d=FX.decals[FX.decals.length-1];d.life=r>40?2400:1500;if(FX.decals.length>100)FX.decals.shift();};
 (function(){const u=fxUpdate;fxUpdate=function(){u();for(let i=FX.decals.length-1;i>=0;i--)if(--FX.decals[i].life<=0)FX.decals.splice(i,1);};})();
 
+        // ── DURABILIDADE ──
+        // Toda torre desgasta durante o combate. Quanto mais efeitos (cartas) ela tem, mais rápido quebra.
+        // Em 0 a torre fica QUEBRADA (não atira, perde VFX) até ser consertada (clique nela).
+        const DUR = {
+            base: 100,          // durabilidade máxima base (cartas alteram via modDur)
+            wear: 0.25,         // desgaste base por segundo de combate (~400 s para uma torre sem efeitos)
+            perEffect: 0.45,    // +45% de desgaste por efeito: 3 efeitos = 2,35x (~170 s)
+            warnPct: 0.25,      // aviso de "durabilidade baixa" abaixo de 25%
+            repairExtra: 10     // conserto = custo normal da torre + 10 de ouro
+        };
         class Tower {
             constructor(gx, gy, key) {
                 this.gridX = gx; this.gridY = gy; this.type = key;
@@ -2060,9 +2075,13 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 this.modDmg = 1.0; this.modRate = 1.0; this.modRange = 1.0;
                 this._critChance = 0; this.critDamage = 1.5; this.splashRadius = 0; this.chainTargets = 0; 
                 this.projectileSpeed = 1.0; this.goldMultiplier = 1.0; this.goldPerKill = 0; this.lifeSteal = 0;
+                this.dur = DUR.base; this.modDur = 1.0; this.modDecay = 1.0; this.durRegen = 0;
                 this.flags = new Set(); this.attackType = 'normal'; this.scale = 0.1; this.scaleV = 0.5; 
             }
             get cappedGoldMult() { return Math.min(3.0, this.goldMultiplier); }
+            get maxDur() { return Math.max(20, Math.round(DUR.base * Math.max(0.3, this.modDur))); }
+            get broken() { return this.dur <= 0; }
+            get wearRate() { return DUR.wear * (1 + DUR.perEffect * this.effects.length) * Math.max(0.1, this.modDecay) - (this.durRegen || 0); }   // por segundo (negativo = regenera)
             get damage() { let d = (this.baseDmg * this.level) * Math.max(0, this.modDmg); if (this.flags.has('arcane')) d += this.level * 5; return d; }
             get range() { return (this.baseRange + (this.level*0.2)) * this.modRange; }
             get fireRate() { return Math.max(10, Math.round((this.baseRate * this.modRate) - (this.level * 1.5))); }
@@ -2070,7 +2089,9 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             set critChance(v) { this._critChance = v; }
 
             levelUp(card) { 
-                if(card.apply) card.apply(this);  
+                const _m0 = this.maxDur, _d0 = this.dur;
+                if(card.apply) card.apply(this);
+                { const _m1 = this.maxDur; this.dur = Math.max(0.01, Math.min(_m1, _d0 / _m0 * _m1 + (this.dur - _d0))); }  
                 this.level++; this.effects.push(card);
                 if(this.flags.has('lightning') && this.flags.has('storm')) this.chainTargets += 2;
                 if(this.flags.has('explosion') && this.flags.has('nuclear')) this.splashRadius += 1.5;
@@ -2096,6 +2117,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             updateVisuals() { this.scaleV += (1.0 - this.scale) * 0.15; this.scaleV *= 0.8; this.scale += this.scaleV; }
 
             updateCombat() {
+                if (this.dur <= 0) return;   // quebrada
                 if(this.cooldown > this.fireRate) this.cooldown = this.fireRate;
                 if(this.cooldown > 0) this.cooldown--;
                 let tgt = null; let minD = Infinity;
@@ -2121,21 +2143,14 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 
             draw() {
                 const pos = cartToIso(this.gridX, this.gridY);
-                if (this._doom != null) {   // torre condenada: treme, pulsa em vermelho e mostra caveira
-                    const k = 1 - this._doom / DOOM.warnFrames, pulse = 0.5 + 0.5 * Math.sin(frameCount * (0.25 + k * 0.5));
-                    pos.x += Math.sin(frameCount * 2.1) * (1.2 + k * 2.2);
-                    ctx.save(); ctx.globalAlpha = 0.35 + pulse * 0.45; ctx.strokeStyle = '#ef4444'; ctx.fillStyle = 'rgba(239,68,68,0.25)'; ctx.lineWidth = 3;
-                    const rr = 34 + pulse * 6; ctx.beginPath(); ctx.ellipse(pos.x, pos.y, rr, rr / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                    ctx.globalAlpha = 0.6 + pulse * 0.4; ctx.fillStyle = '#ef4444'; ctx.font = '900 ' + Math.round(16 + pulse * 4) + 'px "Font Awesome 6 Free"';
-                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('\uf714', pos.x, pos.y - 78); ctx.restore();
-                }
-                if (this.flags.size > 0) drawTowerVFX(pos, this, frameCount);
+                const _brk = this.dur <= 0;
+                if (this.flags.size > 0 && !_brk) drawTowerVFX(pos, this, frameCount);
 
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.beginPath(); ctx.ellipse(pos.x, pos.y, 22, 11, 0, 0, Math.PI*2); ctx.fill();
 
                 let backOrbs = []; let frontOrbs = [];
-                for(let i=0; i<this.effects.length; i++) { 
+                for(let i=0; i<(_brk ? 0 : this.effects.length); i++) { 
                     let angle = (frameCount * 0.03) + (i * Math.PI * 2 / this.effects.length);
                     let sinA = Math.sin(angle); 
                     let ox = pos.x + Math.cos(angle) * 22; 
@@ -2153,16 +2168,16 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 backOrbs.forEach(o => { ctx.fillStyle = o.c; ctx.globalAlpha = o.a; ctx.beginPath(); ctx.arc(o.x, o.y, o.s, 0, Math.PI*2); ctx.fill(); });
                 ctx.globalAlpha = 1.0;
 
-                ctx.save(); ctx.translate(pos.x, pos.y); ctx.scale(this.scale, this.scale);
+                ctx.save(); ctx.translate(pos.x, pos.y); ctx.scale(this.scale, this.scale); if (_brk) ctx.globalAlpha = 0.5;
                 ctx.fillStyle = '#18181b'; ctx.beginPath(); ctx.ellipse(0, -6, 20, 10, 0, 0, Math.PI*2); ctx.fill();
                 ctx.fillRect(-20, -16, 40, 10);
                 ctx.fillStyle = '#27272a'; ctx.beginPath(); ctx.ellipse(0, -16, 20, 10, 0, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = this.color; ctx.beginPath(); ctx.ellipse(0, -16, 12, 6, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = _brk ? '#52525b' : this.color; ctx.beginPath(); ctx.ellipse(0, -16, 12, 6, 0, 0, Math.PI*2); ctx.fill();
 
-                ctx.font = '900 26px "Font Awesome 6 Free"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = this.color;
+                ctx.font = '900 26px "Font Awesome 6 Free"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = _brk ? '#71717a' : this.color;
                 ctx.fillText(this.icon, 0, -38);
 
-                if (this.level > 1 && this.flags.size > 0) {
+                if (this.level > 1 && this.flags.size > 0 && !_brk) {
                     const badgeMap = {
                         fire:        { icon: '\uf06d', color: '#f97316' }, frost:       { icon: '\uf2dc', color: '#93c5fd' }, lightning:   { icon: '\uf0e7', color: '#fde047' },
                         arcane:      { icon: '\uf6e8', color: '#c084fc' }, plasma:      { icon: '\uf5d2', color: '#4ade80' }, nuclear:     { icon: '\uf7b9', color: '#86efac' },
@@ -2185,6 +2200,21 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 
                 frontOrbs.forEach(o => { ctx.fillStyle = o.c; ctx.globalAlpha = o.a; ctx.beginPath(); ctx.arc(o.x, o.y, o.s, 0, Math.PI*2); ctx.fill(); });
                 ctx.globalAlpha = 1.0;
+
+                if (_brk) {   // quebrada: chave inglesa + custo do conserto
+                    const cost = repairCost(this), ok = gold >= cost, bob = Math.sin(frameCount * 0.08) * 2;
+                    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.font = '900 18px "Font Awesome 6 Free"'; ctx.fillStyle = '#ef4444'; ctx.fillText('\uf0ad', pos.x, pos.y - 66 + bob);
+                    ctx.font = 'bold 12px sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.fillStyle = ok ? '#fde047' : '#f87171';
+                    const lb = cost + 'g'; ctx.strokeText(lb, pos.x, pos.y - 48 + bob); ctx.fillText(lb, pos.x, pos.y - 48 + bob);
+                    ctx.restore();
+                } else if (this.dur < this.maxDur - 0.5 && !(window.MP && window.MP.active)) {   // barra de durabilidade
+                    const pc = Math.max(0, this.dur / this.maxDur), bw = 34, bx = pos.x - bw / 2, by = pos.y + 14;
+                    ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 6);
+                    ctx.fillStyle = pc > 0.6 ? '#22c55e' : pc > 0.3 ? '#eab308' : '#ef4444';
+                    if (pc <= DUR.warnPct) ctx.globalAlpha = 0.6 + 0.4 * Math.sin(frameCount * 0.3);
+                    ctx.fillRect(bx, by, bw * pc, 4); ctx.globalAlpha = 1.0;
+                }
             }
         }
 
@@ -3375,6 +3405,20 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             createCard("Coroa do Mercador Supremo","legendary",'<i class="fa-solid fa-crown"></i>',"O rei dos mercadores.", "Preços -25% Perm + Chance Lendária", "Nenhum", t=>{shopMods.priceReduction=Math.min(0.5,shopMods.priceReduction+0.25); shopMods.legendBonusChance+=0.05;}),
         ];
         econCards.forEach(c=>{ c.isEcon=true; arcanasPool.push(c); });
+
+        // ── CARTAS DE DURABILIDADE ──
+        const DUR_CARDS = [
+            createCard("Chapa Reforçada", "common", '<i class="fa-solid fa-shield-halved"></i>', "Mais metal onde dói.", "+30% Durabilidade", "-5% Vel. Ataque", t => { t.modDur = (t.modDur || 1) + 0.30; t.modRate += 0.05; }),
+            createCard("Graxa Pesada", "common", '<i class="fa-solid fa-oil-can"></i>', "Menos atrito, menos desgaste.", "-25% Desgaste", "-5% Dano", t => { t.modDecay = (t.modDecay || 1) - 0.25; t.modDmg -= 0.05; }),
+            createCard("Solda de Campo", "common", '<i class="fa-solid fa-screwdriver-wrench"></i>', "Remendo rápido entre ondas.", "Restaura 50% da Durabilidade", "-5% Alcance", t => { if (!t.isPreview) t.dur = Math.min(t.maxDur, t.dur + t.maxDur * 0.5); t.modRange -= 0.05; }),
+            createCard("Liga de Titânio", "rare", '<i class="fa-solid fa-gem"></i>', "Leve e quase indestrutível.", "+50% Durab., -15% Desgaste", "-10% Vel. Ataque", t => { t.modDur = (t.modDur || 1) + 0.50; t.modDecay = (t.modDecay || 1) - 0.15; t.modRate += 0.10; }),
+            createCard("Nanobots de Reparo", "rare", '<i class="fa-solid fa-microchip"></i>', "Remendam a torre durante a batalha.", "Regenera 0.20 Durab./s", "-10% Dano", t => { t.durRegen = (t.durRegen || 0) + 0.20; t.modDmg -= 0.10; }),
+            createCard("Motor Superaquecido", "rare", '<i class="fa-solid fa-temperature-high"></i>', "Roda no limite.", "+25% Vel. Ataque", "+30% Desgaste", t => { t.modRate -= 0.25; t.modDecay = (t.modDecay || 1) + 0.30; }),
+            createCard("Blindagem Pesada", "epic", '<i class="fa-solid fa-helmet-safety"></i>', "Aguenta o tranco.", "+80% Durabilidade", "-15% Alcance", t => { t.modDur = (t.modDur || 1) + 0.80; t.modRange -= 0.15; }),
+            createCard("Sobrecarga Perigosa", "epic", '<i class="fa-solid fa-radiation"></i>', "Poder demais derrete o metal.", "+40% Dano", "+50% Desgaste", t => { t.modDmg += 0.40; t.modDecay = (t.modDecay || 1) + 0.50; }),
+            createCard("Coração de Adamantium", "legendary", '<i class="fa-solid fa-heart-pulse"></i>', "Nada o quebra.", "+120% Durab., -40% Desgaste", "-15% Vel. Ataque", t => { t.modDur = (t.modDur || 1) + 1.20; t.modDecay = (t.modDecay || 1) - 0.40; t.modRate += 0.15; }),
+        ];
+        DUR_CARDS.forEach(c => { c.isDur = true; arcanasPool.push(c); });
         arcanasPool.push(createCard("Brasa Viva", "common", '<i class="fa-solid fa-fire"></i>', "Tudo que toca, queima.", "Queima + Espalha Fogo", "-5% Dano", t=>{t.flags.add('fire'); t.modDmg-=0.05;}));
         arcanasPool.push(createCard("Ricochete Cromado", "rare", '<i class="fa-solid fa-arrows-split-up-and-left"></i>', "A bala quica de inimigo em inimigo.", "+3 Ricochetes", "-10% Dano", t=>{t.chainTargets+=3; t.flags.add('chain'); t.modDmg-=0.10;}));
         arcanasPool.push(createCard("Pára-Raios", "epic", '<i class="fa-solid fa-bolt-lightning"></i>', "Raios caem do céu e saltam entre inimigos.", "Raio + 2 Saltos + Atordoa", "-15% Vel. Ataque", t=>{t.flags.add('lightning'); t.chainTargets+=2; t.modRate+=0.15;}));
@@ -3527,7 +3571,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     let isEconCard = (r === 'common' || r === 'rare') && Math.random() < 0.18;
                     let basePool = isEconCard
                         ? arcanasPool.filter(c => c.isEcon && c.rarity === r)
-                        : arcanasPool.filter(c => c.rarity === r && !c.isPill && !c.isApple && !c.isEcon);
+                        : arcanasPool.filter(c => c.rarity === r && !c.isPill && !c.isApple && !c.isEcon && !(c.isDur && window.MP && window.MP.active));
 
                     let pool = basePool.filter(c => {
                         let totalAlign = Math.max(1, alignmentLight + alignmentDark);
@@ -4100,6 +4144,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                         <span style="color:#e2e8f0">Disparos:</span> <span style="color:#22c55e; font-weight:bold;">${(60/hoveredTower.fireRate).toFixed(1)}/s</span><br>
                         <span style="color:#e2e8f0">Crit:</span> <span style="color:#fde047; font-weight:bold;">${(hoveredTower.critChance*100).toFixed(0)}% (${hoveredTower.critDamage.toFixed(1)}x)</span><br>
                         <span style="color:#e2e8f0">DPS Real:</span> <span style="color:#c084fc; font-weight:bold;">${realDps.toFixed(1)}</span><br>
+                        <div id="tt-dur" style="margin-top:6px;">${durHtml(hoveredTower)}</div>
                         <br><span style="color:#eab308; font-size:12px; font-weight:bold; letter-spacing:1px;">EFEITO: ${hoveredTower.attackType.toUpperCase()}</span>
                         ${effectsHtml}`;
                     }
@@ -4172,6 +4217,9 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 } else { expandMap(clickedLock.dir, clickedLock.gx, clickedLock.gy); } return;
             }
             
+            const _bt = towers.find(t => t.gridX === pos.x && t.gridY === pos.y);
+            if (_bt && _bt.dur <= 0) { repairTower(_bt); return; }   // torre quebrada: conserta (custo normal + 10)
+
             if(pos.y >= 0 && pos.y < map.length && pos.x >= 0 && pos.x < map[0].length && map[pos.y][pos.x] === 0) {
                 if(waveActive) {
                     SFX.ui_error();
@@ -4392,73 +4440,69 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             }
         }
 
-        // ── TORRE CONDENADA ──
-        // De tempos em tempos (só durante o combate) uma torre é sorteada para ser destruída.
-        // O sorteio é "viciado" em segredo: quanto mais forte a torre, maior o peso dela na roleta.
-        // O jogador recebe um aviso curto e pode vender a torre antes da explosão.
-        const DOOM = {
-            startWave: 3,        // primeira onda em que o sistema passa a funcionar
-            minTowers: 2,        // nunca condena a última torre do jogador
-            minFrames: 1500,     // intervalo mínimo entre sorteios (frames de combate, ~25 s a 60 FPS)
-            maxFrames: 2700,     // intervalo máximo (~45 s)
-            warnFrames: 150,     // tempo de aviso antes da explosão (~2,5 s)
-            bias: 3,             // peso EXTRA da torre mais forte na roleta (as demais escalam pelo poder relativo). 0 = sorteio justo · 3 = a mais forte tem ~4x a chance de uma fraca
-            timer: 0, pending: null
-        };
-        function doomRollTimer() { DOOM.timer = Math.round(R(DOOM.minFrames, DOOM.maxFrames)); }
-        function doomReset() { DOOM.pending = null; towers.forEach(t => { t._doom = null; }); doomRollTimer(); }
-        doomRollTimer();
-        // poder estimado da torre: DPS base multiplicado por bônus de cartas/efeitos
-        function towerPower(t) {
-            const dmg = Number(t.damage), rate = Number(t.fireRate);
-            let p = (isFinite(dmg) && isFinite(rate) && rate > 0) ? dmg * 60 / rate : 1;
-            p *= 1 + 0.15 * t.effects.length + 0.08 * t.flags.size + 0.04 * (t.chainTargets || 0) + 0.10 * (t.splashRadius || 0);
-            return Math.max(1, p);
+        // ── DURABILIDADE: desgaste, quebra e conserto ──
+        // (substitui a antiga "Torre Condenada", que destruía torres aleatoriamente)
+        const DOOM = { pending: null, timer: 0 };   // compatibilidade
+        function doomReset() {}
+        function repairCost(t) { return towerTypes[t.type].cost + DUR.repairExtra; }
+        function durHtml(t) {
+            if (window.MP && window.MP.active) return '';
+            const m = t.maxDur, pc = Math.max(0, Math.min(1, t.dur / m));
+            const col = pc > 0.6 ? '#22c55e' : pc > 0.3 ? '#eab308' : '#ef4444';
+            if (t.dur <= 0) return '<span style="color:#ef4444;font-weight:bold;"><i class="fa-solid fa-screwdriver-wrench"></i> QUEBRADA</span><br>'
+                + '<span style="color:#e2e8f0">Consertar:</span> <span style="color:' + (gold >= repairCost(t) ? '#fde047' : '#f87171') + ';font-weight:bold;">' + repairCost(t) + 'g</span> <span style="color:#a1a1aa;font-size:12px;">(clique na torre)</span>';
+            const wr = t.wearRate, wt = wr > 0 ? '-' + wr.toFixed(2) + '/s' : (wr < 0 ? '+' + (-wr).toFixed(2) + '/s' : '0/s');
+            return '<span style="color:#e2e8f0">Durabilidade:</span> <span style="color:' + col + ';font-weight:bold;">' + Math.ceil(t.dur) + '/' + m + '</span> <span style="color:#a1a1aa;font-size:12px;">(' + wt + ')</span>'
+                + '<div style="height:5px;background:#27272a;border-radius:3px;margin-top:3px;overflow:hidden;"><div style="height:100%;width:' + (pc * 100).toFixed(0) + '%;background:' + col + ';"></div></div>';
         }
-        function doomPickTarget() {
-            const pool = towers.filter(t => t._doom == null);
-            if (!pool.length) return null;
-            const pw = pool.map(towerPower), mx = Math.max(...pw);
-            const w = pw.map(p => 1 + DOOM.bias * (p / mx));   // toda torre mantém chance base; a força só empurra o peso para cima
-            let r = Math.random() * w.reduce((a, b) => a + b, 0);
-            for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
-            return pool[pool.length - 1];
-        }
-        function doomStart(t) {
-            t._doom = DOOM.warnFrames; DOOM.pending = t;
-            const s = scr(t.gridX, t.gridY, -60);
-            floatingTexts.push(new FloatingText(s.x, s.y, '\u26A0 TORRE CONDENADA', '#ef4444', true));
-            try { SFX.ui_error(); } catch (e) {}
-            applyShake(4);
-        }
-        function doomDestroy(t) {
-            DOOM.pending = null; t._doom = null;
-            const i = towers.indexOf(t);
-            if (i < 0 || towers.length < DOOM.minTowers) return;   // vendida durante o aviso, ou virou a última torre: escapa
-            towers.splice(i, 1); lostTowers.push(t);
+        function durBreak(t) {
+            t.dur = 0; t.cooldown = 0; t._lowWarn = false;
             const gx = t.gridX, gy = t.gridY;
-            fxBoom(gx, gy, 1.8, '#ef4444'); fxShock(gx, gy, '#ffffff', 110, 8);
-            fxBurst(gx, gy, 5, 26, ['#52525b', '#27272a', '#a1a1aa', t.color], .22, 4.5, 50, 4, .3, false, false);
-            fxDecal(gx, gy, 34, '#0a0305', .75);
-            createParticles(gx, gy, '#ef4444', 30);
-            fl(.45); applyShake(16); hs(4);
+            fxBoom(gx, gy, 1.2, '#f97316'); fxShock(gx, gy, '#ffffff', 80, 6);
+            fxBurst(gx, gy, 5, 18, ['#52525b', '#27272a', '#a1a1aa', t.color], .2, 4, 45, 4, .3, false, false);
+            fxDecal(gx, gy, 26, '#0a0305', .6);
+            applyShake(10); hs(3);
             try { SFX.base_dmg(); } catch (e) {}
-            const s = scr(gx, gy, -40);
-            floatingTexts.push(new FloatingText(s.x, s.y, '\uD83D\uDCA5 ' + ((towerTypes[t.type] && towerTypes[t.type].name) || 'TORRE') + ' DESTRU\u00CDDA', '#f97316', true));
+            const s = scr(gx, gy, -50);
+            floatingTexts.push(new FloatingText(s.x, s.y, '\uD83D\uDD27 ' + ((towerTypes[t.type] && towerTypes[t.type].name) || 'TORRE') + ' QUEBRADA', '#f97316', true));
+        }
+        function repairTower(t) {
+            if (!t || t.dur > 0) return;
+            const cost = repairCost(t), s = scr(t.gridX, t.gridY, -50);
+            if (gold < cost) {
+                try { SFX.ui_error(); } catch (e) {}
+                floatingTexts.push(new FloatingText(s.x, s.y, 'SEM OURO! (' + cost + 'g)', '#ef4444')); flashGold(); applyShake(4); return;
+            }
+            gold -= cost; t.dur = t.maxDur; t._lowWarn = false; t.cooldown = 0; t.scaleV += 0.6;
+            try { SFX.build(); } catch (e) {}
+            createParticles(t.gridX, t.gridY, '#22c55e', 25); fxShock(t.gridX, t.gridY, '#22c55e', 70, 5);
+            floatingTexts.push(new FloatingText(s.x, s.y, '\uD83D\uDD27 CONSERTADA -' + cost + 'g', '#22c55e', true));
             updateUI();
         }
-        function doomTick() {
-            if (gameOver || isShopOpen || (window.MP && window.MP.active)) return;
-            if (DOOM.pending) {                                   // aviso em andamento
-                const t = DOOM.pending;
-                if (!towers.includes(t)) DOOM.pending = null;     // o jogador vendeu a torre a tempo
-                else if (--t._doom <= 0) doomDestroy(t);
-                return;
+        function durTick() {
+            if (gameOver || (window.MP && window.MP.active)) return;
+            const fight = waveActive && !isShopOpen;
+            for (const t of towers) {
+                if (t.dur <= 0) {   // quebrada: solta fumaça
+                    if (frameCount % 18 === 0) fxBurst(t.gridX, t.gridY, 28, 1, ['#52525b', '#3f3f46'], .03, 1.2, 45, 3, .02, false, true);
+                    continue;
+                }
+                if (!fight) continue;
+                t.dur -= t.wearRate / 60;
+                const mx = t.maxDur;
+                if (t.dur > mx) t.dur = mx;
+                if (t.dur <= 0) { durBreak(t); continue; }
+                const pc = t.dur / mx;
+                if (!t._lowWarn && pc <= DUR.warnPct) {
+                    t._lowWarn = true;
+                    const s = scr(t.gridX, t.gridY, -50);
+                    floatingTexts.push(new FloatingText(s.x, s.y, '\u26A0 DURABILIDADE BAIXA', '#eab308', true));
+                    try { SFX.ui_error(); } catch (e) {}
+                } else if (t._lowWarn && pc > DUR.warnPct + 0.05) t._lowWarn = false;
             }
-            if (!waveActive || wave < DOOM.startWave || towers.length < DOOM.minTowers) return;
-            if (--DOOM.timer > 0) return;
-            doomRollTimer();
-            const t = doomPickTarget(); if (t) doomStart(t);
+            if (frameCount % 15 === 0 && window.lastHoveredTower) {   // atualiza a durabilidade no tooltip
+                const el = document.getElementById('tt-dur'); if (el) el.innerHTML = durHtml(window.lastHoveredTower);
+            }
         }
 
         function gameUpdate() {
@@ -4498,7 +4542,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             }
             if(FX.hitstop>0){FX.hitstop--; fxUpdate(); return;}
             if(FX.slowmo>0 && (FX.slowmo--&1)) return;
-            frameCount++; fxUpdate(); towers.forEach(t => t.updateVisuals()); doomTick();
+            frameCount++; fxUpdate(); towers.forEach(t => t.updateVisuals()); durTick();
 
             if(!isShopOpen && waveActive) {
                 spawnTimer++;
