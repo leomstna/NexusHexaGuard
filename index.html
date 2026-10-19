@@ -5002,5 +5002,531 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
     refreshMenu();
 })();
     </script>
+    <script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   NEXUS HEXA GUARD — MODO VERSUS 1x1
+   Online (PeerJS, sem servidor seu) · Rede local (server.js) · Local (local.html, tela dividida)
+   Nenhum banco de dados. Cada jogador tem a própria base e o mesmo mapa; quem perder a base primeiro perde.
+   Você gasta ouro pra ENVIAR inimigos pra base do rival.
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+'use strict';
+const Q = new URLSearchParams(location.search);
+const EMBED = Q.get('vs') === 'local', SLOT = +Q.get('slot') || 1;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const cleanName = s => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').trim().slice(0, 16);
+const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const genCode = n => Array.from({ length: n }, () => CHARS[Math.random() * CHARS.length | 0]).join('');
+
+const PREP_SECS = 20, SHOP_SECS = 30, SEND_CD = 2500;
+const SEND_DEFS = {
+    horde:    { label: 'HORDA',      icon: '👥', n: 8, type: 'normal',   cost: 45,  min: 1 },
+    fast:     { label: 'VELOZES',    icon: '💨', n: 6, type: 'fast',     cost: 55,  min: 1 },
+    splitter: { label: 'DIVISORES',  icon: '🧬', n: 3, type: 'splitter', cost: 90,  min: 3 },
+    boss:     { label: 'BOSS',       icon: '☠',  n: 1, type: 'boss',     cost: 260, min: 5 }
+};
+
+/* tipos de inimigo extras (o jogo já tinha a lógica de 'fast' e 'splitter', só faltava registrar) */
+if (!ENEMY_TYPES.fast) ENEMY_TYPES.fast = { label: 'Veloz', hpMult: 0.6, speedMult: 1.8, scaleMult: 0.8, goldMult: 0.6, color: '#facc15', icon: '\uf0e7', minWave: 1 };
+if (!ENEMY_TYPES.splitter) ENEMY_TYPES.splitter = { label: 'Divisor', hpMult: 1.8, speedMult: 0.85, scaleMult: 1.3, goldMult: 2, color: '#a855f7', icon: '\uf0c4', minWave: 1, splitsInto: 3 };
+
+const V = {
+    active: false, phase: 'idle', role: null, mode: null, T: null, code: '',
+    name: '', rival: { name: 'Rival', wave: 1, hp: 20, towers: 0, kills: 0 },
+    seed: 0, result: null, why: '', ended: false, matchBegun: false,
+    rm: { me: false, rival: false }, incoming: [], sent: 0, cdUntil: 0,
+    timer: null, tick: null, tickN: 0
+};
+V.name = cleanName(store.get('nexus_vs_name', '')) || 'Jogador' + (Math.random() * 90 + 10 | 0);
+
+/* ───────────────────────── ALEATÓRIO COM SEMENTE (mesmo mapa pros dois) ───────────────────────── */
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function withSeed(seed, fn) { const o = Math.random; Math.random = mulberry32(seed); try { return fn(); } finally { Math.random = o; } }
+
+function newMap(seed) {
+    withSeed(seed, () => {
+        mapWidth = 12; mapHeight = 12;
+        map = Array.from({ length: mapHeight }, () => new Array(mapWidth).fill(0));
+        waypoints = [{ x: 0, y: Math.floor(mapHeight / 2) }];
+        map[waypoints[0].y][waypoints[0].x] = 1;
+        generateWindingPath(waypoints[0].x, waypoints[0].y, mapWidth, mapHeight, 'right').forEach(p => { map[p.y][p.x] = 1; waypoints.push(p); });
+    });
+    _tiles = null; _fd = null;
+}
+
+/* ───────────────────────── RESET DA PARTIDA (revanche sem recarregar a página) ───────────────────────── */
+function resetRun(seed) {
+    hp = 20; gold = 70; wave = 1; alignmentLight = 0; alignmentDark = 0; adaptiveMult = 1.0;
+    gameOver = false; gameOverAlpha = 0; waveStartHp = 20; waveTotalEnemyHp = 0; waveEnemyDmgDealt = 0; waveEnemyHpKilled = 0;
+    statTotalDmgDealt = 0; statTotalDmgTaken = 0; statEnemiesKilled = 0; statTowersBuilt = 0; statCardsUsed = 0; statGoldEarned = 0; statCrits = 0; statRerolls = 0;
+    skipShop = false; rerollCost = 15; isShopOpen = false; waveActive = false; sellTokens = 1; expansionsUsed = 0; selectedTowerKey = 'gatling';
+    Object.assign(shopMods, { rareBonusChance: 0, epicBonusChance: 0, legendBonusChance: 0, priceReduction: 0, rerollDiscount: 0, guaranteeRare: false, onlyRarePlus: false, highLegendChance: false, wavesDiscount: 0, waveDiscountAmt: 0 });
+    towers.length = 0; soldTowers.length = 0; enemies.length = 0; projectiles.length = 0; particles.length = 0; uiParticles.length = 0; floatingTexts.length = 0;
+    FX.list.length = 0; FX.parts.length = 0; FX.decals.length = 0; FX.zones.length = 0; FX.combo = 0; FX.comboT = 0; FX.hitstop = 0; FX.slowmo = 0;
+    playerHand = []; V.incoming = [];
+    camX = 0; camY = 0; zoom = 1.2; zoomTarget = 1.2;
+    newMap(seed);
+    spawnQueue = buildSpawnQueue(1); enemiesToSpawn = spawnQueue.length; spawnTimer = 0;
+    const so = $('shop-overlay'); if (so) so.classList.remove('active');
+    const go = $('gameover-overlay'); if (go) { go.style.display = 'none'; go.style.opacity = '0'; }
+    ['sidebar', 'hand-container', 'controls-hint'].forEach(id => { const el = $(id); if (el) { el.style.opacity = '1'; el.style.pointerEvents = ''; } });
+    const eh = $('hp'); if (eh) eh.classList.remove('danger');
+    const b = $('btn-start-wave'); if (b) { b.disabled = false; b.innerText = 'INICIAR ONDA'; }
+    updateUI(); renderHand(); initMenu();
+}
+
+/* ───────────────────────── GANCHOS NO JOGO ───────────────────────── */
+const _bsq = buildSpawnQueue;
+buildSpawnQueue = function (w) {
+    const q = _bsq.apply(this, arguments);
+    if (V.active && V.incoming.length) q.push(...V.incoming.splice(0));
+    return q;
+};
+const _ss = showShop;
+showShop = function () {
+    _ss.apply(this, arguments);
+    if (V.active && isShopOpen && !gameOver) startTimer('LOJA', SHOP_SECS, () => { if (isShopOpen) closeShop(); });
+};
+const _cs = closeShop;
+closeShop = function () { stopTimer(); return _cs.apply(this, arguments); };
+const _sw = startNextWave;
+startNextWave = function () { stopTimer(); return _sw.apply(this, arguments); };
+const _tw = toggleAutoWave;
+toggleAutoWave = function () { if (V.active && !V._f) return; return _tw.apply(this, arguments); };
+const _sg = showGameOverScreen;
+showGameOverScreen = function () { if (!V.active) return _sg.apply(this, arguments); showResult(); };
+
+/* nunca grava o save do modo solo com a partida de versus */
+const _si = Storage.prototype.setItem;
+Storage.prototype.setItem = function (k, v) { if (V.active && k === 'nexus_save_v1') return; return _si.call(this, k, v); };
+
+/* ESC não pausa/abre menu durante o versus */
+window.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (V.active) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+    if ($('nx-title') && $('nx-title').dataset.k === 'vs') cancelLobby();
+}, true);
+
+function forceAutoWave() { if (!autoWave) { V._f = true; try { toggleAutoWave(); } catch (e) {} V._f = false; } }
+
+/* ───────────────────────── TEMPORIZADOR (preparação / loja) ───────────────────────── */
+function startTimer(label, secs, fn) {
+    stopTimer();
+    V.timer = { label, left: secs, fn };
+    V.tick = setInterval(() => {
+        const t = V.timer; if (!t) return;
+        if ((t.label === 'LOJA' && !isShopOpen) || (t.label !== 'LOJA' && waveActive) || gameOver || V.ended) return stopTimer();
+        t.left--; renderTimer();
+        if (t.left <= 0) { const f = t.fn; stopTimer(); try { f(); } catch (e) { console.error(e); } }
+    }, 1000);
+    renderTimer();
+}
+function stopTimer() { if (V.tick) clearInterval(V.tick); V.tick = null; V.timer = null; renderTimer(); }
+function renderTimer() { const el = $('vs-timer'); if (!el) return; el.textContent = V.timer ? '⏱ ' + V.timer.label + ' ' + V.timer.left + 's' : ''; }
+
+/* ───────────────────────── INTERFACE (HUD, painel de envio, toast, resultado) ───────────────────────── */
+const css = document.createElement('style');
+css.textContent = `
+body:not(.vs-on) .vs-ui { display: none !important; }
+.vs-ui { position: fixed; z-index: 9100; font: 10px 'Press Start 2P', monospace; color: #e9d5ff; text-shadow: 2px 2px 0 #000; user-select: none; }
+#vs-hud { top: 10px; right: 12px; background: rgba(15,8,24,.88); border: 2px solid #7c3aed; padding: 8px 10px; min-width: 190px; box-shadow: 0 4px 0 #1a0b26; }
+#vs-hud .rn { color: #fb923c; margin-bottom: 8px; line-height: 1.4; word-break: break-all; }
+#vs-hud .rs { display: flex; gap: 10px; flex-wrap: wrap; } #vs-hud b { color: #fde047; font-weight: normal; }
+#vs-timer { margin-top: 8px; color: #fde047; min-height: 12px; }
+#vs-send { right: 12px; top: 110px; width: 190px; background: rgba(15,8,24,.88); border: 2px solid #b91c1c; padding: 8px; box-shadow: 0 4px 0 #1a0b26; }
+#vs-send .st { color: #fca5a5; margin-bottom: 8px; line-height: 1.4; }
+#vs-send button { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 6px; margin: 0 0 6px; padding: 9px 8px; font: 9px 'Press Start 2P', monospace; color: #fff7ed; background: #7f1d1d; border: 2px solid #ef4444; cursor: pointer; }
+#vs-send button:hover:not(:disabled) { background: #b91c1c; } #vs-send button:disabled { opacity: .38; cursor: not-allowed; }
+#vs-send button small { font: 8px 'Press Start 2P', monospace; color: #fde047; }
+#vs-toast { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 9150; display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
+#vs-toast div { font: 10px 'Press Start 2P', monospace; color: #fff; background: rgba(127,29,29,.94); border: 2px solid #ef4444; padding: 8px 12px; text-shadow: 2px 2px 0 #000; animation: vsT 3s forwards; }
+#vs-toast div.ok { background: rgba(20,83,45,.94); border-color: #22c55e; }
+@keyframes vsT { 0% { opacity: 0; transform: translateY(-8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+#vs-result { position: fixed; inset: 0; z-index: 9200; display: none; align-items: center; justify-content: center; background: rgba(5,3,10,.9); padding: 20px; box-sizing: border-box; }
+#vs-result .box { width: min(560px, 100%); text-align: center; background: linear-gradient(180deg, #1c0f2b, #0f0818); border: 2px solid #7c3aed; padding: 26px 18px; box-shadow: 0 0 50px rgba(124,58,237,.4); }
+#vs-result .tt { font: clamp(20px, 5vw, 38px) 'Press Start 2P', monospace; margin-bottom: 14px; text-shadow: 3px 3px 0 #000; }
+#vs-result .tt.win { color: #4ade80; } #vs-result .tt.lose { color: #ef4444; } #vs-result .tt.draw { color: #fde047; }
+#vs-result .why { font: 9px/1.8 'Press Start 2P', monospace; color: #a1a1aa; margin-bottom: 18px; }
+#vs-result .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+#vs-result .cmp div { background: #160c24; border: 1px solid #3b1d63; padding: 10px; font: 9px/2 'Press Start 2P', monospace; color: #d4d4d8; } #vs-result .cmp b { color: #fde047; font-weight: normal; }
+#vs-result .act { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+#vs-result #vs-rms { margin-top: 14px; font: 9px 'Press Start 2P', monospace; color: #fb923c; min-height: 12px; }
+.vs-in { width: 100%; box-sizing: border-box; padding: 11px 10px; font: 12px 'Press Start 2P', monospace; color: #fde047; background: #0f0818; border: 2px solid #6d28d9; outline: none; text-transform: none; }
+.vs-in:focus { border-color: #fb923c; } .vs-in.code { text-transform: uppercase; letter-spacing: 4px; text-align: center; }
+.vs-opt { display: block; width: 100%; text-align: left; margin: 0 0 10px; padding: 14px 12px; font: 10px/1.7 'Press Start 2P', monospace; color: #e9d5ff; background: #2a1540; border: 2px solid #6d28d9; cursor: pointer; }
+.vs-opt:hover { background: #7c2d12; border-color: #fb923c; color: #fff7ed; } .vs-opt small { display: block; font: 11px/1.5 sans-serif; color: #a1a1aa; margin-top: 4px; }
+.vs-code { font: 28px 'Press Start 2P', monospace; color: #fde047; letter-spacing: 8px; text-align: center; margin: 16px 0; text-shadow: 3px 3px 0 #7f1d1d; }
+.vs-msg { color: #a1a1aa; font-size: 13px; text-align: center; margin: 8px 0; } .vs-err { color: #fca5a5; font-size: 13px; text-align: center; margin: 10px 0; line-height: 1.6; }
+.vs-room { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a1540; }
+body.vs-embed #nx-menu-btn { display: none !important; }
+body.vs-on #nx-menu-btn { display: none !important; }
+@media (max-width: 760px) { #vs-hud { min-width: 0; } #vs-send { top: 96px; width: 150px; } #vs-send button { font-size: 8px; padding: 7px 5px; } }
+`;
+document.head.appendChild(css);
+
+const hud = document.createElement('div');
+hud.innerHTML = `
+<div id="vs-hud" class="vs-ui"><div class="rn">⚔ <span id="vs-rname">RIVAL</span></div>
+  <div class="rs"><span>❤ <b id="vs-rhp">20</b></span><span>🌊 <b id="vs-rwave">1</b></span><span>🗼 <b id="vs-rtw">0</b></span><span>☠ <b id="vs-rk">0</b></span></div><div id="vs-timer"></div></div>
+<div id="vs-send" class="vs-ui"><div class="st">ENVIAR AO RIVAL</div><div id="vs-btns"></div></div>
+<div id="vs-toast"></div><div id="vs-result"></div>`;
+while (hud.firstChild) document.body.appendChild(hud.firstChild);
+['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'touchstart', 'touchend', 'wheel', 'contextmenu'].forEach(ev => {
+    ['vs-hud', 'vs-send', 'vs-result'].forEach(id => $(id).addEventListener(ev, e => e.stopPropagation()));
+});
+$('vs-btns').addEventListener('click', e => { const b = e.target.closest('[data-send]'); if (b) doSend(b.dataset.send); });
+
+const sendCost = d => Math.round(d.cost * (1 + (wave - 1) * 0.06));
+function renderSend() {
+    const box = $('vs-btns'); if (!box) return;
+    if (!box.children.length) box.innerHTML = Object.keys(SEND_DEFS).map(k => { const d = SEND_DEFS[k]; return `<button data-send="${k}"><span>${d.icon} ${d.label} x${d.n}</span><small></small></button>`; }).join('');
+    const cd = performance.now() < V.cdUntil;
+    [...box.children].forEach(b => {
+        const d = SEND_DEFS[b.dataset.send], c = sendCost(d), lock = wave < d.min;
+        b.querySelector('small').textContent = lock ? 'ONDA ' + d.min : c + 'g';
+        b.disabled = V.ended || gameOver || lock || cd || gold < c;
+    });
+}
+function renderHud() {
+    $('vs-rname').textContent = V.rival.name; $('vs-rhp').textContent = V.rival.hp; $('vs-rwave').textContent = V.rival.wave;
+    $('vs-rtw').textContent = V.rival.towers; $('vs-rk').textContent = V.rival.kills;
+}
+function toast(msg, ok) { const c = $('vs-toast'), d = document.createElement('div'); if (ok) d.className = 'ok'; d.textContent = msg; c.appendChild(d); setTimeout(() => d.remove(), 3000); if (c.children.length > 3) c.firstChild.remove(); }
+
+function doSend(k) {
+    const d = SEND_DEFS[k], now = performance.now();
+    if (!d || !V.active || V.ended || gameOver || !V.T || now < V.cdUntil || wave < d.min) return;
+    const c = sendCost(d);
+    if (gold < c) { try { SFX.ui_error(); flashGold(); } catch (e) {} return; }
+    gold -= c; updateUI(); V.cdUntil = now + SEND_CD; V.sent += d.n;
+    V.T.send({ t: 'send', k });
+    try { SFX.coin(); } catch (e) {}
+    toast('Você enviou ' + d.label + ' x' + d.n, true); renderSend();
+}
+function addEnemies(list) {
+    if (gameOver || V.ended) return;
+    if (isShopOpen) { V.incoming.push(...list); return; }
+    spawnQueue.push(...list); enemiesToSpawn += list.length;
+}
+function onRivalSend(o) {
+    const d = SEND_DEFS[o && o.k]; if (!d || !V.active || V.ended) return;
+    addEnemies(Array(d.n).fill(d.type));
+    toast('⚠ ' + V.rival.name + ' enviou ' + d.label + ' x' + d.n + '!');
+    try { SFX.base_dmg(); fxBanner('⚠ ' + d.label + ' A CAMINHO', '#f43f5e', true); } catch (e) {}
+}
+
+/* resultado */
+function showResult() {
+    if (!V.ended) { V.ended = true; V.phase = 'ended'; V.result = V.result || 'lose'; if (V.T) V.T.send({ t: 'over', w: wave, k: statEnemiesKilled }); }
+    renderResult();
+}
+function renderResult() {
+    const r = V.result || 'lose', ov = $('vs-result');
+    const title = r === 'win' ? 'VITÓRIA!' : r === 'draw' ? 'EMPATE' : 'DERROTA';
+    const why = V.why || (r === 'win' ? 'A base do rival caiu.' : r === 'draw' ? 'As duas bases caíram ao mesmo tempo.' : 'Sua base foi destruída.');
+    ov.innerHTML = `<div class="box"><div class="tt ${r}">${title}</div><div class="why">${esc(why)}</div>
+      <div class="cmp"><div>VOCÊ<br>Onda <b>${wave}</b><br>Abates <b>${statEnemiesKilled}</b><br>Enviados <b>${V.sent}</b></div>
+      <div>${esc(V.rival.name)}<br>Onda <b>${V.rival.wave}</b><br>Abates <b>${V.rival.kills}</b><br>Base <b>${V.rival.hp}</b></div></div>
+      <div class="act"><button class="nx-btn" id="vs-rm">⚔ REVANCHE</button><button class="nx-btn danger" id="vs-exit">SAIR</button></div><div id="vs-rms"></div></div>`;
+    ov.style.display = 'flex';
+    $('vs-rm').onclick = requestRematch;
+    $('vs-exit').onclick = exitVersus;
+    if (!V.T) { $('vs-rm').disabled = true; $('vs-rms').textContent = 'Rival desconectado.'; }
+    else if (V.rm.me) { $('vs-rm').disabled = true; $('vs-rms').textContent = 'Aguardando o rival aceitar...'; }
+    else if (V.rm.rival) $('vs-rms').textContent = 'O rival quer revanche!';
+}
+function requestRematch() {
+    if (!V.T || V.rm.me) return;
+    V.rm.me = true; V.T.send({ t: 'rematch' }); renderResult();
+    if (V.rm.rival && V.role === 'host') beginMatch();
+}
+function exitVersus() {
+    try { if (V.T) { V.T.send({ t: 'bye' }); V.T.close(); } } catch (e) {}
+    if (EMBED) parent.postMessage({ nxvs: 1, msg: { t: '_exit' } }, '*');
+    else location.href = location.pathname;
+}
+
+/* ───────────────────────── PROTOCOLO ───────────────────────── */
+function sendHello() { V.T && V.T.send({ t: 'hello', name: V.name }); }
+function beginMatch() {
+    const seed = (Math.random() * 2147483647) | 0;
+    V.T.send({ t: 'start', seed, hn: V.name });
+    doStart(seed);
+}
+function doStart(seed) {
+    stopTimer(); closeM();
+    V.seed = seed; V.result = null; V.why = ''; V.ended = false; V.matchBegun = true; V.rm = { me: false, rival: false }; V.sent = 0; V.cdUntil = 0;
+    V.rival.wave = 1; V.rival.hp = 20; V.rival.towers = 0; V.rival.kills = 0;
+    $('vs-result').style.display = 'none';
+    resetRun(seed);
+    V.active = true; V.phase = 'playing';
+    nxStarted = true; menuActive = false;
+    const s = $('splash'); if (s) s.classList.add('out');
+    isTutorialActive = false; const tu = $('tutorial-overlay'); if (tu) tu.style.display = 'none';
+    document.body.classList.add('vs-on');
+    forceAutoWave(); renderHud(); renderSend();
+    try { fxBanner('⚔ ' + V.name + '  VS  ' + V.rival.name, '#fde047'); } catch (e) {}
+    startTimer('PREPARAÇÃO', PREP_SECS, () => { if (!waveActive) startNextWave(); });
+    if (!V.sync) V.sync = setInterval(syncTick, 250);
+}
+function syncTick() {
+    if (!V.active) return;
+    if (V.phase === 'playing' && gameOver) { V.phase = 'ended'; V.ended = true; V.result = 'lose'; V.T && V.T.send({ t: 'over', w: wave, k: statEnemiesKilled }); }
+    if (V.phase === 'playing' && (++V.tickN % 4 === 0) && V.T) V.T.send({ t: 'st', w: wave, hp: Math.max(0, hp | 0), tw: towers.length, k: statEnemiesKilled });
+    renderSend();
+}
+const num = (x, d) => (typeof x === 'number' && isFinite(x)) ? Math.max(0, Math.min(1e6, x | 0)) : d;
+function onMsg(o) {
+    if (!o || typeof o !== 'object') return;
+    switch (o.t) {
+        case 'hello':
+            V.rival.name = cleanName(o.name) || 'Rival';
+            if (V.role === 'host' && !V.matchBegun && V.T) { V.matchBegun = true; beginMatch(); }
+            break;
+        case 'start':
+            if (V.role !== 'guest') break;
+            V.rival.name = cleanName(o.hn) || V.rival.name;
+            doStart((o.seed | 0) || 1);
+            break;
+        case 'st':
+            V.rival.wave = num(o.w, V.rival.wave); V.rival.hp = num(o.hp, V.rival.hp); V.rival.towers = num(o.tw, V.rival.towers); V.rival.kills = num(o.k, V.rival.kills);
+            if (V.active) renderHud();
+            break;
+        case 'send': onRivalSend(o); break;
+        case 'over':
+            V.rival.wave = num(o.w, V.rival.wave); V.rival.kills = num(o.k, V.rival.kills); V.rival.hp = 0;
+            if (V.phase === 'playing') { V.phase = 'ended'; V.ended = true; V.result = 'win'; V.why = 'A base de ' + V.rival.name + ' caiu.'; gameOver = true; }
+            else if (V.phase === 'ended' && V.result === 'lose') { V.result = 'draw'; if ($('vs-result').style.display === 'flex') renderResult(); }
+            break;
+        case 'rematch':
+            V.rm.rival = true;
+            if (V.ended && $('vs-result').style.display === 'flex') renderResult();
+            if (V.rm.me && V.role === 'host') beginMatch();
+            break;
+        case 'bye': transportClosed('O rival saiu da partida.'); break;
+    }
+}
+function transportClosed(why) {
+    try { V.T && V.T.close(); } catch (e) {}
+    V.T = null;
+    if (V.phase === 'playing') { V.phase = 'ended'; V.ended = true; V.result = 'win'; V.why = why + ' Vitória por W.O.'; gameOver = true; }
+    else if (V.phase === 'ended') { if ($('vs-result').style.display === 'flex') renderResult(); }
+    else if ($('nx-title') && $('nx-title').dataset.k === 'vs') screenError(why);
+}
+
+/* ───────────────────────── TRANSPORTES ───────────────────────── */
+/* 1) ONLINE — PeerJS (WebRTC ponto a ponto; o broker público do PeerJS só faz o "aperto de mão") */
+function loadPeerJS() {
+    return new Promise((res, rej) => {
+        if (window.Peer) return res();
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+        s.onload = () => window.Peer ? res() : rej(new Error('PeerJS não inicializou.'));
+        s.onerror = () => rej(new Error('Não consegui carregar o PeerJS. Você está sem internet?'));
+        document.head.appendChild(s);
+    });
+}
+async function tPeer(role, code, H) {
+    await loadPeerJS();
+    const cfg = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] } };
+    let peer = null, conn = null, closed = false, tries = 0, timer = null;
+    const api = {
+        send(o) { if (conn && conn.open) try { conn.send(JSON.stringify(o)); } catch (e) {} },
+        close() { closed = true; clearTimeout(timer); try { conn && conn.close(); } catch (e) {} try { peer && peer.destroy(); } catch (e) {} }
+    };
+    const attach = c => {
+        conn = c;
+        c.on('open', () => { clearTimeout(timer); H.ready(); });
+        c.on('data', d => { try { H.msg(typeof d === 'string' ? JSON.parse(d) : d); } catch (e) {} });
+        c.on('close', () => { if (!closed) H.close('A conexão com o rival caiu.'); });
+        c.on('error', () => { if (!closed) H.close('Erro na conexão com o rival.'); });
+    };
+    const onErr = err => {
+        if (closed) return;
+        const t = err && err.type;
+        if (role === 'host' && t === 'unavailable-id' && tries++ < 4) { try { peer.destroy(); } catch (e) {} code = genCode(5); H.codeChanged(code); return mk(); }
+        if (t === 'peer-unavailable') return H.error('Sala não encontrada. Confira o código.');
+        if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') return H.error('Sem conexão com o servidor de encontro do PeerJS. Verifique a internet.');
+        H.error('Erro de conexão (' + (t || 'desconhecido') + ').');
+    };
+    const mk = () => {
+        if (role === 'host') {
+            peer = new Peer('nxhg-' + code, cfg);
+            peer.on('open', () => H.waiting(code));
+            peer.on('connection', c => { if (conn && conn.open) { c.on('open', () => c.close()); return; } attach(c); });
+        } else {
+            peer = new Peer(cfg);
+            peer.on('open', () => {
+                attach(peer.connect('nxhg-' + code, { reliable: true }));
+                timer = setTimeout(() => { if (!closed && !(conn && conn.open)) H.error('Não consegui conectar ao rival. A sala existe? (redes muito restritas podem bloquear — use o modo REDE LOCAL com o server.js hospedado)'); }, 15000);
+            });
+        }
+        peer.on('error', onErr);
+        peer.on('disconnected', () => { if (!closed && !(conn && conn.open)) { try { peer.reconnect(); } catch (e) {} } });
+    };
+    mk();
+    return api;
+}
+
+/* 2) REDE LOCAL / SERVIDOR PRÓPRIO — SSE + POST contra o server.js (zero dependências) */
+function tSSE(role, code, base, H) {
+    base = base.replace(/\/+$/, '');
+    if (location.protocol === 'https:' && /^http:/i.test(base)) { setTimeout(() => H.error('Esta página está em HTTPS e o servidor é HTTP (bloqueado pelo navegador). Abra o jogo pelo endereço http://IP:3000 que o server.js mostra.'), 0); return { send() {}, close() {} }; }
+    let es = null, closed = false, opened = false, chain = Promise.resolve();
+    const api = {
+        send(o) { chain = chain.then(() => fetch(base + '/nx/send?room=' + code + '&role=' + role, { method: 'POST', body: JSON.stringify(o), headers: { 'Content-Type': 'text/plain' } })).catch(() => {}); },
+        close() { closed = true; try { clearTimeout(to); es && es.close(); } catch (e) {} }
+    };
+    let to = 0;
+    try { es = new EventSource(base + '/nx/stream?room=' + encodeURIComponent(code) + '&role=' + role + '&name=' + encodeURIComponent(V.name)); }
+    catch (e) { setTimeout(() => H.error('Endereço do servidor inválido.'), 0); return api; }
+    to = setTimeout(() => { if (!opened && !closed) { closed = true; try { es.close(); } catch (e) {} H.error('O servidor em ' + base + ' não respondeu. O server.js está rodando? O endereço (IP e porta) está certo? Os dois aparelhos estão na mesma rede?'); } }, 6000);
+    es.onopen = () => { opened = true; clearTimeout(to); };
+    es.onmessage = ev => {
+        let o; try { o = JSON.parse(ev.data); } catch (e) { return; }
+        if (o.t === '_wait') H.waiting(code);
+        else if (o.t === '_ready') H.ready();
+        else if (o.t === '_err') { H.error(o.m || 'Erro no servidor.'); api.close(); }
+        else if (o.t === '_left') { H.close('O rival saiu da partida.'); }
+        else H.msg(o);
+    };
+    es.onerror = () => {
+        if (closed) return; closed = true; clearTimeout(to); try { es.close(); } catch (e) {}
+        if (!opened) H.error('Não consegui falar com o servidor em ' + base + '. O server.js está rodando? O endereço está certo?');
+        else H.close('A conexão com o servidor caiu.');
+    };
+    return api;
+}
+
+/* 3) LOCAL (tela dividida) — local.html é o "hub": repassa as mensagens entre os dois iframes */
+function tParent(H) {
+    const on = e => { const d = e.data; if (!d || !d.nxvs || !d.msg) return; if (d.msg.t === '_open') H.ready(); else H.msg(d.msg); };
+    window.addEventListener('message', on);
+    parent.postMessage({ nxvs: 1, msg: { t: '_ready', slot: SLOT } }, '*');
+    return { send(o) { parent.postMessage({ nxvs: 1, msg: o }, '*'); }, close() { window.removeEventListener('message', on); } };
+}
+
+function handlers() {
+    return {
+        waiting(code) { V.code = code; V.phase = 'lobby'; screenWaiting(code); },
+        codeChanged(code) { V.code = code; screenWaiting(code); },
+        ready() { V.phase = 'connected'; if (!EMBED) screenMsg('Rival conectado! Iniciando...'); sendHello(); },
+        msg: onMsg,
+        close: transportClosed,
+        error(m) { cleanupTransport(); screenError(m); }
+    };
+}
+function cleanupTransport() { try { V.T && V.T.close(); } catch (e) {} V.T = null; if (V.phase !== 'playing' && V.phase !== 'ended') { V.phase = 'idle'; V.matchBegun = false; } }
+function cancelLobby() { if (!V.active) cleanupTransport(); }
+
+async function startTransport(mode, role, code) {
+    cleanupTransport(); V.mode = mode; V.role = role; V.code = code; V.matchBegun = false;
+    screenMsg(role === 'host' ? 'Criando sala...' : 'Entrando na sala ' + code + '...');
+    const H = handlers();
+    try { V.T = mode === 'online' ? await tPeer(role, code, H) : tSSE(role, code, lanBase(), H); }
+    catch (e) { H.error(e.message || String(e)); }
+}
+
+/* ───────────────────────── LOBBY (reaproveita o modal do jogo) ───────────────────────── */
+function openM(title, html) { const t = $('nx-title'); t.textContent = title; t.dataset.k = 'vs'; $('nx-body').innerHTML = html; $('nx-body').scrollTop = 0; $('nx-modal').classList.add('open'); }
+function closeM() { const m = $('nx-modal'); if (m && $('nx-title').dataset.k === 'vs') { m.classList.remove('open'); $('nx-title').dataset.k = ''; } }
+const inLobby = () => $('nx-title') && $('nx-title').dataset.k === 'vs';
+const nameField = () => `<div class="nx-sec">SEU NOME</div><input class="vs-in" id="vs-name" maxlength="16" value="${esc(V.name)}">`;
+const lanBase = () => { const el = $('vs-srv'); const v = (el ? el.value : store.get('nexus_vs_srv', '')).trim(); return v || (location.protocol.startsWith('http') ? location.origin : 'http://192.168.0.2:3000'); };
+function readName() { const el = $('vs-name'); if (el) { V.name = cleanName(el.value) || V.name; store.set('nexus_vs_name', V.name); } }
+
+function screenHome() {
+    V.phase = 'idle';
+    openM('MULTIPLAYER 1x1', `${nameField()}<div class="nx-sec">ESCOLHA O MODO</div>
+      <button class="vs-opt" data-vs="online">🌐 ONLINE<small>Joga pela internet com um amigo usando um código de sala. Não precisa configurar nada.</small></button>
+      <button class="vs-opt" data-vs="lan">📡 REDE LOCAL (Wi-Fi)<small>Cada um no seu aparelho, na mesma rede. Precisa rodar o server.js em um PC (veja o MULTIPLAYER.md).</small></button>
+      <button class="vs-opt" data-vs="local">🖥 LOCAL (MESMA TELA)<small>Tela dividida: dois jogadores no mesmo PC/tablet. Ideal com tela de toque.</small></button>`);
+}
+function screenOnline() {
+    openM('ONLINE', `<div class="nx-sec">CRIAR SALA</div><button class="vs-opt" data-vs="host-online">➕ CRIAR SALA E CONVIDAR<small>Você recebe um código pra mandar pro amigo.</small></button>
+      <div class="nx-sec">ENTRAR EM UMA SALA</div><input class="vs-in code" id="vs-code" maxlength="5" placeholder="CÓDIGO">
+      <div class="nx-actions"><button class="nx-btn" data-vs="home">VOLTAR</button><button class="nx-btn on" data-vs="join-online">ENTRAR</button></div>`);
+}
+function screenLan() {
+    openM('REDE LOCAL', `<div class="nx-sec">SERVIDOR</div><input class="vs-in" id="vs-srv" value="${esc(store.get('nexus_vs_srv', '') || (location.protocol.startsWith('http') ? location.origin : 'http://192.168.0.2:3000'))}">
+      <div class="vs-msg">Endereço que o server.js mostra ao iniciar. Se você abriu o jogo por ele, já está certo.</div>
+      <div class="nx-sec">CRIAR SALA</div><button class="vs-opt" data-vs="host-lan">➕ CRIAR SALA<small>Você recebe um código de 4 letras.</small></button>
+      <div class="nx-sec">SALAS ABERTAS</div><div id="vs-rooms" class="vs-msg">Procurando...</div>
+      <div class="nx-sec">ENTRAR POR CÓDIGO</div><input class="vs-in code" id="vs-code" maxlength="4" placeholder="CÓDIGO">
+      <div class="nx-actions"><button class="nx-btn" data-vs="home">VOLTAR</button><button class="nx-btn on" data-vs="join-lan">ENTRAR</button></div>`);
+    refreshRooms();
+}
+async function refreshRooms() {
+    const box = $('vs-rooms'); if (!box) return;
+    try {
+        const r = await fetch(lanBase().replace(/\/+$/, '') + '/nx/rooms'), list = await r.json();
+        if (!$('vs-rooms')) return;
+        $('vs-rooms').innerHTML = list.length ? list.map(x => `<div class="vs-room"><span>${esc(x.name)} · <b style="color:#fde047">${esc(x.code)}</b></span><button class="nx-btn on" data-vs="join-room" data-code="${esc(x.code)}">ENTRAR</button></div>`).join('') : 'Nenhuma sala aberta. Crie uma!';
+    } catch (e) { if ($('vs-rooms')) $('vs-rooms').textContent = 'Servidor não encontrado nesse endereço.'; }
+}
+function shareLink(code) {
+    if (!location.protocol.startsWith('http')) return '';
+    return V.mode === 'online' ? location.origin + location.pathname + '?online=' + code : lanBase().replace(/\/+$/, '') + '/?lan=' + code;
+}
+function screenWaiting(code) {
+    const link = shareLink(code);
+    openM('AGUARDANDO RIVAL', `<div class="vs-msg">Passe este código pro seu rival:</div><div class="vs-code">${esc(code)}</div>
+      ${link ? `<div class="vs-msg">ou mande o link:<br><input class="vs-in" readonly value="${esc(link)}" onclick="this.select()"></div>` : ''}
+      <div class="vs-msg">A partida começa sozinha quando ele entrar.</div>
+      <div class="nx-actions"><button class="nx-btn danger" data-vs="cancel">CANCELAR</button></div>`);
+}
+function screenMsg(m) { openM('MULTIPLAYER 1x1', `<div class="vs-msg" style="margin:30px 0">${esc(m)}</div><div class="nx-actions"><button class="nx-btn danger" data-vs="cancel">CANCELAR</button></div>`); }
+function screenError(m) { openM('NÃO DEU CERTO', `<div class="vs-err">${esc(m)}</div><div class="nx-actions"><button class="nx-btn on" data-vs="home">VOLTAR</button></div>`); }
+
+$('nx-body').addEventListener('click', e => {
+    const b = e.target.closest('[data-vs]'); if (!b || !inLobby()) return;
+    const a = b.dataset.vs; readName();
+    if (a === 'home') { cleanupTransport(); screenHome(); }
+    else if (a === 'online') screenOnline();
+    else if (a === 'lan') screenLan();
+    else if (a === 'local') location.href = 'local.html';
+    else if (a === 'cancel') { cleanupTransport(); screenHome(); }
+    else if (a === 'host-online') startTransport('online', 'host', genCode(5));
+    else if (a === 'join-online') { const c = ($('vs-code').value || '').toUpperCase().trim(); if (c.length < 3) return screenError('Digite o código da sala.'); startTransport('online', 'guest', c); }
+    else if (a === 'host-lan') { store.set('nexus_vs_srv', lanBase()); startTransport('lan', 'host', genCode(4)); }
+    else if (a === 'join-lan' || a === 'join-room') { const c = (a === 'join-room' ? b.dataset.code : ($('vs-code').value || '')).toUpperCase().trim(); if (c.length < 3) return screenError('Digite o código da sala.'); store.set('nexus_vs_srv', lanBase()); startTransport('lan', 'guest', c); }
+});
+$('nx-x').addEventListener('click', () => { if (inLobby() || V.phase === 'lobby') cancelLobby(); });
+
+/* botão no menu principal */
+(function addMenuButton() {
+    const play = document.querySelector('#splash [data-act=play]'); if (!play || EMBED) return;
+    const b = document.createElement('button'); b.className = 'sp-sec'; b.dataset.act = 'vs'; b.textContent = '⚔ MULTIPLAYER 1x1';
+    b.style.cssText = 'background:linear-gradient(45deg,#9a3412,#c2410c)!important;border-color:#ea580c!important;color:#ffedd5!important';
+    play.insertAdjacentElement('afterend', b);
+    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#splash [data-act=vs]')) screenHome(); });
+})();
+
+/* ───────────────────────── INICIALIZAÇÃO ───────────────────────── */
+function boot() {
+    if (EMBED) {
+        document.body.classList.add('vs-embed');
+        V.name = 'P' + SLOT; V.role = SLOT === 1 ? 'host' : 'guest'; V.mode = 'local';
+        FX.px = 1; const ov = $('fx-over'); if (ov) ov.style.display = 'none';
+        if (SLOT !== 1) { const ms = $('music-slider'); if (ms) { ms.value = 0; ms.dispatchEvent(new Event('input')); } }
+        nxStarted = true; menuActive = false;
+        const s = $('splash'); if (s) { s.style.transition = 'none'; s.classList.add('out'); }
+        isTutorialActive = false; const tu = $('tutorial-overlay'); if (tu) tu.style.display = 'none';
+        V.T = tParent(handlers());
+        return;
+    }
+    const on = Q.get('online'), lan = Q.get('lan');
+    if (on) { screenMsg('Entrando na sala...'); startTransport('online', 'guest', on.toUpperCase()); }
+    else if (lan && location.protocol.startsWith('http')) { screenMsg('Entrando na sala...'); startTransport('lan', 'guest', lan.toUpperCase()); }
+}
+window.NXVS = { state: V, doSend, resetRun };
+if (document.readyState === 'complete') setTimeout(boot, 50); else window.addEventListener('load', () => setTimeout(boot, 50));
+})();
+    </script>
 </body>
 </html>
