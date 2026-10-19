@@ -1381,7 +1381,9 @@
         let isTutorialActive = true; 
         let menuActive = true; let nxStarted = false;
         const NXO = (function () { let o = {}; try { o = JSON.parse(localStorage.getItem('nexus_opts') || '{}') || {}; } catch (e) {}
-            return Object.assign({ music: 0.3, sfx: 1, px: 2, shake: true, dmg: true, flash: true }, o); })();
+            return Object.assign({ music: 0.3, sfx: 1, px: 2, shake: true, dmg: true, flash: true, particles: 'all' }, o); })();
+        // multiplicador de partículas: TODAS = 1, MINIMAS = ~25%, NENHUMA = 0
+        const partMul = () => NXO.particles === 'none' ? 0 : NXO.particles === 'min' ? 0.25 : 1;
 
         const shopMods = {
             rareBonusChance:   0,   
@@ -1861,7 +1863,7 @@ const FX={hitstop:0,slowmo:0,flash:0,px:2,combo:0,comboT:0,list:[],parts:[],deca
 const R=(a,b)=>a+Math.random()*(b-a), PI2=Math.PI*2, ISO=(x,y)=>cartToIso(x,y);
 const scr=(gx,gy,dy=0)=>{const p=ISO(gx,gy),cx=canvas.width/2,cy=canvas.height/2;return{x:(p.x-cx)*zoom+cx,y:(p.y+dy-cy)*zoom+cy};};
 const hs=n=>{FX.hitstop=Math.max(FX.hitstop,n)}, fl=n=>{if(NXO.flash===false)return;FX.flash=Math.max(FX.flash,n)};
-function fxP(gx,gy,z,vx,vy,vz,col,life,sz,g,add,shrink){if(FX.parts.length>PERF.maxFx)return;FX.parts.push({gx,gy,z,vx,vy,vz,col,life,max:life,sz,g:g==null?.25:g,add,shrink});}
+function fxP(gx,gy,z,vx,vy,vz,col,life,sz,g,add,shrink){if(FX.parts.length>PERF.maxFx)return;const _pm=partMul();if(_pm<1&&(_pm===0||Math.random()>_pm))return;FX.parts.push({gx,gy,z,vx,vy,vz,col,life,max:life,sz,g:g==null?.25:g,add,shrink});}
 function fxBurst(gx,gy,z,n,cols,spd,up,life,sz,g,add,shrink){for(let i=0;i<n;i++){const a=R(0,PI2),s=R(.3,1)*spd;fxP(gx,gy,z,Math.cos(a)*s,Math.sin(a)*s,R(.3,1)*up,cols[i%cols.length],R(.6,1)*life,sz*R(.6,1.4),g,add,shrink);}}
 function fxDecal(gx,gy,r,col,a){const pts=[];for(let i=0;i<6;i++)pts.push({x:R(-r,r),y:R(-r,r)*.5,r:R(.25,.65)*r});FX.decals.push({gx,gy,col,a,pts});if(FX.decals.length>150)FX.decals.shift();}
 function fxAdd(life,draw,gx,gy,end){FX.list.push({life,max:life,draw,gx,gy,end});}
@@ -2377,8 +2379,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                         let cx3 = canvas.width/2; let cy3 = canvas.height/2;
                         let sx3 = (pos3.x - cx3) * zoom + cx3; let sy3 = (pos3.y - cy3) * zoom + cy3;
                         floatingTexts.push(new FloatingText(sx3, sy3 - 30, 'BOSS MORTO!', '#f97316', true));
-                        for(let i = 0; i < 40; i++) particles.push(new Particle(this.x, this.y, '#f97316', 0.3, 6));
-                        for(let i = 0; i < 20; i++) particles.push(new Particle(this.x, this.y, '#fde047', 0.4, 4));
+                        for(let i = 0, _n = Math.ceil(40 * partMul()); i < _n; i++) particles.push(new Particle(this.x, this.y, '#f97316', 0.3, 6));
+                        for(let i = 0, _n = Math.ceil(20 * partMul()); i < _n; i++) particles.push(new Particle(this.x, this.y, '#fde047', 0.4, 4));
                     }
                 }
                 this.squashV += (1.0 - this.squash) * 0.2; this.squashV *= 0.8; this.squash += this.squashV;
@@ -2721,7 +2723,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 ctx.globalAlpha = 1.0;
             }
         }
-        function createParticles(gx, gy, color, amt) { const room = PERF.maxParticles - particles.length; if (room <= 0) return; if (amt > room) amt = room; for(let i=0; i<amt; i++) particles.push(new Particle(gx, gy, color, 0.5, 4)); }
+        function createParticles(gx, gy, color, amt) { const _pm = partMul(); if (_pm === 0) return; if (_pm < 1) amt = Math.ceil(amt * _pm); const room = PERF.maxParticles - particles.length; if (room <= 0) return; if (amt > room) amt = room; for(let i=0; i<amt; i++) particles.push(new Particle(gx, gy, color, 0.5, 4)); }
 
         const VFX_LAYERS = [
             {
@@ -5010,7 +5012,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     const ms = $('music-slider'), vs = $('volume-slider');
     function saveOpts() {
         NXO.music = +ms.value; NXO.sfx = +vs.value; NXO.px = FX.px;
-        LS.set(OPT_KEY, { music: NXO.music, sfx: NXO.sfx, px: NXO.px, shake: NXO.shake, dmg: NXO.dmg, flash: NXO.flash });
+        LS.set(OPT_KEY, { music: NXO.music, sfx: NXO.sfx, px: NXO.px, shake: NXO.shake, dmg: NXO.dmg, flash: NXO.flash, particles: NXO.particles });
     }
     ms.addEventListener('change', saveOpts); vs.addEventListener('change', saveOpts);
     ms.value = NXO.music; ms.dispatchEvent(new Event('input'));
@@ -5077,6 +5079,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     const onoff = v => v ? 'ON' : 'OFF';
     function optsHTML() {
         const px = [1, 2, 3, 4].map(n => `<button class="nx-btn ${FX.px === n ? 'on' : ''}" data-px="${n}">${n === 1 ? 'OFF' : n + 'x'}</button>`).join('');
+        const pt = [['all', 'TODAS'], ['min', 'MÍNIMAS'], ['none', 'NENHUMA']].map(([v, l]) => `<button class="nx-btn ${NXO.particles === v ? 'on' : ''}" data-pt="${v}">${l}</button>`).join('');
         const tg = (k, t, d) => `<div class="nx-row"><label>${t}<small>${d}</small></label><button class="nx-btn ${NXO[k] ? 'on' : ''}" data-tg="${k}">${onoff(NXO[k])}</button></div>`;
         return `<div class="nx-sec">ÁUDIO</div>
             <div class="nx-row"><label>Música</label><input type="range" id="nx-mus" min="0" max="1" step="0.01" value="${ms.value}"></div>
@@ -5086,6 +5089,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             ${tg('shake', 'Tremor de tela', 'Desligue se a câmera tremendo incomoda')}
             ${tg('dmg', 'Números de dano', 'Os números que sobem ao acertar inimigos')}
             ${tg('flash', 'Flashes de luz', 'Clarões de explosões e raios (fotossensibilidade)')}
+            <div class="nx-row"><label>Partículas<small>Faíscas, fumaça e fragmentos dos efeitos</small></label><div class="nx-seg">${pt}</div></div>
             <div class="nx-row"><label>Tela cheia</label><button class="nx-btn" id="nx-fs">ALTERNAR</button></div>
             <div class="nx-sec">DADOS</div>
             <div class="nx-row"><label>Apagar progresso<small>Recorde, estatísticas, histórico e jogo salvo</small></label><button class="nx-btn danger" id="nx-wipe">APAGAR</button></div>`;
@@ -5097,6 +5101,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         $('nx-sfx').oninput = e => { vs.value = e.target.value; vs.dispatchEvent(new Event('input')); };
         $('nx-sfx').onchange = () => { saveOpts(); click(); };
         b.querySelectorAll('[data-px]').forEach(x => x.onclick = () => { click(); FX.px = +x.dataset.px; nxPxChanged(); });
+        b.querySelectorAll('[data-pt]').forEach(x => x.onclick = () => { click(); NXO.particles = x.dataset.pt; if (NXO.particles === 'none') { particles.length = 0; FX.parts.length = 0; } else if (NXO.particles === 'min') { particles.length = Math.min(particles.length, 30); FX.parts.length = Math.min(FX.parts.length, 60); } saveOpts(); refreshOpts(); });
         b.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { click(); NXO[x.dataset.tg] = !NXO[x.dataset.tg]; saveOpts(); refreshOpts(); });
         $('nx-fs').onclick = () => { click(); if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); };
         $('nx-wipe').onclick = () => { click(); confirmBox('APAGAR PROGRESSO?', 'Isso apaga recorde, estatísticas, histórico e o jogo salvo. Não dá para desfazer.', 'APAGAR TUDO', () => { ['nexus_highscore', 'nexus_history', LIFE_KEY, SAVE_KEY].forEach(LS.del); refreshMenu(); showOpts(); }); };
