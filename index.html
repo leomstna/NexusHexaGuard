@@ -533,6 +533,9 @@
             background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='96' height='96' filter='url(%23n)'/></svg>"); }
 
         /* ═══ MENU PRINCIPAL ═══ */
+        /* PERF: em qualidade baixa/média o overlay perde o backdrop-filter e o ruído com blend (os dois mais caros) */
+        html.nx-lite #fx-over { -webkit-backdrop-filter: none; backdrop-filter: none; }
+        html.nx-lite #fx-over::after { display: none; }
         #splash { gap: 18px; }
         #splash.out { visibility: hidden; transition: opacity .6s, transform .6s, visibility 0s .6s; }
         #splash.out * { animation-play-state: paused !important; }
@@ -1179,23 +1182,24 @@
 
         // ── PERFORMANCE: qualidade adaptativa (cai sozinha se o PC não segura ~50fps) ──
         const PERF = {
-            q: 2, shadow: 1, maxParticles: 600, maxFloating: 70, rays: { scale: 0.5, fps: 30 },
+            q: 2, shadow: 1, maxParticles: 600, maxFloating: 70, rays: { scale: 0.5, fps: 30 }, maxFx: 1400, post: true, lite: false,
             ema: 16.7, slow: 0
         };
         const _QUALITY = [
-            { shadow: 0,   maxParticles: 120, maxFloating: 25, rays: null },
-            { shadow: 0.5, maxParticles: 300, maxFloating: 40, rays: { scale: 0.35, fps: 20 } },
-            { shadow: 1,   maxParticles: 600, maxFloating: 70, rays: { scale: 0.5,  fps: 30 } },
+            { shadow: 0,   maxParticles: 120, maxFloating: 25, rays: null, maxFx: 350,  post: false, lite: true  },
+            { shadow: 0.5, maxParticles: 300, maxFloating: 40, rays: { scale: 0.35, fps: 20 }, maxFx: 700,  post: true,  lite: true  },
+            { shadow: 1,   maxParticles: 600, maxFloating: 70, rays: { scale: 0.5,  fps: 30 }, maxFx: 1400, post: true,  lite: false },
         ];
         function setQuality(q) {
             q = Math.max(0, Math.min(2, q)); PERF.q = q;
             Object.assign(PERF, _QUALITY[q]);
+            document.documentElement.classList.toggle('nx-lite', !!PERF.lite);
         }
         function adaptQuality(dt) {
-            if (PERF.q === 0 || document.hidden || isShopOpen || gameOver) return;
+            if (PERF.q === 0 || document.hidden || isShopOpen || gameOver || menuActive) return;
             PERF.ema += (Math.min(dt, 100) - PERF.ema) * 0.05;
             if (PERF.ema > 21) PERF.slow++; else PERF.slow = Math.max(0, PERF.slow - 2);
-            if (PERF.slow > 120) { setQuality(PERF.q - 1); PERF.slow = 0; PERF.ema = 16.7; }
+            if (PERF.slow > 90) { setQuality(PERF.q - 1); PERF.slow = 0; PERF.ema = 16.7; }
         }
         // shadowBlur é o efeito mais caro do canvas 2D: passa por um multiplicador de qualidade
         (function () {
@@ -1852,7 +1856,7 @@ const FX={hitstop:0,slowmo:0,flash:0,px:2,combo:0,comboT:0,list:[],parts:[],deca
 const R=(a,b)=>a+Math.random()*(b-a), PI2=Math.PI*2, ISO=(x,y)=>cartToIso(x,y);
 const scr=(gx,gy,dy=0)=>{const p=ISO(gx,gy),cx=canvas.width/2,cy=canvas.height/2;return{x:(p.x-cx)*zoom+cx,y:(p.y+dy-cy)*zoom+cy};};
 const hs=n=>{FX.hitstop=Math.max(FX.hitstop,n)}, fl=n=>{if(NXO.flash===false)return;FX.flash=Math.max(FX.flash,n)};
-function fxP(gx,gy,z,vx,vy,vz,col,life,sz,g,add,shrink){if(FX.parts.length>1400)return;FX.parts.push({gx,gy,z,vx,vy,vz,col,life,max:life,sz,g:g==null?.25:g,add,shrink});}
+function fxP(gx,gy,z,vx,vy,vz,col,life,sz,g,add,shrink){if(FX.parts.length>PERF.maxFx)return;FX.parts.push({gx,gy,z,vx,vy,vz,col,life,max:life,sz,g:g==null?.25:g,add,shrink});}
 function fxBurst(gx,gy,z,n,cols,spd,up,life,sz,g,add,shrink){for(let i=0;i<n;i++){const a=R(0,PI2),s=R(.3,1)*spd;fxP(gx,gy,z,Math.cos(a)*s,Math.sin(a)*s,R(.3,1)*up,cols[i%cols.length],R(.6,1)*life,sz*R(.6,1.4),g,add,shrink);}}
 function fxDecal(gx,gy,r,col,a){const pts=[];for(let i=0;i<6;i++)pts.push({x:R(-r,r),y:R(-r,r)*.5,r:R(.25,.65)*r});FX.decals.push({gx,gy,col,a,pts});if(FX.decals.length>150)FX.decals.shift();}
 function fxAdd(life,draw,gx,gy,end){FX.list.push({life,max:life,draw,gx,gy,end});}
@@ -1897,7 +1901,7 @@ function fxRicochetDemo(t){const pts=[];for(let i=0;i<5;i++)pts.push({x:t.gridX+
     if(u<.15){ctx.globalAlpha=1-u*6;ctx.strokeStyle='#fff';ctx.beginPath();ctx.arc(A.x,A.y-15,10+u*60,0,PI2);ctx.stroke();}});
   pts.forEach((q,i)=>setTimeout(()=>fxBurst(q.x,q.y,12,10,['#fff','#7dd3fc'],.1,2.4,16,3,.25,true,true),i*150));}
 // ── MORTE (gibs, sangue, combo), muzzle, status ──
-const COMBOS={5:['KILLING SPREE!','#fde047'],10:['MASSACRE!','#fb923c'],20:['IMPARÁVEL!!','#f43f5e'],35:['NOSSA, QUE JOGO FODA!!!','#a855f7'],50:['LENDÁRIO!!!!','#22d3ee']};
+const COMBOS={5:['KILLING SPREE!','#fde047'],10:['MASSACRE!','#fb923c'],20:['IMPARÁVEL!!','#f43f5e'],35:['INCRÍVEL!!!','#a855f7'],50:['LENDÁRIO!!!!','#22d3ee']};
 function fxBanner(txt,col,small){const d=document.createElement('div');d.className='fx-banner'+(small?' sm':'');d.textContent=txt;d.style.color=col||'#fde047';document.body.appendChild(d);setTimeout(()=>d.remove(),small?1300:1900);}
 function fxDeath(e){const t=ENEMY_TYPES[e.enemyType],boss=e.enemyType==='boss',st=e.statusEffects.map(s=>s.type);
   for(let i=0,n=boss?38:13;i<n;i++)fxP(e.x,e.y,R(8,20),R(-.13,.13),R(-.13,.13),R(2,6),[t.color,'#7f1d1d','#b91c1c','#3f0d0d'][i%4],R(45,90),R(3,6),.3);
@@ -1944,11 +1948,11 @@ function fxDrawDecals(){const k=map.length+'x'+map[0].length+waypoints.length;
   for(const d of FX.decals){const o=ISO(d.gx,d.gy);ctx.globalAlpha=d.a*Math.min(1,(d.life||999)/150);ctx.fillStyle=d.col;for(const q of d.pts){ctx.beginPath();ctx.ellipse(o.x+q.x,o.y+q.y,q.r,q.r*.5,0,0,PI2);ctx.fill();}}ctx.globalAlpha=1;
   }
 function fxDrawWorld(){ctx.save();for(const q of particles)q.draw();for(const f of FX.list){ctx.save();f.draw(1-f.life/f.max);ctx.restore();}
-  for(const p of FX.parts){const o=ISO(p.gx,p.gy),s=p.sz*(p.shrink?p.life/p.max:1);ctx.globalAlpha=Math.min(1,p.life/p.max*1.6);ctx.globalCompositeOperation=p.add?'lighter':'source-over';ctx.fillStyle=p.col;ctx.fillRect((o.x-s/2)|0,(o.y-p.z-s/2)|0,Math.max(1,s|0),Math.max(1,s|0));}ctx.restore();}
+  let _ad=null;for(const p of FX.parts){const o=ISO(p.gx,p.gy),s=p.sz*(p.shrink?p.life/p.max:1);ctx.globalAlpha=Math.min(1,p.life/p.max*1.6);const _a=!!p.add;if(_a!==_ad){_ad=_a;ctx.globalCompositeOperation=_a?'lighter':'source-over';}ctx.fillStyle=p.col;ctx.fillRect((o.x-s/2)|0,(o.y-p.z-s/2)|0,Math.max(1,s|0),Math.max(1,s|0));}ctx.restore();}
 FloatingText.prototype.draw=function(){if(NXO.dmg===false&&/^(⚡ )?\d+$/.test(this.text))return;const pop=this.life>.9?1+(this.life-.9)*7:1;ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,this.life*1.8));ctx.translate(Math.round(this.x),Math.round(this.y));ctx.scale(pop,pop);ctx.font=`${Math.round(this.size*.78)}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='#0a0410';ctx.strokeText(this.text,0,0);ctx.fillStyle=this.color;ctx.fillText(this.text,0,0);ctx.restore();};
 // ── SHADER: Pixelation + dithering + paleta + vinheta + aberração cromática ──
 let _gl=null;
-function fxInitGL(){try{const c=document.createElement('canvas');c.id='fx-gl';c.width=canvas.width;c.height=canvas.height;const gl=c.getContext('webgl',{alpha:false});if(!gl)return;
+function fxInitGL(){try{const c=document.createElement('canvas');c.id='fx-gl';c.width=canvas.width;c.height=canvas.height;const gl=c.getContext('webgl',{alpha:false,antialias:false,depth:false,stencil:false});if(!gl)return;
   const mk=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o;},pr=gl.createProgram();
   gl.attachShader(pr,mk(gl.VERTEX_SHADER,'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}'));
   gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,`precision mediump float;uniform sampler2D t;uniform vec2 r;uniform float px,fl,ab,tm;
@@ -1962,11 +1966,11 @@ c=floor(c*9.+.5+bay(b))/9.;vec2 q=f/r-.5;c*=1.-dot(q,q)*1.35;c*=(mod(b.y,2.)<1.?
   const tx=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tx);[[gl.TEXTURE_MIN_FILTER,gl.NEAREST],[gl.TEXTURE_MAG_FILTER,gl.NEAREST],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]].forEach(([k,v])=>gl.texParameteri(gl.TEXTURE_2D,k,v));
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
   const U=n=>gl.getUniformLocation(pr,n);_gl={c,gl,r:U('r'),px:U('px'),fl:U('fl'),ab:U('ab'),tm:U('tm')};document.body.insertBefore(c,document.body.firstChild);}catch(e){console.warn('Shader pixel desativado:',e);_gl=null;}}
-function fxPost(){if(!_gl||FX.px<=1){if(_gl)_gl.c.style.display='none';canvas.style.opacity=1;return;}
+function fxPost(){if(!_gl||FX.px<=1||!PERF.post){if(_gl&&_gl.c.style.display!=='none')_gl.c.style.display='none';canvas.style.opacity=1;return;}
   const {c,gl}=_gl;c.style.display='block';if(c.width!==canvas.width||c.height!==canvas.height){c.width=canvas.width;c.height=canvas.height;gl.viewport(0,0,c.width,c.height);}
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);gl.uniform2f(_gl.r,c.width,c.height);gl.uniform1f(_gl.px,FX.px);gl.uniform1f(_gl.fl,Math.min(.9,FX.flash));gl.uniform1f(_gl.ab,Math.min(3,screenShake*.12+FX.flash*2.2));gl.uniform1f(_gl.tm,frameCount);gl.drawArrays(gl.TRIANGLES,0,6);
+  if(_gl.tw!==canvas.width||_gl.th!==canvas.height){gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);_gl.tw=canvas.width;_gl.th=canvas.height;}else gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,canvas);gl.uniform2f(_gl.r,c.width,c.height);gl.uniform1f(_gl.px,FX.px);gl.uniform1f(_gl.fl,Math.min(.9,FX.flash));gl.uniform1f(_gl.ab,Math.min(3,screenShake*.12+FX.flash*2.2));gl.uniform1f(_gl.tm,frameCount);gl.drawArrays(gl.TRIANGLES,0,6);
   ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.restore();}
-function fxCyclePx(){FX.px=FX.px===2?3:FX.px===3?4:FX.px===4?1:2;const b=document.getElementById('fx-px');if(b)b.querySelector('span').textContent=FX.px>1?FX.px+'x':'OFF';if(window.nxPxChanged)nxPxChanged();}
+function fxCyclePx(){PERF.slow=0;PERF.ema=16.7;setQuality(2);FX.px=FX.px===2?3:FX.px===3?4:FX.px===4?1:2;const b=document.getElementById('fx-px');if(b)b.querySelector('span').textContent=FX.px>1?FX.px+'x':'OFF';if(window.nxPxChanged)nxPxChanged();}
 function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getElementById('splash');if(s)s.remove();}
 (function fxBoot(){fxInitGL();window.addEventListener('keydown',e=>{if(e.key==='p'||e.key==='P')fxCyclePx();});
   const w=document.getElementById('audio-controls-wrapper'),b=document.createElement('div');b.id='fx-px';b.className='audio-btn targeting-trigger';b.title='Pixel shader [P]';b.innerHTML='<i class="fa-solid fa-border-all"></i><span>2x</span>';b.onclick=fxCyclePx;w&&w.appendChild(b);
@@ -4204,7 +4208,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             let steps = 0;
             while (_acc >= STEP_MS && steps < 3) { if (!menuActive || (window.MP && window.MP.active)) gameUpdate(); _acc -= STEP_MS; steps++; }
             if (_acc >= STEP_MS) _acc = 0;           // PC não acompanha: o jogo desacelera em vez de entrar em espiral
-            if (steps > 0 && (!isShopOpen || (++_shopSkip % 3 === 0))) gameRender();   // loja aberta = só 1/3 dos frames (fundo quase invisível)
+            if (steps > 0 && !menuActive && (!isShopOpen || (++_shopSkip % 3 === 0))) gameRender();   // loja aberta = só 1/3 dos frames (fundo quase invisível)
             adaptQuality(dt);
         }
         requestAnimationFrame(mainFrame);
@@ -4779,7 +4783,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 const cfg = PERF.rays;
                 if (!cfg) { if (canvas.style.display !== 'none') canvas.style.display = 'none'; return; }
                 if (canvas.style.display === 'none') canvas.style.display = '';
-                if (document.hidden || isShopOpen || gameOver) return;
+                if (document.hidden || isShopOpen || gameOver || menuActive) return;
                 if (now - lastDraw < 1000 / cfg.fps) return;
                 lastDraw = now;
                 const w = Math.max(2, Math.floor(canvas.clientWidth * cfg.scale));
@@ -5463,7 +5467,7 @@ try {
 
 /* ── combo, missões e conquistas (checados 10x/s) ── */
 let combo = 0, comboT = 0, maxCombo = 0, lastK = 0, lastG = 0;
-const MILES = [10, 25, 50, 100, 200]; let milesHit = 0;
+const MILES = [10, 25, 50, 100, 200]; let milesHit = 0; let _dSig = '', _dT = 0;   // PERF: controla quando gravar nexus_daily
 function tick() {
   try {
     const k = statEnemiesKilled, g = statGoldEarned, tn = Date.now();
@@ -5477,15 +5481,18 @@ function tick() {
     if (g > lastG) { D.g += g - lastG; lastG = g; }
     if (combo && tn > comboT) { combo = 0; milesHit = 0; }
     D.w = Math.max(D.w, wave);
-    const c = $('nx-combo'); c.style.opacity = combo >= 3 ? 1 : 0; c.innerHTML = 'COMBO x' + combo + '<small>PRÓXIMO BÔNUS EM ' + (MILES[milesHit] || '∞') + '</small>';
+    const c = $('nx-combo'); const _op = combo >= 3 ? '1' : '0'; if (c.style.opacity !== _op) c.style.opacity = _op;
+    const _h = 'COMBO x' + combo + '<small>PRÓXIMO BÔNUS EM ' + (MILES[milesHit] || '∞') + '</small>'; if (c._h !== _h) { c._h = _h; c.innerHTML = _h; }
     const s = { k, w: wave, c: maxCombo, t: towers.length, g };
     let dirty = false;
     ACH.forEach(a => { if (!A[a.id] && a.f(s)) { A[a.id] = 1; dirty = true; gain(a.r); toast('🏆 ' + a.n + ' +' + a.r + '💎'); } });
     MIS.forEach(m => { if (!D.done[m.id] && D[m.id] >= m.t) { D.done[m.id] = 1; dirty = true; gain(15); toast('📋 Missão cumprida: ' + m.n + ' +15💎'); } });
-    LS.set('nexus_daily', D); if (dirty) LS.set('nexus_ach', A);
+    const _sg = D.k + '|' + D.g + '|' + D.w; if (dirty || (_sg !== _dSig && tn - _dT > 2000)) { _dSig = _sg; _dT = tn; LS.set('nexus_daily', D); } if (dirty) LS.set('nexus_ach', A);
   } catch (e) {}
 }
 setInterval(tick, 100);
+const _flushD = () => { try { LS.set('nexus_daily', D); } catch (e) {} };
+window.addEventListener('pagehide', _flushD); document.addEventListener('visibilitychange', () => { if (document.hidden) _flushD(); });
 
 /* ── UI: botão, combo e modal ── */
 const cb = document.createElement('div'); cb.id = 'nx-combo'; document.body.appendChild(cb);
