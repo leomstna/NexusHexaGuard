@@ -583,6 +583,7 @@
         .nx-actions { display: flex; gap: 12px; justify-content: center; margin-top: 18px; }
     </style>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="mp.css">
 </head>
 <body>
     <div style="font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; visibility: hidden; pointer-events: none;">\uf05b\uf135\uf0e7</div>
@@ -1210,42 +1211,94 @@
         const renderQueue = [];
         const _rqCmp = (a, b) => { const dd = a.d - b.d; return (dd < 0.01 && dd > -0.01) ? a.o - b.o : dd; };
         let _tiles = null;
+        // ── PALETAS DO CHÃO: uma é sorteada a cada partida nova (nunca repete a anterior) ──
+        // cores amostradas da imagem de referência, já compensadas pelo filtro do shader final
+        const FLOOR_PALETTES = [
+            { id: 'abismo',   name: 'ABISMO',   tops: ['#241b53', '#2d2163', '#31236a', '#342677', '#3c2a8a'], hover: '#a78bfa', deco: 'crystal', c1: '#5b45b8', c2: '#a78bfa' },
+            { id: 'floresta', name: 'FLORESTA', tops: ['#295422', '#366727', '#3c7028', '#427729', '#4f872a'], hover: '#bef264', deco: 'tuft',    c1: '#5fae2e', c2: '#8fd14f' },
+            { id: 'vulcao',   name: 'VULCÃO',   tops: ['#783d25', '#974e2b', '#a4572d', '#b1602e', '#c9752f'], hover: '#fdba74', deco: 'rock',    c1: '#4a2412', c2: '#8a4a22' },
+            { id: 'gelo',     name: 'GELO',     tops: ['#1f5f71', '#217585', '#237e8b', '#248893', '#2badaf'], hover: '#a5f3fc', deco: 'spark',   c1: '#7fe9f5', c2: '#ffffff' }
+        ];
+        FLOOR_PALETTES.forEach(p => {   // laterais = versão escurecida do tom médio
+            const m = parseInt(p.tops[2].slice(1), 16), ch = s => [(m >> 16) & 255, (m >> 8) & 255, m & 255].map(v => Math.round(v * s));
+            const hx = a => '#' + a.map(v => v.toString(16).padStart(2, '0')).join('');
+            p.left = hx(ch(0.42)); p.right = hx(ch(0.58));
+        });
+        let floorPalette = FLOOR_PALETTES[0];
+        const FLOOR_LAST_KEY = 'nexus_last_floor';
+        function setFloorPalette(id) {
+            const p = FLOOR_PALETTES.find(x => x.id === id); if (!p) return false;
+            floorPalette = p; _tiles = null;
+            try { localStorage.setItem(FLOOR_LAST_KEY, p.id); } catch (e) {}
+            return true;
+        }
+        function pickRandomFloor() {
+            let last = null; try { last = localStorage.getItem(FLOOR_LAST_KEY); } catch (e) {}
+            const opts = FLOOR_PALETTES.filter(p => p.id !== last);
+            return (opts[Math.floor(Math.random() * opts.length)] || FLOOR_PALETTES[0]).id;
+        }
+        setFloorPalette(pickRandomFloor());   // partida nova = página recarregada; "Continuar" restaura a paleta salva (ver loadGame)
+
+        function _tileRand(x, y, n) {
+            let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(n, 1274126177)) | 0;
+            h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+            return (h >>> 0) / 4294967296;
+        }
         function _buildTiles() {
-            const W2 = TILE_W / 2, H2 = TILE_H / 2;
-            const G = { l0: new Path2D(), l1: new Path2D(), r0: new Path2D(), r1: new Path2D(), t1: new Path2D(), g0: new Path2D(), g1: new Path2D(), g2: new Path2D(), stroke: new Path2D() };
-            const grass = ['g0', 'g1', 'g2'];
+            const W2 = TILE_W / 2, H2 = TILE_H / 2, P = floorPalette, NT = P.tops.length;
+            const G = { l0: new Path2D(), l1: new Path2D(), r0: new Path2D(), r1: new Path2D(), t1: new Path2D(), top: [], dark: new Path2D(), light: new Path2D(), d1: new Path2D(), d2: new Path2D(), stroke: new Path2D() };
+            for (let i = 0; i < NT; i++) G.top.push(new Path2D());
             for (let y = 0; y < map.length; y++) {
                 for (let x = 0; x < map[y].length; x++) {
                     const type = map[y][x] === 1 ? 1 : 0;
                     const px = (x - y) * W2, py = (x + y) * H2;
-                    const L = G[type ? 'l1' : 'l0'], R = G[type ? 'r1' : 'r0'];
+                    const L = G[type ? 'l1' : 'l0'], R_ = G[type ? 'r1' : 'r0'];
                     L.moveTo(px - W2, py); L.lineTo(px, py + H2); L.lineTo(px, py + H2 + 10); L.lineTo(px - W2, py + 10); L.closePath();
-                    R.moveTo(px, py + H2); R.lineTo(px + W2, py); R.lineTo(px + W2, py + 10); R.lineTo(px, py + H2 + 10); R.closePath();
-                    const T = type ? G.t1 : G[grass[(x * 37 + y * 17) % 3]];
+                    R_.moveTo(px, py + H2); R_.lineTo(px + W2, py); R_.lineTo(px + W2, py + 10); R_.lineTo(px, py + H2 + 10); R_.closePath();
+                    // tom da tile = ruído por tile + ruído em blocos 2x2 (forma manchas claras/escuras como na referência)
+                    const shade = Math.min(NT - 1, Math.floor((_tileRand(x, y, 1) * 0.55 + _tileRand(x >> 1, y >> 1, 2) * 0.45) * NT));
+                    const T = type ? G.t1 : G.top[shade];
                     T.moveTo(px, py - H2); T.lineTo(px + W2, py); T.lineTo(px, py + H2); T.lineTo(px - W2, py); T.closePath();
                     G.stroke.moveTo(px, py - H2); G.stroke.lineTo(px + W2, py); G.stroke.lineTo(px, py + H2); G.stroke.lineTo(px - W2, py); G.stroke.closePath();
+                    if (type) continue;
+                    // pontinhos de textura dentro do losango (|a|,|b| <= .42 garante ficar dentro da tile)
+                    for (let k = 0; k < 3; k++) {
+                        const a = (_tileRand(x, y, 10 + k) - 0.5) * 0.84, b = (_tileRand(x, y, 20 + k) - 0.5) * 0.84;
+                        (k === 2 ? G.light : G.dark).rect(Math.round(px + (a - b) * W2), Math.round(py + (a + b) * H2), 2, 1);
+                    }
+                    // decoração rara por bioma (tufos, pedras, cristais, brilhos de gelo)
+                    if (_tileRand(x, y, 30) < 0.085) {
+                        const a = (_tileRand(x, y, 31) - 0.5) * 0.6, b = (_tileRand(x, y, 32) - 0.5) * 0.6;
+                        const dx = Math.round(px + (a - b) * W2), dy = Math.round(py + (a + b) * H2);
+                        if (P.deco === 'tuft')         { G.d1.rect(dx - 2, dy - 4, 1, 4); G.d1.rect(dx, dy - 6, 1, 6); G.d1.rect(dx + 2, dy - 4, 1, 4); G.d2.rect(dx, dy - 6, 1, 2); }
+                        else if (P.deco === 'rock')    { G.d1.rect(dx - 3, dy - 3, 6, 4); G.d2.rect(dx - 3, dy - 3, 6, 1); G.d2.rect(dx - 3, dy - 3, 1, 3); }
+                        else if (P.deco === 'crystal') { G.d1.rect(dx - 1, dy - 4, 2, 4); G.d2.rect(dx - 1, dy - 5, 2, 1); }
+                        else                           { G.d1.rect(dx - 2, dy, 5, 1); G.d1.rect(dx, dy - 2, 1, 5); G.d2.rect(dx, dy, 1, 1); }
+                    }
                 }
             }
-            _tiles = { key: map.length + 'x' + map[0].length + ':' + waypoints.length, G };
+            _tiles = { key: map.length + 'x' + map[0].length + ':' + waypoints.length + ':' + P.id, G };
         }
         function drawMapTiles(hx, hy) {
-            if (!_tiles || _tiles.key !== map.length + 'x' + map[0].length + ':' + waypoints.length) _buildTiles();
-            const G = _tiles.G, W2 = TILE_W / 2, H2 = TILE_H / 2;
+            if (!_tiles || _tiles.key !== map.length + 'x' + map[0].length + ':' + waypoints.length + ':' + floorPalette.id) _buildTiles();
+            const G = _tiles.G, P = floorPalette, W2 = TILE_W / 2, H2 = TILE_H / 2;
             ctx.save();
             ctx.translate(canvas.width / 2 + camX, canvas.height / 4 + camY);
-            ctx.fillStyle = '#1b1530'; ctx.fill(G.l0);
+            ctx.fillStyle = P.left; ctx.fill(G.l0);
             ctx.fillStyle = '#140c0c'; ctx.fill(G.l1);
-            ctx.fillStyle = '#251c3d'; ctx.fill(G.r0);
+            ctx.fillStyle = P.right; ctx.fill(G.r0);
             ctx.fillStyle = '#1d1111'; ctx.fill(G.r1);
-            ctx.fillStyle = '#33284f'; ctx.fill(G.g0);
-            ctx.fillStyle = '#2d2347'; ctx.fill(G.g1);
-            ctx.fillStyle = '#3a2e5a'; ctx.fill(G.g2);
+            for (let i = 0; i < G.top.length; i++) { ctx.fillStyle = P.tops[i]; ctx.fill(G.top[i]); }
             ctx.fillStyle = '#2a1717'; ctx.fill(G.t1);
             ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.stroke(G.stroke);
+            ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fill(G.dark);
+            ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill(G.light);
+            ctx.fillStyle = P.c1; ctx.fill(G.d1);
+            ctx.fillStyle = P.c2; ctx.fill(G.d2);
             if (hy >= 0 && hy < map.length && hx >= 0 && hx < map[hy].length && map[hy][hx] === 0) {
                 const px = (hx - hy) * W2, py = (hx + hy) * H2;
                 ctx.beginPath(); ctx.moveTo(px, py - H2); ctx.lineTo(px + W2, py); ctx.lineTo(px, py + H2); ctx.lineTo(px - W2, py); ctx.closePath();
-                ctx.fillStyle = '#a78bfa'; ctx.fill(); ctx.stroke();
+                ctx.fillStyle = P.hover; ctx.fill(); ctx.stroke();
             }
             ctx.restore();
         }
@@ -1379,7 +1432,7 @@
         let initialPath = generateWindingPath(waypoints[0].x, waypoints[0].y, mapWidth, mapHeight, 'right');
         initialPath.forEach(p => { map[p.y][p.x] = 1; waypoints.push(p); });
 
-        const towers = []; const soldTowers = []; const enemies = []; const projectiles = []; const particles = [];
+        const towers = []; const soldTowers = []; const lostTowers = []; const enemies = []; const projectiles = []; const particles = [];
         const uiParticles = []; const floatingTexts = []; 
         let hoverGridX = -1; let hoverGridY = -1;
         let enemiesToSpawn = 0; let spawnInterval = 80; let frameCount = 0; let spawnTimer = 0;
@@ -1881,15 +1934,15 @@ function fxUpdate(){FX.flash*=.86;if(FX.flash<.01)FX.flash=0;
   for(let i=FX.list.length-1;i>=0;i--){const f=FX.list[i];if(--f.life<=0){f.end&&f.end();FX.list.splice(i,1);}}
   for(let i=FX.parts.length-1;i>=0;i--){const p=FX.parts[i];p.gx+=p.vx;p.gy+=p.vy;p.z+=p.vz;p.vz-=p.g;if(p.z<0){p.z=0;p.vz*=-.4;p.vx*=.6;p.vy*=.6;if(Math.abs(p.vz)<.35)p.vz=0;}if(--p.life<=0)FX.parts.splice(i,1);}
   for(let i=FX.zones.length-1;i>=0;i--){const z=FX.zones[i];if(--z.life<=0){FX.zones.splice(i,1);continue;}
-    if(z.life%10===0)for(const e of enemies)if(!e.dead&&Math.hypot(e.x-z.gx,e.y-z.gy)<z.r&&z.dmg>0&&!e.statusEffects.some(s=>s.type==='fire'))e.statusEffects.push({type:'fire',dmg:z.dmg,duration:50});
-    if(z.life%4===0)fxP(z.gx+R(-z.r,z.r)*.7,z.gy+R(-z.r,z.r)*.7,2,0,0,R(.6,1.5),['#f97316','#fde047'][z.life%2],R(18,30),R(2,4),-.01,true,true);}
+    if(z.life%10===0)for(const e of enemies){const ty=z.kind==='rad'?'poison':'fire';if(!e.dead&&Math.hypot(e.x-z.gx,e.y-z.gy)<z.r&&z.dmg>0&&!e.statusEffects.some(s=>s.type===ty))e.statusEffects.push(ty==='poison'?{type:'poison',dmg:z.dmg,duration:60,stacks:1}:{type:'fire',dmg:z.dmg,duration:50});}
+    if(z.life%4===0)fxP(z.gx+R(-z.r,z.r)*.7,z.gy+R(-z.r,z.r)*.7,2,0,0,R(.6,1.5),(z.kind==='rad'?['#86efac','#4ade80']:['#f97316','#fde047'])[z.life%2],R(18,30),R(2,4),-.01,true,true);}
   if(FX.comboT>0){FX.comboT--;if(!FX.comboT)FX.combo=0;}const c=document.getElementById('fx-combo');if(c){const v=FX.combo>=3?FX.combo:0;if(c._v!==v){c._v=v;c.textContent=v?'x'+v+' COMBO':'';c.style.opacity=v?1:0;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop');}}}
 let _fd=null;
 function fxDrawDecals(){const k=map.length+'x'+map[0].length+waypoints.length;
   if(!_fd||_fd.k!==k){const a=new Path2D(),b=new Path2D();for(let y=0;y<map.length;y++)for(let x=0;x<map[y].length;x++){const h=(x*73+y*151+x*y*7)%9,p=ISO(x,y);if(map[y][x]===1){if(h<4)b.rect(p.x-14+h*7,p.y-3+(h%3)*3,3,2);}else if(h<4){a.rect(p.x-18+h*9,p.y-4+(h%2)*6,2,2);if(h===0)a.rect(p.x+4,p.y+2,6,1);}}_fd={k,a,b,ox:camX,oy:camY};}
   ctx.save();ctx.translate(camX-_fd.ox,camY-_fd.oy);ctx.fillStyle='rgba(255,255,255,.07)';ctx.fill(_fd.a);ctx.fillStyle='rgba(120,20,20,.35)';ctx.fill(_fd.b);ctx.restore();
-  for(const d of FX.decals){const o=ISO(d.gx,d.gy);ctx.globalAlpha=d.a;ctx.fillStyle=d.col;for(const q of d.pts){ctx.beginPath();ctx.ellipse(o.x+q.x,o.y+q.y,q.r,q.r*.5,0,0,PI2);ctx.fill();}}ctx.globalAlpha=1;
-  const fc=frameCount;for(const z of FX.zones){const o=ISO(z.gx,z.gy),f=Math.min(1,z.life/60);ctx.globalAlpha=f*.9;for(let k=0;k<6;k++)fxFlameDraw(o.x+Math.cos(k*1.05)*z.r*26,o.y+Math.sin(k*1.05)*z.r*13,.9,fc+k*7);}ctx.globalAlpha=1;}
+  for(const d of FX.decals){const o=ISO(d.gx,d.gy);ctx.globalAlpha=d.a*Math.min(1,(d.life||999)/150);ctx.fillStyle=d.col;for(const q of d.pts){ctx.beginPath();ctx.ellipse(o.x+q.x,o.y+q.y,q.r,q.r*.5,0,0,PI2);ctx.fill();}}ctx.globalAlpha=1;
+  }
 function fxDrawWorld(){ctx.save();for(const q of particles)q.draw();for(const f of FX.list){ctx.save();f.draw(1-f.life/f.max);ctx.restore();}
   for(const p of FX.parts){const o=ISO(p.gx,p.gy),s=p.sz*(p.shrink?p.life/p.max:1);ctx.globalAlpha=Math.min(1,p.life/p.max*1.6);ctx.globalCompositeOperation=p.add?'lighter':'source-over';ctx.fillStyle=p.col;ctx.fillRect((o.x-s/2)|0,(o.y-p.z-s/2)|0,Math.max(1,s|0),Math.max(1,s|0));}ctx.restore();}
 FloatingText.prototype.draw=function(){if(NXO.dmg===false&&/^(⚡ )?\d+$/.test(this.text))return;const pop=this.life>.9?1+(this.life-.9)*7:1;ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,this.life*1.8));ctx.translate(Math.round(this.x),Math.round(this.y));ctx.scale(pop,pop);ctx.font=`${Math.round(this.size*.78)}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='#0a0410';ctx.strokeText(this.text,0,0);ctx.fillStyle=this.color;ctx.fillText(this.text,0,0);ctx.restore();};
@@ -1919,6 +1972,79 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
   const w=document.getElementById('audio-controls-wrapper'),b=document.createElement('div');b.id='fx-px';b.className='audio-btn targeting-trigger';b.title='Pixel shader [P]';b.innerHTML='<i class="fa-solid fa-border-all"></i><span>2x</span>';b.onclick=fxCyclePx;w&&w.appendChild(b);
   const sp=document.getElementById('splash'),em=sp&&sp.querySelector('.sp-embers');if(em)for(let i=0;i<30;i++){const s=document.createElement('i');s.style.cssText=`left:${R(0,100)}%;animation-duration:${R(3,8)}s;animation-delay:${R(0,6)}s;width:${(R(2,5)|0)*2}px;height:${(R(2,5)|0)*2}px`;em.appendChild(s);}
 })();
+
+// ═══════════ NEXUS FX · EXPANSÃO (gelo, veneno, sangue, plasma, vazio, arcano, perfurante, tempestade, nuclear, auras) ═══════════
+const FXC={fire:['#f97316','#fde047','#ef4444'],frost:['#e0f2fe','#7dd3fc','#38bdf8'],poison:['#4ade80','#22c55e','#166534'],bleed:['#ef4444','#b91c1c','#7f1d1d'],plasma:['#f0abfc','#22d3ee','#fff'],void:['#a855f7','#6b21a8','#e9d5ff'],arcane:['#c4b5fd','#8b5cf6','#fff'],rad:['#86efac','#4ade80','#fde047'],lightning:['#fde047','#7dd3fc','#fff'],meteor:['#f97316','#92400e','#fde047'],chain:['#7dd3fc','#fff','#bae6fd'],nuclear:['#86efac','#a3e635','#fde047']};
+const FXA={fire:[1,-.01],frost:[-.25,0],poison:[.5,-.005],bleed:[-.55,.01],void:[0,0],plasma:[0,0],arcane:[.6,0],lightning:[0,0],meteor:[.7,-.01],chain:[0,0],nuclear:[.4,0]};
+const once=(k,n)=>{if((FX['c_'+k]||0)>frameCount)return false;FX['c_'+k]=frameCount+n;return true;};
+const gfx=(p,a)=>{ctx.globalAlpha=a;};
+// ── CAMADA SUPERIOR: tudo que é efeito/partícula passa por cima de torres e inimigos ──
+function fxDrawZones(){const fc=frameCount;for(const z of FX.zones){const o=ISO(z.gx,z.gy),f=Math.min(1,z.life/60);ctx.globalAlpha=f*.9;
+  if(z.kind==='rad'){ctx.fillStyle='rgba(74,222,128,.18)';ctx.beginPath();ctx.ellipse(o.x,o.y,z.r*40,z.r*20,0,0,PI2);ctx.fill();ctx.fillStyle='#86efac';for(let k=0;k<8;k++){const a=k*1.7,ph=(fc*.02+k*.31)%1,q=(k%3)/3+.3;ctx.fillRect((o.x+Math.cos(a)*z.r*30*q)|0,(o.y+Math.sin(a)*z.r*15*q-ph*26)|0,3,3);}}
+  else for(let k=0;k<6;k++)fxFlameDraw(o.x+Math.cos(k*1.05)*z.r*26,o.y+Math.sin(k*1.05)*z.r*13,.9,fc+k*7);}ctx.globalAlpha=1;}
+function fxStatusTop(e){const s=e.statusEffects;if(!s.length)return;const has=t=>s.some(x=>x.type===t),fz=has('frost'),po=has('poison'),bl=has('bleed'),fi=has('fire');if(!(fz||po||bl||fi||has('shock')))return;
+  const p=ISO(e.x,e.y),bob=Math.abs(Math.sin(e.wobble))*-12;ctx.save();ctx.translate(p.x,p.y+bob);ctx.scale(e.scale*(1/e.squash),e.scale*e.squash);fxStatusDraw(e,fz,po,bl,fi);ctx.restore();}
+const _fxZone=fxZone;fxZone=function(gx,gy,r,dmg,life,kind){FX.zones.push({gx,gy,r,dmg,life,max:life,kind});};
+// ── GELO: espetos de gelo brotam do chão ──
+function fxIce(gx,gy,n=5,r=24){if(!once('ice',4))return;const sp=[];for(let i=0;i<n;i++){const a=i/n*PI2+R(0,.5);sp.push({x:Math.cos(a)*r*R(.5,1),y:Math.sin(a)*r*R(.5,1)*.5,h:R(22,46),w:R(5,9)});}
+  fxAdd(26,p=>{const o=ISO(gx,gy),k=p<.3?p/.3:1-(p-.3)/.7;ctx.globalAlpha=Math.min(1,k*1.5);sp.forEach((s,i)=>{const h=s.h*k;ctx.fillStyle=i%2?'#bae6fd':'#7dd3fc';ctx.beginPath();ctx.moveTo(o.x+s.x-s.w,o.y+s.y);ctx.lineTo(o.x+s.x,o.y+s.y-h);ctx.lineTo(o.x+s.x+s.w,o.y+s.y);ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.fillRect((o.x+s.x-1)|0,(o.y+s.y-h*.75)|0,2,(h*.5)|0);});},gx,gy);
+  fxShock(gx,gy,'#7dd3fc',r*2.4,5);fxBurst(gx,gy,6,12,FXC.frost,.1,3,30,3,.12,true);}
+// ── VENENO: nuvem tóxica + bolhas ──
+function fxToxic(gx,gy,big){if(!once('tox',5))return;fxBurst(gx,gy,10,big?16:8,FXC.poison,.05,1.2,55,big?10:7,-.005,false,true);fxBurst(gx,gy,6,5,['#bbf7d0','#4ade80'],.03,2.2,40,3,.02,true,true);
+  fxAdd(30,p=>{const o=ISO(gx,gy),s=(big?48:28)*(.6+p*.6),g=ctx.createRadialGradient(o.x,o.y-6,1,o.x,o.y-6,s);g.addColorStop(0,'rgba(74,222,128,.55)');g.addColorStop(1,'rgba(22,101,52,0)');ctx.globalAlpha=1-p;ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(o.x,o.y-6,s,s*.55,0,0,PI2);ctx.fill();},gx,gy);}
+// ── SANGUE: corte diagonal + jato ──
+function fxSlash(gx,gy,big){if(!once('slash',2))return;const a=R(-.9,.9)-.8,L=big?34:24;
+  fxAdd(9,p=>{const o=ISO(gx,gy),e=Math.min(1,p*2.5),x0=o.x-Math.cos(a)*L,y0=o.y-16-Math.sin(a)*L;ctx.globalAlpha=1-p;ctx.lineCap='square';ctx.strokeStyle='#fecaca';ctx.lineWidth=6*(1-p)+1;ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0+Math.cos(a)*L*2*e,y0+Math.sin(a)*L*2*e);ctx.stroke();ctx.strokeStyle='#dc2626';ctx.lineWidth=2;ctx.stroke();},gx,gy);
+  for(let i=0;i<(big?14:7);i++)fxP(gx,gy,R(10,24),Math.cos(a)*R(.02,.12)+R(-.03,.03),Math.sin(a)*R(.01,.06),R(1,3.5),i%3?'#b91c1c':'#ef4444',R(24,44),R(2,4),.25);}
+// ── PLASMA ──
+function fxPlasma(gx,gy){if(!once('pls',3))return;fxShock(gx,gy,'#f0abfc',54,4);fxAdd(14,p=>{const o=ISO(gx,gy),s=8+p*26;ctx.globalAlpha=1-p;ctx.globalCompositeOperation='lighter';const g=ctx.createRadialGradient(o.x,o.y-14,1,o.x,o.y-14,s);g.addColorStop(0,'#fff');g.addColorStop(.4,'#e879f9');g.addColorStop(1,'rgba(34,211,238,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(o.x,o.y-14,s,0,PI2);ctx.fill();},gx,gy);fxBurst(gx,gy,12,12,FXC.plasma,.14,2.5,22,3,.15,true,true);}
+// ── VAZIO: vórtice que suga partículas ──
+function fxVoid(gx,gy){if(!once('void',8))return;
+  fxAdd(34,p=>{const o=ISO(gx,gy),fd=p<.2?p/.2:p>.75?(1-p)/.25:1;ctx.globalAlpha=fd;ctx.translate(o.x,o.y-10);ctx.scale(1,.55);for(let k=0;k<4;k++){ctx.strokeStyle=k%2?'#a855f7':'#6b21a8';ctx.lineWidth=4-k*.6;ctx.beginPath();for(let i=0;i<=24;i++){const t=i/24,r=(1-t)*34*(1+.15*Math.sin(p*9)),a=t*7+p*14+k*1.57;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.stroke();}ctx.fillStyle='#050010';ctx.beginPath();ctx.arc(0,0,7+p*3,0,PI2);ctx.fill();ctx.strokeStyle='#f0abfc';ctx.lineWidth=1.5;ctx.stroke();},gx,gy,()=>fxShock(gx,gy,'#a855f7',44,4));
+  for(let i=0;i<14;i++){const a=R(0,PI2),d=R(.5,1.1);fxP(gx+Math.cos(a)*d,gy+Math.sin(a)*d,R(2,18),-Math.cos(a)*d/22,-Math.sin(a)*d/22,0,FXC.void[i%3],22,3,0,true,true);}}
+// ── ARCANO: círculo rúnico + feixe de luz ──
+function fxArcane(gx,gy){if(!once('arc',6))return;
+  fxAdd(30,p=>{const o=ISO(gx,gy),k=p<.2?p/.2:1-(p-.2)/.8;ctx.globalAlpha=k;ctx.translate(o.x,o.y);ctx.scale(1,.5);ctx.strokeStyle='#c4b5fd';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,30,0,PI2);ctx.stroke();ctx.beginPath();ctx.arc(0,0,22,0,PI2);ctx.stroke();ctx.rotate(p*3);for(let i=0;i<6;i++){const a=i*PI2/6;ctx.fillStyle='#8b5cf6';ctx.fillRect(Math.cos(a)*26-2,Math.sin(a)*26-2,5,5);ctx.beginPath();ctx.moveTo(Math.cos(a)*22,Math.sin(a)*22);ctx.lineTo(Math.cos(a+2.1)*22,Math.sin(a+2.1)*22);ctx.stroke();}},gx,gy);
+  fxAdd(22,p=>{const o=ISO(gx,gy);ctx.globalAlpha=(1-p)*.8;ctx.globalCompositeOperation='lighter';const w=14*(1-p),g=ctx.createLinearGradient(0,o.y-120,0,o.y);g.addColorStop(0,'rgba(196,181,253,0)');g.addColorStop(1,'#c4b5fd');ctx.fillStyle=g;ctx.fillRect(o.x-w/2,o.y-120,w,120);},gx,gy);fxBurst(gx,gy,4,16,FXC.arcane,.05,3,36,3,.04,true,true);}
+// ── PERFURANTE: risco atravessa o inimigo ──
+function fxPierce(pr){const t=pr.tgt,dx=t.x-pr.startX,dy=t.y-pr.startY,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d,c=pr.color||'#fff';
+  fxAdd(9,p=>{const A=ISO(t.x-ux*1.4,t.y-uy*1.4),B=ISO(t.x+ux*1.8,t.y+uy*1.8),e=Math.min(1,p*3);ctx.globalAlpha=1-p;ctx.lineCap='round';ctx.strokeStyle=c;ctx.lineWidth=7*(1-p)+1;ctx.beginPath();ctx.moveTo(A.x,A.y-14);ctx.lineTo(A.x+(B.x-A.x)*e,A.y-14+(B.y-A.y)*e);ctx.stroke();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();},t.x,t.y);
+  for(let i=0;i<8;i++)fxP(t.x,t.y,R(8,22),ux*R(.04,.16)+R(-.03,.03),uy*R(.04,.16)+R(-.03,.03),R(.3,1.5),i%2?c:'#fff',R(12,22),3,.12,true,true);}
+// ── TEMPESTADE: nuvem, chuva e relâmpagos extras (causam dano!) ──
+function fxStorm(gx,gy,dmg){if(!once('storm',24))return;
+  fxAdd(46,p=>{const o=ISO(gx,gy),k=p<.15?p/.15:p>.8?(1-p)/.2:1,cy=o.y-250;ctx.globalAlpha=k*.92;[[-60,0,44],[-25,-10,52],[15,-6,48],[52,2,40],[0,8,60]].forEach(([x,y,r],i)=>{ctx.fillStyle=i%2?'#1e1b3a':'#2b2650';ctx.beginPath();ctx.ellipse(o.x+x+Math.sin(p*6+i)*4,cy+y,r,r*.5,0,0,PI2);ctx.fill();});if(Math.random()<.3){ctx.fillStyle='#fde047';ctx.fillRect((o.x+R(-60,60))|0,cy+10,3,R(8,18)|0);}},gx,gy);
+  for(let i=0;i<26;i++)fxP(gx+R(-1.2,1.2),gy+R(-1.2,1.2),R(150,260),-.02,0,-R(6,8),'#93c5fd',30,2,0,true);
+  [0,1,2].forEach(i=>setTimeout(()=>{const bx=gx+R(-1.3,1.3),by=gy+R(-1.3,1.3);fxBolt(bx,by);if(dmg)enemies.forEach(e=>{if(!e.dead&&Math.hypot(e.x-bx,e.y-by)<1)e.hp-=dmg*.4;});},200+i*170));}
+// ── NUCLEAR: cogumelo atômico + zona radioativa ──
+function fxNuke(gx,gy,r){if(!once('nuke',20))return;fl(.8);applyShake(24);hs(6);fxShock(gx,gy,'#86efac',190,14);fxShock(gx,gy,'#fff',120,8);
+  fxAdd(80,p=>{const o=ISO(gx,gy),h=Math.min(1,p*2.2)*120,s=Math.min(1,p*1.6);ctx.globalAlpha=p>.7?(1-p)/.3:1;ctx.fillStyle='#78716c';ctx.fillRect(o.x-9*s,o.y-h,18*s,h);ctx.fillStyle='#a3e635';ctx.fillRect(o.x-5*s,o.y-h,10*s,h);const cy=o.y-h-4;
+    [[0,0,46],[-34,10,30],[34,10,30],[-18,-14,28],[20,-12,30]].forEach(([x,y,rr],i)=>{ctx.fillStyle=['#fb923c','#fde047','#ef4444','#f97316','#fbbf24'][i];ctx.beginPath();ctx.ellipse(o.x+x*s,cy+y*s,rr*s,rr*s*.7,0,0,PI2);ctx.fill();});ctx.fillStyle='rgba(134,239,172,.35)';ctx.beginPath();ctx.ellipse(o.x,cy+6,60*s,26*s,0,0,PI2);ctx.fill();},gx,gy);
+  fxBurst(gx,gy,6,50,[...FXC.rad,'#fff'],.25,6,50,4,.15,true,true);fxDecal(gx,gy,60,'#0a1a08',.6);fxZone(gx,gy,(r||2.5)*.9,.5,300,'rad');}
+const _fxBoom=fxBoom;fxBoom=function(gx,gy,r,col){if(col==='#86efac'&&r>=2)return fxNuke(gx,gy,r);_fxBoom(gx,gy,r,col);};
+// ── Ganchos: impacto por tipo, morte, disparo, carta aplicada ──
+const _fxHit=fxHit;fxHit=function(pr,crit,dmg){_fxHit(pr,crit,dmg);const t=pr.tgt,f=pr.tower.flags,ty=pr.type;
+  if(ty==='frost'||f.has('frost'))fxIce(t.x,t.y,crit?7:4,crit?30:20);if(f.has('poison'))fxToxic(t.x,t.y,false);if(f.has('bleed'))fxSlash(t.x,t.y,crit);
+  if(f.has('fire')||ty==='fire')fxBurst(t.x,t.y,14,8,FXC.fire,.1,3,20,3,.15,true,true);if(ty==='plasma'||f.has('plasma'))fxPlasma(t.x,t.y);
+  if(ty==='void'||f.has('void'))fxVoid(t.x,t.y);if(ty==='arcane'||f.has('arcane'))fxArcane(t.x,t.y);if(pr.pierces>0||ty==='piercing')fxPierce(pr);if(ty==='storm')fxStorm(t.x,t.y,pr.dmg);};
+const _fxDeath=fxDeath;fxDeath=function(e){_fxDeath(e);const st=e.statusEffects.map(s=>s.type),near=(n,d)=>!n.dead&&n!==e&&Math.hypot(n.x-e.x,n.y-e.y)<d;
+  if(st.includes('fire')){const fe=e.statusEffects.find(s=>s.type==='fire');fxBoom(e.x,e.y,.7,'#f97316');enemies.forEach(n=>{if(near(n,1.5)){if(!n.statusEffects.some(s=>s.type==='fire'))n.statusEffects.push({type:'fire',dmg:fe.dmg*.8,duration:80});n.hp-=e.maxHp*.03;}});}
+  if(st.includes('frost')){fxIce(e.x,e.y,8,34);enemies.forEach(n=>{if(near(n,1.8))n.statusEffects.push({type:'frost',slow:.5,duration:70});});}
+  if(st.includes('poison'))fxToxic(e.x,e.y,true);
+  if(st.includes('bleed'))for(let i=0;i<10;i++)fxP(e.x,e.y,8,R(-.02,.02),R(-.02,.02),R(4,8),'#dc2626',R(30,50),R(2,4),.3);};
+const _fxMuz=fxMuzzle;fxMuzzle=function(t){_fxMuz(t);const f=[...t.flags].find(x=>FXC[x]);if(f&&once('mz'+f,3))fxBurst(t.gridX,t.gridY,30,5,FXC[f],.05,1.2,14,3,.1,true,true);};
+const _fxCA=fxCardApply;fxCardApply=function(t,card,bf){_fxCA(t,card,bf);const nf=f=>t.flags.has(f)&&!bf.has(f),gx=t.gridX,gy=t.gridY;
+  setTimeout(()=>{if(nf('bleed'))fxSlash(gx,gy,true);if(nf('plasma'))fxPlasma(gx,gy);if(nf('void'))fxVoid(gx,gy);if(nf('arcane'))fxArcane(gx,gy);if(nf('storm'))fxStorm(gx,gy,0);if(nf('poison'))fxToxic(gx,gy,true);if(nf('frost'))fxIce(gx,gy,8,36);
+    if(nf('nuclear')){fxShock(gx,gy,'#86efac',120,8);fxBurst(gx,gy,10,30,FXC.rad,.15,4,40,3,.1,true,true);}if(nf('explosion'))fxBoom(gx,gy,1.2);if(nf('piercing'))fxPierce({tgt:{x:gx+1,y:gy+1},startX:gx-1,startY:gy-1,color:'#fff'});},450);};
+// ── Rastros nas balas + auras passivas nas torres (por efeito aplicado) ──
+const _fxUpd=fxUpdate;fxUpdate=function(){_fxUpd();const fc=frameCount;
+  for(const p of projectiles){if(p.dead||fc%2||p.type==='lightning'||p.type==='storm'||p.type==='meteor')continue;const f=[...p.tower.flags].find(x=>FXC[x]);if(f)fxP(p.x,p.y,16,R(-.01,.01),R(-.01,.01),R(.2,1),FXC[f][fc%3],R(10,18),f==='void'||f==='plasma'?4:3,-.01,true,true);}
+  for(const t of towers){if((fc+t.gridX*3+t.gridY)%7)continue;const fl2=[...t.flags].filter(x=>FXC[x]);if(!fl2.length)continue;const f=fl2[(fc/7|0)%fl2.length],c=FXC[f],a=FXA[f]||[.5,0],g=R(0,PI2);
+    if(f==='void'||f==='plasma'){const d=.55;fxP(t.gridX+Math.cos(g)*d,t.gridY+Math.sin(g)*d,R(20,40),-Math.cos(g)*d/20,-Math.sin(g)*d/20,0,c[fc%3],20,3,0,true,true);}
+    else fxP(t.gridX+R(-.3,.3),t.gridY+R(-.3,.3),f==='frost'||f==='bleed'?R(42,60):R(14,38),0,0,a[0]*R(.5,1.2),c[fc%3],R(20,34),3,a[1],true,true);}};
+(function(){const o=fxDrawWorld;fxDrawWorld=function(){ctx.save();fxDrawZones();for(const e of enemies)if(!e.dead&&e.yOffset<=30)fxStatusTop(e);ctx.restore();o();};})();
+// ── Manchas (sangue, chamuscado, crateras) somem com o tempo ──
+const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);const d=FX.decals[FX.decals.length-1];d.life=r>40?2400:1500;if(FX.decals.length>100)FX.decals.shift();};
+(function(){const u=fxUpdate;fxUpdate=function(){u();for(let i=FX.decals.length-1;i>=0;i--)if(--FX.decals[i].life<=0)FX.decals.splice(i,1);};})();
 
         class Tower {
             constructor(gx, gy, key) {
@@ -1991,6 +2117,14 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
 
             draw() {
                 const pos = cartToIso(this.gridX, this.gridY);
+                if (this._doom != null) {   // torre condenada: treme, pulsa em vermelho e mostra caveira
+                    const k = 1 - this._doom / DOOM.warnFrames, pulse = 0.5 + 0.5 * Math.sin(frameCount * (0.25 + k * 0.5));
+                    pos.x += Math.sin(frameCount * 2.1) * (1.2 + k * 2.2);
+                    ctx.save(); ctx.globalAlpha = 0.35 + pulse * 0.45; ctx.strokeStyle = '#ef4444'; ctx.fillStyle = 'rgba(239,68,68,0.25)'; ctx.lineWidth = 3;
+                    const rr = 34 + pulse * 6; ctx.beginPath(); ctx.ellipse(pos.x, pos.y, rr, rr / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                    ctx.globalAlpha = 0.6 + pulse * 0.4; ctx.fillStyle = '#ef4444'; ctx.font = '900 ' + Math.round(16 + pulse * 4) + 'px "Font Awesome 6 Free"';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('\uf714', pos.x, pos.y - 78); ctx.restore();
+                }
                 if (this.flags.size > 0) drawTowerVFX(pos, this, frameCount);
 
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -2220,7 +2354,7 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
                     let tgt = this.myPath[this.wayIdx + 1];
                     if(!tgt) {
                         SFX.base_dmg();
-                        let dmg = this.enemyType === 'boss' ? 3 : 1;
+                        let dmg = (ENEMY_TYPES[this.enemyType] && ENEMY_TYPES[this.enemyType].leakDmg) || (this.enemyType === 'boss' ? 3 : 1);
                         hp -= dmg; waveEnemyDmgDealt += dmg; statTotalDmgTaken += dmg;
                         applyShake(this.enemyType === 'boss' ? 20 : 8);
 
@@ -2333,8 +2467,7 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
                 ctx.fillText(cfg.icon, 0, -15);
                 ctx.shadowBlur = 0;
 
-                if(!this.dead) fxStatusDraw(this, isFrozen, isPoisoned, isBleeding, isOnFire);
-                if(!this.dead) {
+                                if(!this.dead) {
                     let icons = [];
                     if(isPoisoned) icons.push({icon: '\uf7dd', color: '#4ade80'});
                     if(isBleeding) icons.push({icon: '\uf043', color: '#ef4444'});
@@ -4069,7 +4202,7 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
             if (dt > 250) dt = STEP_MS;              // voltou de outra aba / travou: não "acelera" o jogo
             _acc += dt;
             let steps = 0;
-            while (_acc >= STEP_MS && steps < 3) { if (!menuActive) gameUpdate(); _acc -= STEP_MS; steps++; }
+            while (_acc >= STEP_MS && steps < 3) { if (!menuActive || (window.MP && window.MP.active)) gameUpdate(); _acc -= STEP_MS; steps++; }
             if (_acc >= STEP_MS) _acc = 0;           // PC não acompanha: o jogo desacelera em vez de entrar em espiral
             if (steps > 0 && (!isShopOpen || (++_shopSkip % 3 === 0))) gameRender();   // loja aberta = só 1/3 dos frames (fundo quase invisível)
             adaptQuality(dt);
@@ -4230,7 +4363,7 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
             });
 
             let tList = document.getElementById('go-towers-list');
-            let allTowers = [...towers, ...soldTowers]; 
+            let allTowers = [...towers, ...soldTowers, ...lostTowers]; 
             
             if(allTowers.length === 0) { tList.innerHTML = '<span style="color:#52525b">Nenhuma torre construída.</span>'; }
             else {
@@ -4242,8 +4375,8 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
                     let flags = (t.flags instanceof Set ? [...t.flags] : Array.isArray(t.flags) ? t.flags : []).join(', ') || 'Nenhuma';
                     let dmgStat = Math.floor(t.damage || 0);
                     
-                    let isSold = soldTowers.includes(t);
-                    let tagVendida = isSold ? ' <span style="color:#ef4444;font-size:10px;border:1px solid #ef4444;border-radius:4px;padding:2px 4px;margin-left:6px;vertical-align:middle;">VENDIDA</span>' : '';
+                    let isSold = soldTowers.includes(t), isLost = lostTowers.includes(t);
+                    let tagVendida = isSold ? ' <span style="color:#ef4444;font-size:10px;border:1px solid #ef4444;border-radius:4px;padding:2px 4px;margin-left:6px;vertical-align:middle;">VENDIDA</span>' : (isLost ? ' <span style="color:#f97316;font-size:10px;border:1px solid #f97316;border-radius:4px;padding:2px 4px;margin-left:6px;vertical-align:middle;">DESTRU\u00CDDA</span>' : '');
 
                     return '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #1f1f23;">'
                         + '<span style="font-size:20px;color:' + color + ';">' + icon + '</span>'
@@ -4253,6 +4386,75 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
                         + '</div></div>';
                 }).join('');
             }
+        }
+
+        // ── TORRE CONDENADA ──
+        // De tempos em tempos (só durante o combate) uma torre é sorteada para ser destruída.
+        // O sorteio é "viciado" em segredo: quanto mais forte a torre, maior o peso dela na roleta.
+        // O jogador recebe um aviso curto e pode vender a torre antes da explosão.
+        const DOOM = {
+            startWave: 3,        // primeira onda em que o sistema passa a funcionar
+            minTowers: 2,        // nunca condena a última torre do jogador
+            minFrames: 1500,     // intervalo mínimo entre sorteios (frames de combate, ~25 s a 60 FPS)
+            maxFrames: 2700,     // intervalo máximo (~45 s)
+            warnFrames: 150,     // tempo de aviso antes da explosão (~2,5 s)
+            bias: 3,             // peso EXTRA da torre mais forte na roleta (as demais escalam pelo poder relativo). 0 = sorteio justo · 3 = a mais forte tem ~4x a chance de uma fraca
+            timer: 0, pending: null
+        };
+        function doomRollTimer() { DOOM.timer = Math.round(R(DOOM.minFrames, DOOM.maxFrames)); }
+        function doomReset() { DOOM.pending = null; towers.forEach(t => { t._doom = null; }); doomRollTimer(); }
+        doomRollTimer();
+        // poder estimado da torre: DPS base multiplicado por bônus de cartas/efeitos
+        function towerPower(t) {
+            const dmg = Number(t.damage), rate = Number(t.fireRate);
+            let p = (isFinite(dmg) && isFinite(rate) && rate > 0) ? dmg * 60 / rate : 1;
+            p *= 1 + 0.15 * t.effects.length + 0.08 * t.flags.size + 0.04 * (t.chainTargets || 0) + 0.10 * (t.splashRadius || 0);
+            return Math.max(1, p);
+        }
+        function doomPickTarget() {
+            const pool = towers.filter(t => t._doom == null);
+            if (!pool.length) return null;
+            const pw = pool.map(towerPower), mx = Math.max(...pw);
+            const w = pw.map(p => 1 + DOOM.bias * (p / mx));   // toda torre mantém chance base; a força só empurra o peso para cima
+            let r = Math.random() * w.reduce((a, b) => a + b, 0);
+            for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
+            return pool[pool.length - 1];
+        }
+        function doomStart(t) {
+            t._doom = DOOM.warnFrames; DOOM.pending = t;
+            const s = scr(t.gridX, t.gridY, -60);
+            floatingTexts.push(new FloatingText(s.x, s.y, '\u26A0 TORRE CONDENADA', '#ef4444', true));
+            try { SFX.ui_error(); } catch (e) {}
+            applyShake(4);
+        }
+        function doomDestroy(t) {
+            DOOM.pending = null; t._doom = null;
+            const i = towers.indexOf(t);
+            if (i < 0 || towers.length < DOOM.minTowers) return;   // vendida durante o aviso, ou virou a última torre: escapa
+            towers.splice(i, 1); lostTowers.push(t);
+            const gx = t.gridX, gy = t.gridY;
+            fxBoom(gx, gy, 1.8, '#ef4444'); fxShock(gx, gy, '#ffffff', 110, 8);
+            fxBurst(gx, gy, 5, 26, ['#52525b', '#27272a', '#a1a1aa', t.color], .22, 4.5, 50, 4, .3, false, false);
+            fxDecal(gx, gy, 34, '#0a0305', .75);
+            createParticles(gx, gy, '#ef4444', 30);
+            fl(.45); applyShake(16); hs(4);
+            try { SFX.base_dmg(); } catch (e) {}
+            const s = scr(gx, gy, -40);
+            floatingTexts.push(new FloatingText(s.x, s.y, '\uD83D\uDCA5 ' + ((towerTypes[t.type] && towerTypes[t.type].name) || 'TORRE') + ' DESTRU\u00CDDA', '#f97316', true));
+            updateUI();
+        }
+        function doomTick() {
+            if (gameOver || isShopOpen || (window.MP && window.MP.active)) return;
+            if (DOOM.pending) {                                   // aviso em andamento
+                const t = DOOM.pending;
+                if (!towers.includes(t)) DOOM.pending = null;     // o jogador vendeu a torre a tempo
+                else if (--t._doom <= 0) doomDestroy(t);
+                return;
+            }
+            if (!waveActive || wave < DOOM.startWave || towers.length < DOOM.minTowers) return;
+            if (--DOOM.timer > 0) return;
+            doomRollTimer();
+            const t = doomPickTarget(); if (t) doomStart(t);
         }
 
         function gameUpdate() {
@@ -4292,7 +4494,7 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
             }
             if(FX.hitstop>0){FX.hitstop--; fxUpdate(); return;}
             if(FX.slowmo>0 && (FX.slowmo--&1)) return;
-            frameCount++; fxUpdate(); towers.forEach(t => t.updateVisuals());
+            frameCount++; fxUpdate(); towers.forEach(t => t.updateVisuals()); doomTick();
 
             if(!isShopOpen && waveActive) {
                 spawnTimer++;
@@ -4902,11 +5104,12 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
         return { p, flags: [...t.flags], effects: t.effects.map(c => c.name) };
     }
     function saveGame() {
+        if (window.MP && window.MP.active) return false;
         if (!nxStarted || gameOver || waveActive || isShopOpen) return false;
         if (enemies.some(e => !e.dead)) return false;
         if (wave === 1 && towers.length === 0 && playerHand.length === 0) return false;
         LS.set(SAVE_KEY, {
-            v: 1, t: Date.now(), hp, gold, wave, sellTokens, expansionsUsed, alignmentLight, alignmentDark, adaptiveMult, rerollCost, selectedTowerKey,
+            v: 1, t: Date.now(), floor: floorPalette.id, hp, gold, wave, sellTokens, expansionsUsed, alignmentLight, alignmentDark, adaptiveMult, rerollCost, selectedTowerKey,
             map, waypoints, camX, camY, zoom: zoomTarget, hand: playerHand.map(c => c.name), shopMods: Object.assign({}, shopMods),
             stats: { statTotalDmgDealt, statTotalDmgTaken, statEnemiesKilled, statTowersBuilt, statCardsUsed, statGoldEarned, statCrits, statRerolls },
             towers: towers.map(serTower)
@@ -4914,6 +5117,7 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
         return true;
     }
     function loadGame(d) {
+        if (d.floor) setFloorPalette(d.floor);
         hp = d.hp; gold = d.gold; wave = d.wave; sellTokens = d.sellTokens; expansionsUsed = d.expansionsUsed;
         alignmentLight = d.alignmentLight; alignmentDark = d.alignmentDark; adaptiveMult = d.adaptiveMult; rerollCost = d.rerollCost;
         if (towerTypes[d.selectedTowerKey]) selectedTowerKey = d.selectedTowerKey;
@@ -4922,7 +5126,7 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
         Object.assign(shopMods, d.shopMods);
         const byName = n => arcanasPool.find(c => c.name === n);
         playerHand = d.hand.map(byName).filter(Boolean);
-        towers.length = 0; soldTowers.length = 0; enemies.length = 0; projectiles.length = 0; particles.length = 0; floatingTexts.length = 0;
+        towers.length = 0; soldTowers.length = 0; lostTowers.length = 0; enemies.length = 0; projectiles.length = 0; particles.length = 0; floatingTexts.length = 0;
         d.towers.forEach(s => {
             const t = new Tower(s.p.gridX, s.p.gridY, s.p.type);
             Object.assign(t, s.p);
@@ -4936,7 +5140,7 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
         waveActive = false; isShopOpen = false; gameOverAlpha = 0; waveStartHp = hp;
         spawnQueue = buildSpawnQueue(wave); enemiesToSpawn = spawnQueue.length; spawnTimer = 0;
         const b = $('btn-start-wave'); b.disabled = false; b.innerText = wave > 1 ? 'INICIAR ONDA ' + wave : 'INICIAR ONDA';
-        updateUI(); renderHand(); initMenu();
+        doomReset(); updateUI(); renderHand(); initMenu();
     }
     setInterval(saveGame, 3000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) { saveGame(); flushTime(); } });
@@ -5004,529 +5208,342 @@ function fxSkipIntro(){menuActive=false;nxStarted=true;const s=document.getEleme
     </script>
     <script>
 /* ═══════════════════════════════════════════════════════════════════════════
-   NEXUS HEXA GUARD — MODO VERSUS 1x1
-   Online (PeerJS, sem servidor seu) · Rede local (server.js) · Local (local.html, tela dividida)
-   Nenhum banco de dados. Cada jogador tem a própria base e o mesmo mapa; quem perder a base primeiro perde.
-   Você gasta ouro pra ENVIAR inimigos pra base do rival.
+   NEXUS HEXA GUARD — EXTRAS
+   1) Splash text amarelo no logo do menu (estilo Minecraft / Terraria)
+   2) Escolha do nome do time (estilo Super Auto Pets): 3 opções "Substantivo + Adjetivo"
+      aparecem logo depois de apertar INICIAR ONDA na onda 1, a cada partida.
+   API pra outros scripts (ex.: multiplayer):  window.NXTEAM.name  +  evento 'nx-team' (detail.name)
    ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
 'use strict';
-const Q = new URLSearchParams(location.search);
-const EMBED = Q.get('vs') === 'local', SLOT = +Q.get('slot') || 1;
 const $ = id => document.getElementById(id);
+const pick = a => a[Math.random() * a.length | 0];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const cleanName = s => String(s == null ? '' : s).replace(/[<>&"'`]/g, '').trim().slice(0, 16);
-const store = {
-    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-};
-const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const genCode = n => Array.from({ length: n }, () => CHARS[Math.random() * CHARS.length | 0]).join('');
 
-const PREP_SECS = 20, SHOP_SECS = 30, SEND_CD = 2500;
-const SEND_DEFS = {
-    horde:    { label: 'HORDA',      icon: '👥', n: 8, type: 'normal',   cost: 45,  min: 1 },
-    fast:     { label: 'VELOZES',    icon: '💨', n: 6, type: 'fast',     cost: 55,  min: 1 },
-    splitter: { label: 'DIVISORES',  icon: '🧬', n: 3, type: 'splitter', cost: 90,  min: 3 },
-    boss:     { label: 'BOSS',       icon: '☠',  n: 1, type: 'boss',     cost: 260, min: 5 }
-};
-
-/* tipos de inimigo extras (o jogo já tinha a lógica de 'fast' e 'splitter', só faltava registrar) */
-if (!ENEMY_TYPES.fast) ENEMY_TYPES.fast = { label: 'Veloz', hpMult: 0.6, speedMult: 1.8, scaleMult: 0.8, goldMult: 0.6, color: '#facc15', icon: '\uf0e7', minWave: 1 };
-if (!ENEMY_TYPES.splitter) ENEMY_TYPES.splitter = { label: 'Divisor', hpMult: 1.8, speedMult: 0.85, scaleMult: 1.3, goldMult: 2, color: '#a855f7', icon: '\uf0c4', minWave: 1, splitsInto: 3 };
-
-const V = {
-    active: false, phase: 'idle', role: null, mode: null, T: null, code: '',
-    name: '', rival: { name: 'Rival', wave: 1, hp: 20, towers: 0, kills: 0 },
-    seed: 0, result: null, why: '', ended: false, matchBegun: false,
-    rm: { me: false, rival: false }, incoming: [], sent: 0, cdUntil: 0,
-    timer: null, tick: null, tickN: 0
-};
-V.name = cleanName(store.get('nexus_vs_name', '')) || 'Jogador' + (Math.random() * 90 + 10 | 0);
-
-/* ───────────────────────── ALEATÓRIO COM SEMENTE (mesmo mapa pros dois) ───────────────────────── */
-function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function withSeed(seed, fn) { const o = Math.random; Math.random = mulberry32(seed); try { return fn(); } finally { Math.random = o; } }
-
-function newMap(seed) {
-    withSeed(seed, () => {
-        mapWidth = 12; mapHeight = 12;
-        map = Array.from({ length: mapHeight }, () => new Array(mapWidth).fill(0));
-        waypoints = [{ x: 0, y: Math.floor(mapHeight / 2) }];
-        map[waypoints[0].y][waypoints[0].x] = 1;
-        generateWindingPath(waypoints[0].x, waypoints[0].y, mapWidth, mapHeight, 'right').forEach(p => { map[p.y][p.x] = 1; waypoints.push(p); });
-    });
-    _tiles = null; _fd = null;
-}
-
-/* ───────────────────────── RESET DA PARTIDA (revanche sem recarregar a página) ───────────────────────── */
-function resetRun(seed) {
-    hp = 20; gold = 70; wave = 1; alignmentLight = 0; alignmentDark = 0; adaptiveMult = 1.0;
-    gameOver = false; gameOverAlpha = 0; waveStartHp = 20; waveTotalEnemyHp = 0; waveEnemyDmgDealt = 0; waveEnemyHpKilled = 0;
-    statTotalDmgDealt = 0; statTotalDmgTaken = 0; statEnemiesKilled = 0; statTowersBuilt = 0; statCardsUsed = 0; statGoldEarned = 0; statCrits = 0; statRerolls = 0;
-    skipShop = false; rerollCost = 15; isShopOpen = false; waveActive = false; sellTokens = 1; expansionsUsed = 0; selectedTowerKey = 'gatling';
-    Object.assign(shopMods, { rareBonusChance: 0, epicBonusChance: 0, legendBonusChance: 0, priceReduction: 0, rerollDiscount: 0, guaranteeRare: false, onlyRarePlus: false, highLegendChance: false, wavesDiscount: 0, waveDiscountAmt: 0 });
-    towers.length = 0; soldTowers.length = 0; enemies.length = 0; projectiles.length = 0; particles.length = 0; uiParticles.length = 0; floatingTexts.length = 0;
-    FX.list.length = 0; FX.parts.length = 0; FX.decals.length = 0; FX.zones.length = 0; FX.combo = 0; FX.comboT = 0; FX.hitstop = 0; FX.slowmo = 0;
-    playerHand = []; V.incoming = [];
-    camX = 0; camY = 0; zoom = 1.2; zoomTarget = 1.2;
-    newMap(seed);
-    spawnQueue = buildSpawnQueue(1); enemiesToSpawn = spawnQueue.length; spawnTimer = 0;
-    const so = $('shop-overlay'); if (so) so.classList.remove('active');
-    const go = $('gameover-overlay'); if (go) { go.style.display = 'none'; go.style.opacity = '0'; }
-    ['sidebar', 'hand-container', 'controls-hint'].forEach(id => { const el = $(id); if (el) { el.style.opacity = '1'; el.style.pointerEvents = ''; } });
-    const eh = $('hp'); if (eh) eh.classList.remove('danger');
-    const b = $('btn-start-wave'); if (b) { b.disabled = false; b.innerText = 'INICIAR ONDA'; }
-    updateUI(); renderHand(); initMenu();
-}
-
-/* ───────────────────────── GANCHOS NO JOGO ───────────────────────── */
-const _bsq = buildSpawnQueue;
-buildSpawnQueue = function (w) {
-    const q = _bsq.apply(this, arguments);
-    if (V.active && V.incoming.length) q.push(...V.incoming.splice(0));
-    return q;
-};
-const _ss = showShop;
-showShop = function () {
-    _ss.apply(this, arguments);
-    if (V.active && isShopOpen && !gameOver) startTimer('LOJA', SHOP_SECS, () => { if (isShopOpen) closeShop(); });
-};
-const _cs = closeShop;
-closeShop = function () { stopTimer(); return _cs.apply(this, arguments); };
-const _sw = startNextWave;
-startNextWave = function () { stopTimer(); return _sw.apply(this, arguments); };
-const _tw = toggleAutoWave;
-toggleAutoWave = function () { if (V.active && !V._f) return; return _tw.apply(this, arguments); };
-const _sg = showGameOverScreen;
-showGameOverScreen = function () { if (!V.active) return _sg.apply(this, arguments); showResult(); };
-
-/* nunca grava o save do modo solo com a partida de versus */
-const _si = Storage.prototype.setItem;
-Storage.prototype.setItem = function (k, v) { if (V.active && k === 'nexus_save_v1') return; return _si.call(this, k, v); };
-
-/* ESC não pausa/abre menu durante o versus */
-window.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
-    if (V.active) { e.stopImmediatePropagation(); e.preventDefault(); return; }
-    if ($('nx-title') && $('nx-title').dataset.k === 'vs') cancelLobby();
-}, true);
-
-function forceAutoWave() { if (!autoWave) { V._f = true; try { toggleAutoWave(); } catch (e) {} V._f = false; } }
-
-/* ───────────────────────── TEMPORIZADOR (preparação / loja) ───────────────────────── */
-function startTimer(label, secs, fn) {
-    stopTimer();
-    V.timer = { label, left: secs, fn };
-    V.tick = setInterval(() => {
-        const t = V.timer; if (!t) return;
-        if ((t.label === 'LOJA' && !isShopOpen) || (t.label !== 'LOJA' && waveActive) || gameOver || V.ended) return stopTimer();
-        t.left--; renderTimer();
-        if (t.left <= 0) { const f = t.fn; stopTimer(); try { f(); } catch (e) { console.error(e); } }
-    }, 1000);
-    renderTimer();
-}
-function stopTimer() { if (V.tick) clearInterval(V.tick); V.tick = null; V.timer = null; renderTimer(); }
-function renderTimer() { const el = $('vs-timer'); if (!el) return; el.textContent = V.timer ? '⏱ ' + V.timer.label + ' ' + V.timer.left + 's' : ''; }
-
-/* ───────────────────────── INTERFACE (HUD, painel de envio, toast, resultado) ───────────────────────── */
 const css = document.createElement('style');
 css.textContent = `
-body:not(.vs-on) .vs-ui { display: none !important; }
-.vs-ui { position: fixed; z-index: 9100; font: 10px 'Press Start 2P', monospace; color: #e9d5ff; text-shadow: 2px 2px 0 #000; user-select: none; }
-#vs-hud { top: 10px; right: 12px; background: rgba(15,8,24,.88); border: 2px solid #7c3aed; padding: 8px 10px; min-width: 190px; box-shadow: 0 4px 0 #1a0b26; }
-#vs-hud .rn { color: #fb923c; margin-bottom: 8px; line-height: 1.4; word-break: break-all; }
-#vs-hud .rs { display: flex; gap: 10px; flex-wrap: wrap; } #vs-hud b { color: #fde047; font-weight: normal; }
-#vs-timer { margin-top: 8px; color: #fde047; min-height: 12px; }
-#vs-send { right: 12px; top: 110px; width: 190px; background: rgba(15,8,24,.88); border: 2px solid #b91c1c; padding: 8px; box-shadow: 0 4px 0 #1a0b26; }
-#vs-send .st { color: #fca5a5; margin-bottom: 8px; line-height: 1.4; }
-#vs-send button { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 6px; margin: 0 0 6px; padding: 9px 8px; font: 9px 'Press Start 2P', monospace; color: #fff7ed; background: #7f1d1d; border: 2px solid #ef4444; cursor: pointer; }
-#vs-send button:hover:not(:disabled) { background: #b91c1c; } #vs-send button:disabled { opacity: .38; cursor: not-allowed; }
-#vs-send button small { font: 8px 'Press Start 2P', monospace; color: #fde047; }
-#vs-toast { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 9150; display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
-#vs-toast div { font: 10px 'Press Start 2P', monospace; color: #fff; background: rgba(127,29,29,.94); border: 2px solid #ef4444; padding: 8px 12px; text-shadow: 2px 2px 0 #000; animation: vsT 3s forwards; }
-#vs-toast div.ok { background: rgba(20,83,45,.94); border-color: #22c55e; }
-@keyframes vsT { 0% { opacity: 0; transform: translateY(-8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-#vs-result { position: fixed; inset: 0; z-index: 9200; display: none; align-items: center; justify-content: center; background: rgba(5,3,10,.9); padding: 20px; box-sizing: border-box; }
-#vs-result .box { width: min(560px, 100%); text-align: center; background: linear-gradient(180deg, #1c0f2b, #0f0818); border: 2px solid #7c3aed; padding: 26px 18px; box-shadow: 0 0 50px rgba(124,58,237,.4); }
-#vs-result .tt { font: clamp(20px, 5vw, 38px) 'Press Start 2P', monospace; margin-bottom: 14px; text-shadow: 3px 3px 0 #000; }
-#vs-result .tt.win { color: #4ade80; } #vs-result .tt.lose { color: #ef4444; } #vs-result .tt.draw { color: #fde047; }
-#vs-result .why { font: 9px/1.8 'Press Start 2P', monospace; color: #a1a1aa; margin-bottom: 18px; }
-#vs-result .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-#vs-result .cmp div { background: #160c24; border: 1px solid #3b1d63; padding: 10px; font: 9px/2 'Press Start 2P', monospace; color: #d4d4d8; } #vs-result .cmp b { color: #fde047; font-weight: normal; }
-#vs-result .act { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-#vs-result #vs-rms { margin-top: 14px; font: 9px 'Press Start 2P', monospace; color: #fb923c; min-height: 12px; }
-.vs-in { width: 100%; box-sizing: border-box; padding: 11px 10px; font: 12px 'Press Start 2P', monospace; color: #fde047; background: #0f0818; border: 2px solid #6d28d9; outline: none; text-transform: none; }
-.vs-in:focus { border-color: #fb923c; } .vs-in.code { text-transform: uppercase; letter-spacing: 4px; text-align: center; }
-.vs-opt { display: block; width: 100%; text-align: left; margin: 0 0 10px; padding: 14px 12px; font: 10px/1.7 'Press Start 2P', monospace; color: #e9d5ff; background: #2a1540; border: 2px solid #6d28d9; cursor: pointer; }
-.vs-opt:hover { background: #7c2d12; border-color: #fb923c; color: #fff7ed; } .vs-opt small { display: block; font: 11px/1.5 sans-serif; color: #a1a1aa; margin-top: 4px; }
-.vs-code { font: 28px 'Press Start 2P', monospace; color: #fde047; letter-spacing: 8px; text-align: center; margin: 16px 0; text-shadow: 3px 3px 0 #7f1d1d; }
-.vs-msg { color: #a1a1aa; font-size: 13px; text-align: center; margin: 8px 0; } .vs-err { color: #fca5a5; font-size: 13px; text-align: center; margin: 10px 0; line-height: 1.6; }
-.vs-room { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a1540; }
-body.vs-embed #nx-menu-btn { display: none !important; }
-body.vs-on #nx-menu-btn { display: none !important; }
-@media (max-width: 760px) { #vs-hud { min-width: 0; } #vs-send { top: 96px; width: 150px; } #vs-send button { font-size: 8px; padding: 7px 5px; } }
+.sp-logo { z-index: 3 !important; }
+.sp-logo .sp-splash { position: absolute; left: 62%; bottom: -4px; z-index: 3; width: max-content; max-width: clamp(140px, 34vw, 380px); text-align: center; white-space: normal; cursor: pointer; user-select: none;
+  font: clamp(12px, 2vw, 22px)/1.25 'Press Start 2P', monospace !important; letter-spacing: 0; color: #8dff4f;
+  text-shadow: 3px 3px 0 #123300; transform: rotate(-12deg); transform-origin: 0 100%; animation: spSplash .5s ease-in-out infinite alternate; }
+@keyframes spSplash { from { transform: rotate(-12deg) scale(1); } to { transform: rotate(-12deg) scale(1.08); } }
+@keyframes spSplashM { from { transform: translateX(-50%) rotate(-6deg) scale(1); } to { transform: translateX(-50%) rotate(-6deg) scale(1.06); } }
+@media (max-width: 640px) { .sp-logo .sp-splash { left: 50%; bottom: -38px; max-width: 88vw; font-size: 11px; transform-origin: 50% 50%; animation-name: spSplashM; } }
+#team-modal { position: fixed; inset: 0; z-index: 100004; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; box-sizing: border-box; background: rgba(5,3,10,.9); }
+#team-modal.open { display: flex; animation: nxFade .2s ease-out; }
+#team-modal .tm-t { font: clamp(13px, 3vw, 22px)/1.4 'Press Start 2P', monospace; color: #fde047; text-shadow: 3px 3px 0 #7f1d1d; text-align: center; }
+#team-modal .tm-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(8px, 2vw, 22px); width: min(900px, 100%); }
+#team-modal .tm-o { padding: clamp(14px, 3vw, 26px) 6px; font: clamp(8px, 1.6vw, 14px)/1.4 'Press Start 2P', monospace; color: #fff; border: 4px solid #fff; border-radius: 10px; cursor: pointer; word-break: break-word;
+  text-shadow: 2px 2px 0 rgba(0,0,0,.6); opacity: 0; animation: tmPop .28s ease-out forwards; transition: transform .1s, filter .1s; }
+#team-modal .tm-o.n { background: #15803d; box-shadow: 0 6px 0 #14532d; } #team-modal .tm-o.a { background: #1d4ed8; box-shadow: 0 6px 0 #1e3a8a; }
+#team-modal .tm-row .tm-o:nth-child(2) { animation-delay: .07s; } #team-modal .tm-row .tm-o:nth-child(3) { animation-delay: .14s; }
+#team-modal .tm-o:hover { transform: translateY(3px) scale(1.03); filter: brightness(1.2); }
+#team-modal .tm-o.sel { filter: brightness(1.7) saturate(.7); border-color: #fde047; transform: translateY(4px); }
+#team-modal .tm-p { font: clamp(11px, 2.4vw, 18px)/1.5 'Press Start 2P', monospace; color: #fff; text-align: center; min-height: 28px; text-shadow: 2px 2px 0 #000; }
+#team-modal .tm-p i { font-style: normal; color: #fde047; }
+#team-modal .tm-act { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+#team-modal .tm-b { font: clamp(9px, 1.6vw, 12px) 'Press Start 2P', monospace; padding: 12px 16px; color: #e9d5ff; background: #2a1540; border: 2px solid #6d28d9; cursor: pointer; }
+#team-modal .tm-b:hover:not(:disabled) { background: #7c2d12; border-color: #fb923c; color: #fff7ed; }
+#team-modal .tm-b.go { color: #1a0b26; background: #fde047; border-color: #fde047; box-shadow: 0 5px 0 #b45309; } #team-modal .tm-b:disabled { opacity: .35; cursor: not-allowed; }
+@keyframes tmPop { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+#team-badge { margin: -4px 0 10px; text-align: center; font: 8px/1.5 'Press Start 2P', monospace; color: #fde047; text-shadow: 2px 2px 0 #000; word-break: break-word; display: none; }
 `;
 document.head.appendChild(css);
 
-const hud = document.createElement('div');
-hud.innerHTML = `
-<div id="vs-hud" class="vs-ui"><div class="rn">⚔ <span id="vs-rname">RIVAL</span></div>
-  <div class="rs"><span>❤ <b id="vs-rhp">20</b></span><span>🌊 <b id="vs-rwave">1</b></span><span>🗼 <b id="vs-rtw">0</b></span><span>☠ <b id="vs-rk">0</b></span></div><div id="vs-timer"></div></div>
-<div id="vs-send" class="vs-ui"><div class="st">ENVIAR AO RIVAL</div><div id="vs-btns"></div></div>
-<div id="vs-toast"></div><div id="vs-result"></div>`;
-while (hud.firstChild) document.body.appendChild(hud.firstChild);
-['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'touchstart', 'touchend', 'wheel', 'contextmenu'].forEach(ev => {
-    ['vs-hud', 'vs-send', 'vs-result'].forEach(id => $(id).addEventListener(ev, e => e.stopPropagation()));
-});
-$('vs-btns').addEventListener('click', e => { const b = e.target.closest('[data-send]'); if (b) doSend(b.dataset.send); });
-
-const sendCost = d => Math.round(d.cost * (1 + (wave - 1) * 0.06));
-function renderSend() {
-    const box = $('vs-btns'); if (!box) return;
-    if (!box.children.length) box.innerHTML = Object.keys(SEND_DEFS).map(k => { const d = SEND_DEFS[k]; return `<button data-send="${k}"><span>${d.icon} ${d.label} x${d.n}</span><small></small></button>`; }).join('');
-    const cd = performance.now() < V.cdUntil;
-    [...box.children].forEach(b => {
-        const d = SEND_DEFS[b.dataset.send], c = sendCost(d), lock = wave < d.min;
-        b.querySelector('small').textContent = lock ? 'ONDA ' + d.min : c + 'g';
-        b.disabled = V.ended || gameOver || lock || cd || gold < c;
-    });
+/* ───────────────────────── 1) SPLASH TEXT ───────────────────────── */
+const SPLASHES = [
+    'Defenda o Nexus!', 'Hexágono é amor!', 'Seis lados, zero medo!', 'Mais uma onda!', 'Só mais uma onda...', 'Tem boss na onda 5!', 'Cuidado com o boss!',
+    'Torre nunca dorme!', 'Metralhadora resolve!', 'Tesla é vida!', 'Canhão de Elite!', 'Fogo, raio e meteoro!', 'Ricochete!', 'Crítico!', 'Combo infinito!',
+    'Compre torres, não ansiedade!', 'Vender torre também é jogada!', 'Arrasta a carta na torre!', 'Carta lendária? Sorte sua!', 'Cadê o ouro?!',
+    '100% pixel-art!', 'Pixels artesanais!', 'Feito com HTML5!', 'Sem anúncios!', 'Roda a 60 FPS*', '*quando dá', 'Agora com mais pixels!',
+    'Experimente também Terraria!', 'Também joga no celular!', 'Isso é bug ou feature?', 'Funciona na minha máquina!', 'Café com código!',
+    'Escrito de madrugada!', 'Ctrl+S salva vidas!', 'Clique em mim!', 'Tem Easter egg aqui!', 'Manda o link pro amigo!', 'Hexagonal, meu bem!',
+    'Base forte, onda fraca!', 'Defesa é o melhor ataque!', 'Não deixa passar!', 'Torres: cuidem bem delas!', 'Nexus Hexa Guard!', 'Quase um Tower Defense!',
+    'Dica: venda e reconstrua!', 'Dica: use as expansões!', 'Dica: [P] muda o filtro pixel!', 'Dica: WASD move a câmera!', 'Dica: o scroll dá zoom!',
+    'Hoje a base não cai!', 'Respira e constrói!', 'Quem tem Tesla não tem medo!', 'O inimigo é fraco, o pânico é forte!', 'Sobreviva até a onda 20!'
+];
+function dynamicSplash() {
+    const d = new Date(), out = [], m = d.getMonth(), day = d.getDate(), wd = d.getDay();
+    try { const hs = +localStorage.getItem('nexus_highscore') || 0; if (hs > 0) out.push('Seu recorde: ' + hs.toLocaleString('pt-BR') + '!'); } catch (e) {}
+    try { const l = JSON.parse(localStorage.getItem('nexus_life') || '{}'); if (l.bestWave > 1) out.push('Melhor onda: ' + l.bestWave + '!'); if (l.kills > 100) out.push(l.kills.toLocaleString('pt-BR') + ' abates!'); } catch (e) {}
+    if (wd === 5) out.push('Sextou!'); if (wd === 1) out.push('Segunda... bora defender!'); if (wd === 0 || wd === 6) out.push('Bom fim de semana!');
+    if (m === 9 && day >= 25) out.push('Feliz Halloween!'); if (m === 11 && (day === 24 || day === 25)) out.push('Feliz Natal!'); if (m === 0 && day === 1) out.push('Feliz Ano Novo!');
+    return out;
 }
-function renderHud() {
-    $('vs-rname').textContent = V.rival.name; $('vs-rhp').textContent = V.rival.hp; $('vs-rwave').textContent = V.rival.wave;
-    $('vs-rtw').textContent = V.rival.towers; $('vs-rk').textContent = V.rival.kills;
+let lastSplash = '';
+function rollSplash() {
+    const el = document.querySelector('.sp-logo .sp-splash'); if (!el) return;
+    const dyn = dynamicSplash(); let t, n = 0;
+    do { t = (dyn.length && Math.random() < 0.18) ? pick(dyn) : pick(SPLASHES); } while (t === lastSplash && ++n < 8);
+    lastSplash = t; el.textContent = t;
 }
-function toast(msg, ok) { const c = $('vs-toast'), d = document.createElement('div'); if (ok) d.className = 'ok'; d.textContent = msg; c.appendChild(d); setTimeout(() => d.remove(), 3000); if (c.children.length > 3) c.firstChild.remove(); }
-
-function doSend(k) {
-    const d = SEND_DEFS[k], now = performance.now();
-    if (!d || !V.active || V.ended || gameOver || !V.T || now < V.cdUntil || wave < d.min) return;
-    const c = sendCost(d);
-    if (gold < c) { try { SFX.ui_error(); flashGold(); } catch (e) {} return; }
-    gold -= c; updateUI(); V.cdUntil = now + SEND_CD; V.sent += d.n;
-    V.T.send({ t: 'send', k });
-    try { SFX.coin(); } catch (e) {}
-    toast('Você enviou ' + d.label + ' x' + d.n, true); renderSend();
-}
-function addEnemies(list) {
-    if (gameOver || V.ended) return;
-    if (isShopOpen) { V.incoming.push(...list); return; }
-    spawnQueue.push(...list); enemiesToSpawn += list.length;
-}
-function onRivalSend(o) {
-    const d = SEND_DEFS[o && o.k]; if (!d || !V.active || V.ended) return;
-    addEnemies(Array(d.n).fill(d.type));
-    toast('⚠ ' + V.rival.name + ' enviou ' + d.label + ' x' + d.n + '!');
-    try { SFX.base_dmg(); fxBanner('⚠ ' + d.label + ' A CAMINHO', '#f43f5e', true); } catch (e) {}
-}
-
-/* resultado */
-function showResult() {
-    if (!V.ended) { V.ended = true; V.phase = 'ended'; V.result = V.result || 'lose'; if (V.T) V.T.send({ t: 'over', w: wave, k: statEnemiesKilled }); }
-    renderResult();
-}
-function renderResult() {
-    const r = V.result || 'lose', ov = $('vs-result');
-    const title = r === 'win' ? 'VITÓRIA!' : r === 'draw' ? 'EMPATE' : 'DERROTA';
-    const why = V.why || (r === 'win' ? 'A base do rival caiu.' : r === 'draw' ? 'As duas bases caíram ao mesmo tempo.' : 'Sua base foi destruída.');
-    ov.innerHTML = `<div class="box"><div class="tt ${r}">${title}</div><div class="why">${esc(why)}</div>
-      <div class="cmp"><div>VOCÊ<br>Onda <b>${wave}</b><br>Abates <b>${statEnemiesKilled}</b><br>Enviados <b>${V.sent}</b></div>
-      <div>${esc(V.rival.name)}<br>Onda <b>${V.rival.wave}</b><br>Abates <b>${V.rival.kills}</b><br>Base <b>${V.rival.hp}</b></div></div>
-      <div class="act"><button class="nx-btn" id="vs-rm">⚔ REVANCHE</button><button class="nx-btn danger" id="vs-exit">SAIR</button></div><div id="vs-rms"></div></div>`;
-    ov.style.display = 'flex';
-    $('vs-rm').onclick = requestRematch;
-    $('vs-exit').onclick = exitVersus;
-    if (!V.T) { $('vs-rm').disabled = true; $('vs-rms').textContent = 'Rival desconectado.'; }
-    else if (V.rm.me) { $('vs-rm').disabled = true; $('vs-rms').textContent = 'Aguardando o rival aceitar...'; }
-    else if (V.rm.rival) $('vs-rms').textContent = 'O rival quer revanche!';
-}
-function requestRematch() {
-    if (!V.T || V.rm.me) return;
-    V.rm.me = true; V.T.send({ t: 'rematch' }); renderResult();
-    if (V.rm.rival && V.role === 'host') beginMatch();
-}
-function exitVersus() {
-    try { if (V.T) { V.T.send({ t: 'bye' }); V.T.close(); } } catch (e) {}
-    if (EMBED) parent.postMessage({ nxvs: 1, msg: { t: '_exit' } }, '*');
-    else location.href = location.pathname;
-}
-
-/* ───────────────────────── PROTOCOLO ───────────────────────── */
-function sendHello() { V.T && V.T.send({ t: 'hello', name: V.name }); }
-function beginMatch() {
-    const seed = (Math.random() * 2147483647) | 0;
-    V.T.send({ t: 'start', seed, hn: V.name });
-    doStart(seed);
-}
-function doStart(seed) {
-    stopTimer(); closeM();
-    V.seed = seed; V.result = null; V.why = ''; V.ended = false; V.matchBegun = true; V.rm = { me: false, rival: false }; V.sent = 0; V.cdUntil = 0;
-    V.rival.wave = 1; V.rival.hp = 20; V.rival.towers = 0; V.rival.kills = 0;
-    $('vs-result').style.display = 'none';
-    resetRun(seed);
-    V.active = true; V.phase = 'playing';
-    nxStarted = true; menuActive = false;
-    const s = $('splash'); if (s) s.classList.add('out');
-    isTutorialActive = false; const tu = $('tutorial-overlay'); if (tu) tu.style.display = 'none';
-    document.body.classList.add('vs-on');
-    forceAutoWave(); renderHud(); renderSend();
-    try { fxBanner('⚔ ' + V.name + '  VS  ' + V.rival.name, '#fde047'); } catch (e) {}
-    startTimer('PREPARAÇÃO', PREP_SECS, () => { if (!waveActive) startNextWave(); });
-    if (!V.sync) V.sync = setInterval(syncTick, 250);
-}
-function syncTick() {
-    if (!V.active) return;
-    if (V.phase === 'playing' && gameOver) { V.phase = 'ended'; V.ended = true; V.result = 'lose'; V.T && V.T.send({ t: 'over', w: wave, k: statEnemiesKilled }); }
-    if (V.phase === 'playing' && (++V.tickN % 4 === 0) && V.T) V.T.send({ t: 'st', w: wave, hp: Math.max(0, hp | 0), tw: towers.length, k: statEnemiesKilled });
-    renderSend();
-}
-const num = (x, d) => (typeof x === 'number' && isFinite(x)) ? Math.max(0, Math.min(1e6, x | 0)) : d;
-function onMsg(o) {
-    if (!o || typeof o !== 'object') return;
-    switch (o.t) {
-        case 'hello':
-            V.rival.name = cleanName(o.name) || 'Rival';
-            if (V.role === 'host' && !V.matchBegun && V.T) { V.matchBegun = true; beginMatch(); }
-            break;
-        case 'start':
-            if (V.role !== 'guest') break;
-            V.rival.name = cleanName(o.hn) || V.rival.name;
-            doStart((o.seed | 0) || 1);
-            break;
-        case 'st':
-            V.rival.wave = num(o.w, V.rival.wave); V.rival.hp = num(o.hp, V.rival.hp); V.rival.towers = num(o.tw, V.rival.towers); V.rival.kills = num(o.k, V.rival.kills);
-            if (V.active) renderHud();
-            break;
-        case 'send': onRivalSend(o); break;
-        case 'over':
-            V.rival.wave = num(o.w, V.rival.wave); V.rival.kills = num(o.k, V.rival.kills); V.rival.hp = 0;
-            if (V.phase === 'playing') { V.phase = 'ended'; V.ended = true; V.result = 'win'; V.why = 'A base de ' + V.rival.name + ' caiu.'; gameOver = true; }
-            else if (V.phase === 'ended' && V.result === 'lose') { V.result = 'draw'; if ($('vs-result').style.display === 'flex') renderResult(); }
-            break;
-        case 'rematch':
-            V.rm.rival = true;
-            if (V.ended && $('vs-result').style.display === 'flex') renderResult();
-            if (V.rm.me && V.role === 'host') beginMatch();
-            break;
-        case 'bye': transportClosed('O rival saiu da partida.'); break;
-    }
-}
-function transportClosed(why) {
-    try { V.T && V.T.close(); } catch (e) {}
-    V.T = null;
-    if (V.phase === 'playing') { V.phase = 'ended'; V.ended = true; V.result = 'win'; V.why = why + ' Vitória por W.O.'; gameOver = true; }
-    else if (V.phase === 'ended') { if ($('vs-result').style.display === 'flex') renderResult(); }
-    else if ($('nx-title') && $('nx-title').dataset.k === 'vs') screenError(why);
-}
-
-/* ───────────────────────── TRANSPORTES ───────────────────────── */
-/* 1) ONLINE — PeerJS (WebRTC ponto a ponto; o broker público do PeerJS só faz o "aperto de mão") */
-function loadPeerJS() {
-    return new Promise((res, rej) => {
-        if (window.Peer) return res();
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
-        s.onload = () => window.Peer ? res() : rej(new Error('PeerJS não inicializou.'));
-        s.onerror = () => rej(new Error('Não consegui carregar o PeerJS. Você está sem internet?'));
-        document.head.appendChild(s);
-    });
-}
-async function tPeer(role, code, H) {
-    await loadPeerJS();
-    const cfg = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] } };
-    let peer = null, conn = null, closed = false, tries = 0, timer = null;
-    const api = {
-        send(o) { if (conn && conn.open) try { conn.send(JSON.stringify(o)); } catch (e) {} },
-        close() { closed = true; clearTimeout(timer); try { conn && conn.close(); } catch (e) {} try { peer && peer.destroy(); } catch (e) {} }
-    };
-    const attach = c => {
-        conn = c;
-        c.on('open', () => { clearTimeout(timer); H.ready(); });
-        c.on('data', d => { try { H.msg(typeof d === 'string' ? JSON.parse(d) : d); } catch (e) {} });
-        c.on('close', () => { if (!closed) H.close('A conexão com o rival caiu.'); });
-        c.on('error', () => { if (!closed) H.close('Erro na conexão com o rival.'); });
-    };
-    const onErr = err => {
-        if (closed) return;
-        const t = err && err.type;
-        if (role === 'host' && t === 'unavailable-id' && tries++ < 4) { try { peer.destroy(); } catch (e) {} code = genCode(5); H.codeChanged(code); return mk(); }
-        if (t === 'peer-unavailable') return H.error('Sala não encontrada. Confira o código.');
-        if (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') return H.error('Sem conexão com o servidor de encontro do PeerJS. Verifique a internet.');
-        H.error('Erro de conexão (' + (t || 'desconhecido') + ').');
-    };
-    const mk = () => {
-        if (role === 'host') {
-            peer = new Peer('nxhg-' + code, cfg);
-            peer.on('open', () => H.waiting(code));
-            peer.on('connection', c => { if (conn && conn.open) { c.on('open', () => c.close()); return; } attach(c); });
-        } else {
-            peer = new Peer(cfg);
-            peer.on('open', () => {
-                attach(peer.connect('nxhg-' + code, { reliable: true }));
-                timer = setTimeout(() => { if (!closed && !(conn && conn.open)) H.error('Não consegui conectar ao rival. A sala existe? (redes muito restritas podem bloquear — use o modo REDE LOCAL com o server.js hospedado)'); }, 15000);
-            });
-        }
-        peer.on('error', onErr);
-        peer.on('disconnected', () => { if (!closed && !(conn && conn.open)) { try { peer.reconnect(); } catch (e) {} } });
-    };
-    mk();
-    return api;
-}
-
-/* 2) REDE LOCAL / SERVIDOR PRÓPRIO — SSE + POST contra o server.js (zero dependências) */
-function tSSE(role, code, base, H) {
-    base = base.replace(/\/+$/, '');
-    if (location.protocol === 'https:' && /^http:/i.test(base)) { setTimeout(() => H.error('Esta página está em HTTPS e o servidor é HTTP (bloqueado pelo navegador). Abra o jogo pelo endereço http://IP:3000 que o server.js mostra.'), 0); return { send() {}, close() {} }; }
-    let es = null, closed = false, opened = false, chain = Promise.resolve();
-    const api = {
-        send(o) { chain = chain.then(() => fetch(base + '/nx/send?room=' + code + '&role=' + role, { method: 'POST', body: JSON.stringify(o), headers: { 'Content-Type': 'text/plain' } })).catch(() => {}); },
-        close() { closed = true; try { clearTimeout(to); es && es.close(); } catch (e) {} }
-    };
-    let to = 0;
-    try { es = new EventSource(base + '/nx/stream?room=' + encodeURIComponent(code) + '&role=' + role + '&name=' + encodeURIComponent(V.name)); }
-    catch (e) { setTimeout(() => H.error('Endereço do servidor inválido.'), 0); return api; }
-    to = setTimeout(() => { if (!opened && !closed) { closed = true; try { es.close(); } catch (e) {} H.error('O servidor em ' + base + ' não respondeu. O server.js está rodando? O endereço (IP e porta) está certo? Os dois aparelhos estão na mesma rede?'); } }, 6000);
-    es.onopen = () => { opened = true; clearTimeout(to); };
-    es.onmessage = ev => {
-        let o; try { o = JSON.parse(ev.data); } catch (e) { return; }
-        if (o.t === '_wait') H.waiting(code);
-        else if (o.t === '_ready') H.ready();
-        else if (o.t === '_err') { H.error(o.m || 'Erro no servidor.'); api.close(); }
-        else if (o.t === '_left') { H.close('O rival saiu da partida.'); }
-        else H.msg(o);
-    };
-    es.onerror = () => {
-        if (closed) return; closed = true; clearTimeout(to); try { es.close(); } catch (e) {}
-        if (!opened) H.error('Não consegui falar com o servidor em ' + base + '. O server.js está rodando? O endereço está certo?');
-        else H.close('A conexão com o servidor caiu.');
-    };
-    return api;
-}
-
-/* 3) LOCAL (tela dividida) — local.html é o "hub": repassa as mensagens entre os dois iframes */
-function tParent(H) {
-    const on = e => { const d = e.data; if (!d || !d.nxvs || !d.msg) return; if (d.msg.t === '_open') H.ready(); else H.msg(d.msg); };
-    window.addEventListener('message', on);
-    parent.postMessage({ nxvs: 1, msg: { t: '_ready', slot: SLOT } }, '*');
-    return { send(o) { parent.postMessage({ nxvs: 1, msg: o }, '*'); }, close() { window.removeEventListener('message', on); } };
-}
-
-function handlers() {
-    return {
-        waiting(code) { V.code = code; V.phase = 'lobby'; screenWaiting(code); },
-        codeChanged(code) { V.code = code; screenWaiting(code); },
-        ready() { V.phase = 'connected'; if (!EMBED) screenMsg('Rival conectado! Iniciando...'); sendHello(); },
-        msg: onMsg,
-        close: transportClosed,
-        error(m) { cleanupTransport(); screenError(m); }
-    };
-}
-function cleanupTransport() { try { V.T && V.T.close(); } catch (e) {} V.T = null; if (V.phase !== 'playing' && V.phase !== 'ended') { V.phase = 'idle'; V.matchBegun = false; } }
-function cancelLobby() { if (!V.active) cleanupTransport(); }
-
-async function startTransport(mode, role, code) {
-    cleanupTransport(); V.mode = mode; V.role = role; V.code = code; V.matchBegun = false;
-    screenMsg(role === 'host' ? 'Criando sala...' : 'Entrando na sala ' + code + '...');
-    const H = handlers();
-    try { V.T = mode === 'online' ? await tPeer(role, code, H) : tSSE(role, code, lanBase(), H); }
-    catch (e) { H.error(e.message || String(e)); }
-}
-
-/* ───────────────────────── LOBBY (reaproveita o modal do jogo) ───────────────────────── */
-function openM(title, html) { const t = $('nx-title'); t.textContent = title; t.dataset.k = 'vs'; $('nx-body').innerHTML = html; $('nx-body').scrollTop = 0; $('nx-modal').classList.add('open'); }
-function closeM() { const m = $('nx-modal'); if (m && $('nx-title').dataset.k === 'vs') { m.classList.remove('open'); $('nx-title').dataset.k = ''; } }
-const inLobby = () => $('nx-title') && $('nx-title').dataset.k === 'vs';
-const nameField = () => `<div class="nx-sec">SEU NOME</div><input class="vs-in" id="vs-name" maxlength="16" value="${esc(V.name)}">`;
-const lanBase = () => { const el = $('vs-srv'); const v = (el ? el.value : store.get('nexus_vs_srv', '')).trim(); return v || (location.protocol.startsWith('http') ? location.origin : 'http://192.168.0.2:3000'); };
-function readName() { const el = $('vs-name'); if (el) { V.name = cleanName(el.value) || V.name; store.set('nexus_vs_name', V.name); } }
-
-function screenHome() {
-    V.phase = 'idle';
-    openM('MULTIPLAYER 1x1', `${nameField()}<div class="nx-sec">ESCOLHA O MODO</div>
-      <button class="vs-opt" data-vs="online">🌐 ONLINE<small>Joga pela internet com um amigo usando um código de sala. Não precisa configurar nada.</small></button>
-      <button class="vs-opt" data-vs="lan">📡 REDE LOCAL (Wi-Fi)<small>Cada um no seu aparelho, na mesma rede. Precisa rodar o server.js em um PC (veja o MULTIPLAYER.md).</small></button>
-      <button class="vs-opt" data-vs="local">🖥 LOCAL (MESMA TELA)<small>Tela dividida: dois jogadores no mesmo PC/tablet. Ideal com tela de toque.</small></button>`);
-}
-function screenOnline() {
-    openM('ONLINE', `<div class="nx-sec">CRIAR SALA</div><button class="vs-opt" data-vs="host-online">➕ CRIAR SALA E CONVIDAR<small>Você recebe um código pra mandar pro amigo.</small></button>
-      <div class="nx-sec">ENTRAR EM UMA SALA</div><input class="vs-in code" id="vs-code" maxlength="5" placeholder="CÓDIGO">
-      <div class="nx-actions"><button class="nx-btn" data-vs="home">VOLTAR</button><button class="nx-btn on" data-vs="join-online">ENTRAR</button></div>`);
-}
-function screenLan() {
-    openM('REDE LOCAL', `<div class="nx-sec">SERVIDOR</div><input class="vs-in" id="vs-srv" value="${esc(store.get('nexus_vs_srv', '') || (location.protocol.startsWith('http') ? location.origin : 'http://192.168.0.2:3000'))}">
-      <div class="vs-msg">Endereço que o server.js mostra ao iniciar. Se você abriu o jogo por ele, já está certo.</div>
-      <div class="nx-sec">CRIAR SALA</div><button class="vs-opt" data-vs="host-lan">➕ CRIAR SALA<small>Você recebe um código de 4 letras.</small></button>
-      <div class="nx-sec">SALAS ABERTAS</div><div id="vs-rooms" class="vs-msg">Procurando...</div>
-      <div class="nx-sec">ENTRAR POR CÓDIGO</div><input class="vs-in code" id="vs-code" maxlength="4" placeholder="CÓDIGO">
-      <div class="nx-actions"><button class="nx-btn" data-vs="home">VOLTAR</button><button class="nx-btn on" data-vs="join-lan">ENTRAR</button></div>`);
-    refreshRooms();
-}
-async function refreshRooms() {
-    const box = $('vs-rooms'); if (!box) return;
-    try {
-        const r = await fetch(lanBase().replace(/\/+$/, '') + '/nx/rooms'), list = await r.json();
-        if (!$('vs-rooms')) return;
-        $('vs-rooms').innerHTML = list.length ? list.map(x => `<div class="vs-room"><span>${esc(x.name)} · <b style="color:#fde047">${esc(x.code)}</b></span><button class="nx-btn on" data-vs="join-room" data-code="${esc(x.code)}">ENTRAR</button></div>`).join('') : 'Nenhuma sala aberta. Crie uma!';
-    } catch (e) { if ($('vs-rooms')) $('vs-rooms').textContent = 'Servidor não encontrado nesse endereço.'; }
-}
-function shareLink(code) {
-    if (!location.protocol.startsWith('http')) return '';
-    return V.mode === 'online' ? location.origin + location.pathname + '?online=' + code : lanBase().replace(/\/+$/, '') + '/?lan=' + code;
-}
-function screenWaiting(code) {
-    const link = shareLink(code);
-    openM('AGUARDANDO RIVAL', `<div class="vs-msg">Passe este código pro seu rival:</div><div class="vs-code">${esc(code)}</div>
-      ${link ? `<div class="vs-msg">ou mande o link:<br><input class="vs-in" readonly value="${esc(link)}" onclick="this.select()"></div>` : ''}
-      <div class="vs-msg">A partida começa sozinha quando ele entrar.</div>
-      <div class="nx-actions"><button class="nx-btn danger" data-vs="cancel">CANCELAR</button></div>`);
-}
-function screenMsg(m) { openM('MULTIPLAYER 1x1', `<div class="vs-msg" style="margin:30px 0">${esc(m)}</div><div class="nx-actions"><button class="nx-btn danger" data-vs="cancel">CANCELAR</button></div>`); }
-function screenError(m) { openM('NÃO DEU CERTO', `<div class="vs-err">${esc(m)}</div><div class="nx-actions"><button class="nx-btn on" data-vs="home">VOLTAR</button></div>`); }
-
-$('nx-body').addEventListener('click', e => {
-    const b = e.target.closest('[data-vs]'); if (!b || !inLobby()) return;
-    const a = b.dataset.vs; readName();
-    if (a === 'home') { cleanupTransport(); screenHome(); }
-    else if (a === 'online') screenOnline();
-    else if (a === 'lan') screenLan();
-    else if (a === 'local') location.href = 'local.html';
-    else if (a === 'cancel') { cleanupTransport(); screenHome(); }
-    else if (a === 'host-online') startTransport('online', 'host', genCode(5));
-    else if (a === 'join-online') { const c = ($('vs-code').value || '').toUpperCase().trim(); if (c.length < 3) return screenError('Digite o código da sala.'); startTransport('online', 'guest', c); }
-    else if (a === 'host-lan') { store.set('nexus_vs_srv', lanBase()); startTransport('lan', 'host', genCode(4)); }
-    else if (a === 'join-lan' || a === 'join-room') { const c = (a === 'join-room' ? b.dataset.code : ($('vs-code').value || '')).toUpperCase().trim(); if (c.length < 3) return screenError('Digite o código da sala.'); store.set('nexus_vs_srv', lanBase()); startTransport('lan', 'guest', c); }
-});
-$('nx-x').addEventListener('click', () => { if (inLobby() || V.phase === 'lobby') cancelLobby(); });
-
-/* botão no menu principal */
-(function addMenuButton() {
-    const play = document.querySelector('#splash [data-act=play]'); if (!play || EMBED) return;
-    const b = document.createElement('button'); b.className = 'sp-sec'; b.dataset.act = 'vs'; b.textContent = '⚔ MULTIPLAYER 1x1';
-    b.style.cssText = 'background:linear-gradient(45deg,#9a3412,#c2410c)!important;border-color:#ea580c!important;color:#ffedd5!important';
-    play.insertAdjacentElement('afterend', b);
-    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#splash [data-act=vs]')) screenHome(); });
+(function initSplash() {
+    const logo = document.querySelector('#splash .sp-logo'); if (!logo) return;
+    const sp = document.createElement('span'); sp.className = 'sp-splash'; sp.title = 'Clique pra trocar';
+    sp.addEventListener('click', e => { e.stopPropagation(); rollSplash(); });
+    logo.appendChild(sp); rollSplash();
+    const s = $('splash'); let was = s.classList.contains('out');
+    new MutationObserver(() => { const now = s.classList.contains('out'); if (was && !now) rollSplash(); was = now; }).observe(s, { attributes: true, attributeFilter: ['class'] });
 })();
 
-/* ───────────────────────── INICIALIZAÇÃO ───────────────────────── */
-function boot() {
-    if (EMBED) {
-        document.body.classList.add('vs-embed');
-        V.name = 'P' + SLOT; V.role = SLOT === 1 ? 'host' : 'guest'; V.mode = 'local';
-        FX.px = 1; const ov = $('fx-over'); if (ov) ov.style.display = 'none';
-        if (SLOT !== 1) { const ms = $('music-slider'); if (ms) { ms.value = 0; ms.dispatchEvent(new Event('input')); } }
-        nxStarted = true; menuActive = false;
-        const s = $('splash'); if (s) { s.style.transition = 'none'; s.classList.add('out'); }
-        isTutorialActive = false; const tu = $('tutorial-overlay'); if (tu) tu.style.display = 'none';
-        V.T = tParent(handlers());
-        return;
-    }
-    const on = Q.get('online'), lan = Q.get('lan');
-    if (on) { screenMsg('Entrando na sala...'); startTransport('online', 'guest', on.toUpperCase()); }
-    else if (lan && location.protocol.startsWith('http')) { screenMsg('Entrando na sala...'); startTransport('lan', 'guest', lan.toUpperCase()); }
+/* ───────────────────────── 2) NOME DO TIME (estilo Super Auto Pets: 1 de 3 substantivos + 1 de 3 adjetivos) ───────────────────────── */
+const NOUNS = [['Torres', 'f'], ['Sentinelas', 'f'], ['Muralhas', 'f'], ['Bruxas', 'f'], ['Coxinhas', 'f'], ['Capivaras', 'f'], ['Galinhas', 'f'], ['Gárgulas', 'f'], ['Tartarugas', 'f'], ['Minhocas', 'f'], ['Fadas', 'f'], ['Lulas', 'f'], ['Tropas', 'f'], ['Raposas', 'f'], ['Jaquetas', 'f'],
+    ['Guardiões', 'm'], ['Canhões', 'm'], ['Goblins', 'm'], ['Pastéis', 'm'], ['Lobos', 'm'], ['Cogumelos', 'm'], ['Magos', 'm'], ['Hexágonos', 'm'], ['Escudos', 'm'], ['Dragões', 'm'], ['Sapos', 'm'], ['Zumbis', 'm'], ['Tijolos', 'm'], ['Pirulitos', 'm'], ['Mosquitos', 'm'], ['Cavaleiros', 'm'], ['Pãezinhos', 'm'], ['Gatos', 'm']];
+const ADJS = [['Adoráveis', 'Adoráveis'], ['Agressivos', 'Agressivas'], ['Deliciosos', 'Deliciosas'], ['Molhados', 'Molhadas'], ['Furiosos', 'Furiosas'], ['Sinistros', 'Sinistras'], ['Estranhos', 'Estranhas'], ['Heroicos', 'Heroicas'],
+    ['Suspeitos', 'Suspeitas'], ['Lendários', 'Lendárias'], ['Absurdos', 'Absurdas'], ['Misteriosos', 'Misteriosas'], ['Radioativos', 'Radioativas'], ['Invencíveis', 'Invencíveis'], ['Fofos', 'Fofas'], ['Cósmicos', 'Cósmicas'],
+    ['Desempregados', 'Desempregadas'], ['Suados', 'Suadas'], ['Nervosos', 'Nervosas'], ['Cansados', 'Cansadas'], ['Poderosos', 'Poderosas'], ['Bugados', 'Bugadas'], ['Brilhantes', 'Brilhantes'], ['Gigantes', 'Gigantes'], ['Elétricos', 'Elétricas'], ['Ilegais', 'Ilegais'],
+    ['Desastrados', 'Desastradas'], ['Desequilibrados', 'Desequilibradas'], ['Esperançosos', 'Esperançosas'], ['Imprestáveis', 'Imprestáveis']];
+const sample = (arr, n) => { const a = arr.slice(), o = []; while (o.length < n && a.length) o.push(a.splice(Math.random() * a.length | 0, 1)[0]); return o; };
+const adjOf = (a, noun) => noun && noun[1] === 'f' ? a[1] : a[0];
+
+const TEAM = window.NXTEAM = { name: '' };
+let named = false, picking = false, onPick = null, autoT = null;
+let nounOpts = [], adjOpts = [], selN = -1, selA = -1;
+
+const modal = document.createElement('div'); modal.id = 'team-modal';
+document.body.appendChild(modal);
+['mousedown', 'mouseup', 'click', 'pointerdown', 'touchstart', 'wheel'].forEach(ev => modal.addEventListener(ev, e => e.stopPropagation()));
+const preview = () => selN >= 0 && selA >= 0 ? nounOpts[selN][0] + ' ' + adjOf(adjOpts[selA], nounOpts[selN]) : '';
+function rollOpts() { nounOpts = sample(NOUNS, 3); adjOpts = sample(ADJS, 3); selN = selA = -1; }
+function renderPicker(anim) {
+    const nn = selN >= 0 ? nounOpts[selN] : null, p = preview();
+    modal.innerHTML = `<div class="tm-t">DÊ UM NOME À SUA EQUIPE</div>
+      <div class="tm-row">${nounOpts.map((o, i) => `<button class="tm-o n${i === selN ? ' sel' : ''}" data-n="${i}" ${anim ? '' : 'style="animation:none;opacity:1"'}>${esc(o[0])}</button>`).join('')}</div>
+      <div class="tm-row">${adjOpts.map((o, i) => `<button class="tm-o a${i === selA ? ' sel' : ''}" data-a="${i}" ${anim ? '' : 'style="animation:none;opacity:1"'}>${esc(adjOf(o, nn))}</button>`).join('')}</div>
+      <div class="tm-p">${p ? '🛡 <i>' + esc(p) + '</i>' : 'Escolha 1 de cada cor'}</div>
+      <div class="tm-act"><button class="tm-b" data-r="1">🎲 SORTEAR OUTROS [R]</button><button class="tm-b go" data-ok="1" ${p ? '' : 'disabled'}>CONFIRMAR [ENTER]</button></div>`;
 }
-window.NXVS = { state: V, doSend, resetRun };
-if (document.readyState === 'complete') setTimeout(boot, 50); else window.addEventListener('load', () => setTimeout(boot, 50));
+function selectN(i) { selN = i; renderPicker(false); }
+function selectA(i) { selA = i; renderPicker(false); }
+modal.addEventListener('click', e => {
+    const n = e.target.closest('[data-n]'), a = e.target.closest('[data-a]'), r = e.target.closest('[data-r]'), ok = e.target.closest('[data-ok]');
+    try { SFX.ui_click(); } catch (er) {}
+    if (n) selectN(+n.dataset.n); else if (a) selectA(+a.dataset.a);
+    else if (r) { rollOpts(); renderPicker(true); } else if (ok) confirmPick();
+});
+function confirmPick() {
+    if (selN < 0 || selA < 0) return;
+    clearTimeout(autoT);
+    TEAM.name = preview(); modal.classList.remove('open'); picking = false; named = true;
+    showBadge();
+    window.dispatchEvent(new CustomEvent('nx-team', { detail: { name: TEAM.name } }));
+    const f = onPick; onPick = null; if (f) f();
+}
+function openPicker(cb) {
+    picking = true; onPick = cb; rollOpts(); renderPicker(true); modal.classList.add('open');
+    try { SFX.card_drop(); } catch (er) {}
+    const nv = window.NXVS && NXVS.state && NXVS.state.active;
+    if (nv) autoT = setTimeout(() => { if (selN < 0) selN = 0; if (selA < 0) selA = 0; confirmPick(); }, 15000);   // no versus não dá pra deixar o rival esperando
+}
+window.addEventListener('keydown', e => {
+    if (!picking) return;
+    e.stopImmediatePropagation();
+    if (e.key === 'Escape') { e.preventDefault(); return; }
+    const k = e.key.toLowerCase();
+    if (k >= '1' && k <= '3') selectN(+k - 1);
+    else if (k >= '4' && k <= '6') selectA(+k - 4);
+    else if (k === 'r') { rollOpts(); renderPicker(true); }
+    else if (k === 'enter') confirmPick();
+}, true);
+
+function showBadge() {
+    let b = $('team-badge');
+    if (!b) { const t = $('sidebar-title'); if (!t) return; b = document.createElement('div'); b.id = 'team-badge'; t.insertAdjacentElement('afterend', b); }
+    b.textContent = '🛡 ' + TEAM.name; b.style.display = 'block';
+}
+
+/* depois de apertar INICIAR ONDA na onda 1: escolhe o nome, e só então a onda começa */
+const _sw = startNextWave;
+startNextWave = function () {
+    if (picking) return;
+    if (wave === 1 && !named) { const args = arguments, self = this; openPicker(() => _sw.apply(self, args)); return; }
+    return _sw.apply(this, arguments);
+};
+/* fim de partida: mostra o nome na tela final e libera nova escolha na próxima */
+const _sg = showGameOverScreen;
+showGameOverScreen = function () {
+    const r = _sg.apply(this, arguments);
+    try {
+        const w = $('go-wave'); let g = $('go-team');
+        if (w && !g && TEAM.name) { g = document.createElement('div'); g.id = 'go-team'; g.style.cssText = "color:#fde047;font:12px 'Press Start 2P',monospace;margin:-18px 0 22px;text-shadow:2px 2px 0 #000"; w.parentElement.insertAdjacentElement('beforebegin', g); }
+        if (g) g.textContent = TEAM.name ? '🛡 ' + TEAM.name : '';
+    } catch (e) {}
+    named = false; picking = false; return r;
+};
 })();
     </script>
+<!-- ═════════ NEXUS ADDICTION PACK: cristais, loja, combo, conquistas, missões, game over provocador ═════════ -->
+<style>
+#nx-meta-btn{position:fixed;left:14px;bottom:14px;z-index:8500;background:#18181b;border:1px solid #eab308;color:#fde047;font:900 13px sans-serif;padding:10px 14px;border-radius:10px;cursor:pointer;box-shadow:0 5px 15px rgba(0,0,0,.5)}
+#nx-meta-btn:hover{background:#27272a;transform:scale(1.05)}
+#nx-meta-modal{position:fixed;inset:0;background:rgba(5,5,10,.92);z-index:95000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 14px}
+#nx-meta-modal.open{display:flex}
+.nxm-box{background:linear-gradient(180deg,#18181b,#0f1115);border:1px solid #3f3f46;border-radius:16px;max-width:620px;width:100%;padding:22px;color:#e4e4e7;font-family:sans-serif}
+.nxm-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.nxm-h b{font-size:20px;color:#fde047}
+.nxm-x{background:none;border:1px solid #3f3f46;color:#a1a1aa;border-radius:8px;padding:6px 12px;cursor:pointer}
+.nxm-s{font-size:11px;letter-spacing:2px;color:#71717a;margin:18px 0 8px;font-weight:900}
+.nxm-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#111114;border:1px solid #27272a;border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:13px}
+.nxm-row small{color:#71717a;display:block}
+.nxm-buy{background:#eab308;color:#000;border:none;border-radius:8px;padding:8px 12px;font-weight:900;cursor:pointer;white-space:nowrap}
+.nxm-buy:disabled{background:#27272a;color:#52525b;cursor:not-allowed}
+.nxm-bar{height:6px;background:#27272a;border-radius:4px;margin-top:6px;overflow:hidden}.nxm-bar i{display:block;height:100%;background:#22c55e}
+.nxm-ach{opacity:.4}.nxm-ach.on{opacity:1;border-color:#eab308}
+#nx-combo{position:fixed;top:78px;left:50%;transform:translateX(-50%);z-index:8000;pointer-events:none;text-align:center;font:900 28px sans-serif;color:#f97316;text-shadow:0 0 14px #f97316,2px 2px 0 #000;opacity:0;transition:opacity .2s}
+#nx-combo small{display:block;font-size:12px;color:#fde047;letter-spacing:2px}
+#nx-combo.pop{animation:nxpop .18s}@keyframes nxpop{50%{transform:translateX(-50%) scale(1.3)}}
+#nx-toasts{position:fixed;top:14px;right:14px;z-index:99000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.nx-toast{background:#18181b;border:1px solid #eab308;color:#fde047;padding:10px 14px;border-radius:10px;font:700 13px sans-serif;box-shadow:0 5px 20px rgba(0,0,0,.6);animation:nxin .3s}
+@keyframes nxin{from{transform:translateX(40px);opacity:0}}
+#nx-go-extra{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.35);border-radius:14px;padding:16px;margin-bottom:22px;color:#e4e4e7;font-family:sans-serif}
+#nx-go-extra .t{font-size:18px;font-weight:900;color:#fde047;margin-bottom:6px}
+#nx-go-extra button{background:#27272a;color:#f4f4f5;border:1px solid #3f3f46;border-radius:8px;padding:8px 14px;margin:8px 4px 0;font-weight:700;cursor:pointer}
+</style>
+<script>
+(function () {
+const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const $ = id => document.getElementById(id);
+let M = LS.get('nexus_meta', { c: 0, u: {} }); if (!M.u) M.u = {};
+const saveM = () => LS.set('nexus_meta', M);
+
+/* ── upgrades permanentes ── */
+const UPG = [
+  { id: 'gold', n: 'Cofre inicial', d: '+15 de ouro no início da partida', max: 5 },
+  { id: 'hp', n: 'Muralha reforçada', d: '+2 de vida da base', max: 5 },
+  { id: 'dmg', n: 'Munição Hexa', d: '+4% de dano em todas as torres', max: 5 },
+  { id: 'wave', n: 'Imposto de guerra', d: '+6 de ouro no começo de cada onda', max: 5 }
+];
+const lvl = id => M.u[id] || 0, cost = id => 10 + lvl(id) * 10;
+
+/* ── missões diárias e conquistas ── */
+const now = new Date(), ds = now.toISOString().slice(0, 10), sd = (now.getDate() + now.getMonth()) % 3;
+const MIS = [
+  { id: 'k', n: 'Abata ' + (120 + sd * 40) + ' inimigos', t: 120 + sd * 40 },
+  { id: 'g', n: 'Ganhe ' + (600 + sd * 200) + ' de ouro', t: 600 + sd * 200 },
+  { id: 'w', n: 'Chegue à onda ' + (6 + sd * 2), t: 6 + sd * 2 }
+];
+let D = LS.get('nexus_daily', {}); if (D.d !== ds) D = { d: ds, k: 0, g: 0, w: 0, done: {} };
+const ACH = [
+  { id: 'k100', n: 'Exterminador', d: '100 abates numa partida', r: 5, f: s => s.k >= 100 },
+  { id: 'w5', n: 'Veterano', d: 'Chegue à onda 5', r: 5, f: s => s.w >= 5 },
+  { id: 'w10', n: 'Sobrevivente', d: 'Chegue à onda 10', r: 10, f: s => s.w >= 10 },
+  { id: 'w15', n: 'Lenda do Nexus', d: 'Chegue à onda 15', r: 20, f: s => s.w >= 15 },
+  { id: 'w20', n: 'Hexa Supremo', d: 'Chegue à onda 20', r: 40, f: s => s.w >= 20 },
+  { id: 'c25', n: 'Frenesi', d: 'Combo de 25', r: 8, f: s => s.c >= 25 },
+  { id: 'c50', n: 'Imparável', d: 'Combo de 50', r: 15, f: s => s.c >= 50 },
+  { id: 't10', n: 'Arquiteto', d: '10 torres ao mesmo tempo', r: 8, f: s => s.t >= 10 },
+  { id: 'g15', n: 'Rei Midas', d: 'Ganhe 1500 de ouro numa partida', r: 10, f: s => s.g >= 1500 }
+];
+let A = LS.get('nexus_ach', {});
+
+function toast(msg) {
+  let w = $('nx-toasts'); if (!w) { w = document.createElement('div'); w.id = 'nx-toasts'; document.body.appendChild(w); }
+  const t = document.createElement('div'); t.className = 'nx-toast'; t.textContent = msg; w.appendChild(t);
+  try { SFX.card_drop(); } catch (e) {} setTimeout(() => t.remove(), 3800);
+}
+function gain(n) { M.c += n; saveM(); refreshBtn(); }
+function ft(txt, col) { try { floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height * 0.3, txt, col, true)); } catch (e) {} }
+
+/* ── aplica bônus permanentes ── */
+let lastBonusWave = 0;
+const _sw = startNextWave;
+startNextWave = function () {
+  if (lastBonusWave !== wave) {
+    lastBonusWave = wave;
+    if (wave === 1) { gold += lvl('gold') * 15; hp += lvl('hp') * 2; }
+    else if (lvl('wave')) { gold += lvl('wave') * 6; ft('+' + lvl('wave') * 6 + 'g Imposto de guerra', '#fde047'); }
+    try { updateUI(); } catch (e) {}
+  }
+  return _sw.apply(this, arguments);
+};
+try {
+  const d = Object.getOwnPropertyDescriptor(Tower.prototype, 'damage');
+  Object.defineProperty(Tower.prototype, 'damage', { configurable: true, get() { return d.get.call(this) * (1 + 0.04 * lvl('dmg')); } });
+} catch (e) {}
+
+/* ── combo, missões e conquistas (checados 10x/s) ── */
+let combo = 0, comboT = 0, maxCombo = 0, lastK = 0, lastG = 0;
+const MILES = [10, 25, 50, 100, 200]; let milesHit = 0;
+function tick() {
+  try {
+    const k = statEnemiesKilled, g = statGoldEarned, tn = Date.now();
+    if (k < lastK) { lastK = k; combo = 0; milesHit = 0; maxCombo = 0; }
+    if (g < lastG) lastG = g;
+    if (k > lastK) {
+      D.k += k - lastK; combo += k - lastK; lastK = k; comboT = tn + 2500; maxCombo = Math.max(maxCombo, combo);
+      const el = $('nx-combo'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+      while (milesHit < MILES.length && combo >= MILES[milesHit]) { const b = MILES[milesHit] * 2; gold += b; ft('COMBO x' + MILES[milesHit] + '  +' + b + 'g', '#f97316'); try { updateUI(); } catch (e) {} milesHit++; }
+    }
+    if (g > lastG) { D.g += g - lastG; lastG = g; }
+    if (combo && tn > comboT) { combo = 0; milesHit = 0; }
+    D.w = Math.max(D.w, wave);
+    const c = $('nx-combo'); c.style.opacity = combo >= 3 ? 1 : 0; c.innerHTML = 'COMBO x' + combo + '<small>PRÓXIMO BÔNUS EM ' + (MILES[milesHit] || '∞') + '</small>';
+    const s = { k, w: wave, c: maxCombo, t: towers.length, g };
+    let dirty = false;
+    ACH.forEach(a => { if (!A[a.id] && a.f(s)) { A[a.id] = 1; dirty = true; gain(a.r); toast('🏆 ' + a.n + ' +' + a.r + '💎'); } });
+    MIS.forEach(m => { if (!D.done[m.id] && D[m.id] >= m.t) { D.done[m.id] = 1; dirty = true; gain(15); toast('📋 Missão cumprida: ' + m.n + ' +15💎'); } });
+    LS.set('nexus_daily', D); if (dirty) LS.set('nexus_ach', A);
+  } catch (e) {}
+}
+setInterval(tick, 100);
+
+/* ── UI: botão, combo e modal ── */
+const cb = document.createElement('div'); cb.id = 'nx-combo'; document.body.appendChild(cb);
+const btn = document.createElement('button'); btn.id = 'nx-meta-btn'; document.body.appendChild(btn);
+function refreshBtn() { btn.textContent = '💎 ' + M.c + ' · LOJA'; }
+refreshBtn();
+const modal = document.createElement('div'); modal.id = 'nx-meta-modal'; document.body.appendChild(modal);
+['mousedown', 'mouseup', 'pointerdown', 'touchstart', 'wheel', 'click'].forEach(ev => modal.addEventListener(ev, e => e.stopPropagation()));
+function render() {
+  modal.innerHTML = '<div class="nxm-box"><div class="nxm-h"><b>💎 ' + M.c + ' Cristais Hexa</b><button class="nxm-x" data-x="1">FECHAR [ESC]</button></div>' +
+    '<div class="nxm-s">UPGRADES PERMANENTES</div>' + UPG.map(u => { const l = lvl(u.id), mx = l >= u.max;
+      return '<div class="nxm-row"><div><b>' + u.n + ' (' + l + '/' + u.max + ')</b><small>' + u.d + '</small></div><button class="nxm-buy" data-b="' + u.id + '" ' + (mx || M.c < cost(u.id) ? 'disabled' : '') + '>' + (mx ? 'MÁXIMO' : cost(u.id) + ' 💎') + '</button></div>'; }).join('') +
+    '<div class="nxm-s">MISSÕES DE HOJE (+15💎 cada)</div>' + MIS.map(m => { const p = Math.min(D[m.id] || 0, m.t);
+      return '<div class="nxm-row" style="display:block"><b>' + (D.done[m.id] ? '✅ ' : '') + m.n + '</b> <small style="display:inline">' + p + '/' + m.t + '</small><div class="nxm-bar"><i style="width:' + (p / m.t * 100) + '%"></i></div></div>'; }).join('') +
+    '<div class="nxm-s">CONQUISTAS (' + ACH.filter(a => A[a.id]).length + '/' + ACH.length + ')</div>' + ACH.map(a => '<div class="nxm-row nxm-ach' + (A[a.id] ? ' on' : '') + '"><div><b>' + (A[a.id] ? '🏆 ' : '🔒 ') + a.n + '</b><small>' + a.d + '</small></div><span>+' + a.r + '💎</span></div>').join('') + '</div>';
+}
+function openM() { render(); modal.classList.add('open'); } function closeM() { modal.classList.remove('open'); }
+btn.onclick = openM;
+modal.addEventListener('click', e => {
+  if (e.target === modal || e.target.closest('[data-x]')) return closeM();
+  const b = e.target.closest('[data-b]'); if (!b) return;
+  const id = b.dataset.b, u = UPG.find(x => x.id === id);
+  if (u && lvl(id) < u.max && M.c >= cost(id)) { M.c -= cost(id); M.u[id] = lvl(id) + 1; saveM(); refreshBtn(); try { SFX.ui_click(); } catch (er) {} render(); toast('✔ ' + u.n + ' nível ' + lvl(id) + (wave === 1 ? ' (vale a partir da próxima partida)' : '')); }
+});
+
+/* ── game over provocador + reinício com ENTER ── */
+let awarded = false;
+const _go = showGameOverScreen;
+showGameOverScreen = function () {
+  const prevBest = (LS.get('nexus_life', {}).bestWave) || 0;
+  const r = _go.apply(this, arguments);
+  try {
+    if (!awarded) {
+      awarded = true;
+      const g = Math.max(1, Math.floor((wave - 1) * 2 + statEnemiesKilled / 25)); gain(g);
+      let teaser = wave > prevBest && prevBest > 0 ? '🏆 NOVO RECORDE DE ONDAS!' : wave === prevBest ? 'Você igualou seu recorde. Só mais UMA onda passa dele!' : prevBest ? 'Faltaram só ' + (prevBest - wave) + ' onda(s) para igualar seu recorde (onda ' + prevBest + ')!' : 'Seu primeiro recorde está feito. Dá pra superar!';
+      const next = UPG.filter(u => lvl(u.id) < u.max).sort((a, b) => cost(a.id) - cost(b.id))[0];
+      const hint = next ? (M.c >= cost(next.id) ? '💎 Você já pode comprar <b>' + next.n + '</b>!' : 'Faltam <b>' + (cost(next.id) - M.c) + '💎</b> para <b>' + next.n + '</b>.') : 'Todos os upgrades no máximo!';
+      const x = document.createElement('div'); x.id = 'nx-go-extra';
+      x.innerHTML = '<div class="t">' + teaser + '</div>+' + g + '💎 ganhos nesta partida (total ' + M.c + ')<br>' + hint + '<br><button data-go="shop">💎 LOJA</button><button data-go="share">📋 COMPARTILHAR</button><div style="color:#71717a;font-size:12px;margin-top:10px">Aperte ENTER para jogar de novo</div>';
+      x.addEventListener('click', e => {
+        const a = e.target.closest('[data-go]'); if (!a) return;
+        if (a.dataset.go === 'shop') openM();
+        else { const t = '🏰 Nexus Hexa Guard — ' + ((window.NXTEAM && NXTEAM.name) || 'minha equipe') + ' caiu na onda ' + wave + ' com ' + statEnemiesKilled + ' abates! Consegue superar? ' + location.href.split('#')[0];
+          (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Copiado! Cole pros amigos 😈')).catch(() => prompt('Copie:', t)); }
+      });
+      const grid = $('go-stats-grid'); if (grid) grid.insertAdjacentElement('beforebegin', x);
+    }
+  } catch (e) {}
+  return r;
+};
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modal.classList.contains('open')) { closeM(); return; }
+  const go = $('gameover-overlay');
+  if (e.key === 'Enter' && go && go.style.display === 'flex' && !modal.classList.contains('open') && typeof nxRetry === 'function') nxRetry();
+});
+})();
+</script>
+    <script src="mp.js"></script>
 </body>
 </html>
