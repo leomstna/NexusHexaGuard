@@ -2056,12 +2056,12 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 (function(){const u=fxUpdate;fxUpdate=function(){u();for(let i=FX.decals.length-1;i>=0;i--)if(--FX.decals[i].life<=0)FX.decals.splice(i,1);};})();
 
         // ── DURABILIDADE ──
-        // Toda torre desgasta durante o combate. Quanto mais efeitos (cartas) ela tem, mais rápido quebra.
+        // Toda torre desgasta a CADA DISPARO (uso). Quanto mais efeitos (cartas) ela tem, mais desgasta por tiro.
         // Em 0 a torre fica QUEBRADA (não atira, perde VFX) até ser consertada (clique nela).
         const DUR = {
             base: 100,          // durabilidade máxima base (cartas alteram via modDur)
-            wear: 0.25,         // desgaste base por segundo de combate (~400 s para uma torre sem efeitos)
-            perEffect: 0.45,    // +45% de desgaste por efeito: 3 efeitos = 2,35x (~170 s)
+            wear: 0.15,         // desgaste base por disparo (~670 tiros para uma torre sem efeitos)
+            perEffect: 0.45,    // +45% de desgaste por efeito: 3 efeitos = 2,35x (~280 tiros)
             warnPct: 0.25,      // aviso de "durabilidade baixa" abaixo de 25%
             repairExtra: 10     // conserto = custo normal da torre + 10 de ouro
         };
@@ -2081,7 +2081,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             get cappedGoldMult() { return Math.min(3.0, this.goldMultiplier); }
             get maxDur() { return Math.max(20, Math.round(DUR.base * Math.max(0.3, this.modDur))); }
             get broken() { return this.dur <= 0; }
-            get wearRate() { return DUR.wear * (1 + DUR.perEffect * this.effects.length) * Math.max(0.1, this.modDecay) - (this.durRegen || 0); }   // por segundo (negativo = regenera)
+            get wearPerShot() { return DUR.wear * (1 + DUR.perEffect * this.effects.length) * Math.max(0.1, this.modDecay); }   // desgaste de cada disparo
             get damage() { let d = (this.baseDmg * this.level) * Math.max(0, this.modDmg); if (this.flags.has('arcane')) d += this.level * 5; return d; }
             get range() { return (this.baseRange + (this.level*0.2)) * this.modRange; }
             get fireRate() { return Math.max(10, Math.round((this.baseRate * this.modRate) - (this.level * 1.5))); }
@@ -2130,7 +2130,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     let p1 = cartToIso(this.gridX, this.gridY); let p2 = cartToIso(tgt.x, tgt.y);
                     this.angle = Math.atan2(p2.y - (p1.y - 25), p2.x - p1.x);
                     if(this.cooldown === 0) {
-                        projectiles.push(new Projectile(this, tgt)); fxMuzzle(this); this.cooldown = Math.round(this.fireRate); this.scaleV -= 0.2; 
+                        projectiles.push(new Projectile(this, tgt)); fxMuzzle(this); this.cooldown = Math.round(this.fireRate); this.scaleV -= 0.2; if (!(window.MP && window.MP.active)) { this.dur -= this.wearPerShot; if (this.dur <= 0) durBreak(this); } 
                         
                         if (this.type === 'gatling') SFX.shoot_gatling();
                         else if (this.type === 'sniper') SFX.shoot_sniper();
@@ -4441,7 +4441,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         }
 
         // ── DURABILIDADE: desgaste, quebra e conserto ──
-        // (substitui a antiga "Torre Condenada", que destruía torres aleatoriamente)
+        // (desgaste por disparo; substitui a antiga "Torre Condenada", que destruía torres aleatoriamente)
         const DOOM = { pending: null, timer: 0 };   // compatibilidade
         function doomReset() {}
         function repairCost(t) { return towerTypes[t.type].cost + DUR.repairExtra; }
@@ -4451,7 +4451,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             const col = pc > 0.6 ? '#22c55e' : pc > 0.3 ? '#eab308' : '#ef4444';
             if (t.dur <= 0) return '<span style="color:#ef4444;font-weight:bold;"><i class="fa-solid fa-screwdriver-wrench"></i> QUEBRADA</span><br>'
                 + '<span style="color:#e2e8f0">Consertar:</span> <span style="color:' + (gold >= repairCost(t) ? '#fde047' : '#f87171') + ';font-weight:bold;">' + repairCost(t) + 'g</span> <span style="color:#a1a1aa;font-size:12px;">(clique na torre)</span>';
-            const wr = t.wearRate, wt = wr > 0 ? '-' + wr.toFixed(2) + '/s' : (wr < 0 ? '+' + (-wr).toFixed(2) + '/s' : '0/s');
+            const wt = '-' + t.wearPerShot.toFixed(2) + '/tiro' + (t.durRegen ? ', +' + t.durRegen.toFixed(2) + '/s' : '');
             return '<span style="color:#e2e8f0">Durabilidade:</span> <span style="color:' + col + ';font-weight:bold;">' + Math.ceil(t.dur) + '/' + m + '</span> <span style="color:#a1a1aa;font-size:12px;">(' + wt + ')</span>'
                 + '<div style="height:5px;background:#27272a;border-radius:3px;margin-top:3px;overflow:hidden;"><div style="height:100%;width:' + (pc * 100).toFixed(0) + '%;background:' + col + ';"></div></div>';
         }
@@ -4488,7 +4488,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     continue;
                 }
                 if (!fight) continue;
-                t.dur -= t.wearRate / 60;
+                if (t.durRegen) t.dur += t.durRegen / 60;   // regeneração (Nanobots)
                 const mx = t.maxDur;
                 if (t.dur > mx) t.dur = mx;
                 if (t.dur <= 0) { durBreak(t); continue; }
