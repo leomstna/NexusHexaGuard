@@ -497,6 +497,14 @@
             font: 34px 'Press Start 2P', monospace; text-shadow: 4px 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 0 30px currentColor;
             animation: fxBan 1.9s cubic-bezier(.2,1.6,.4,1) forwards; }
         .fx-banner.sm { font-size: 20px; animation-duration: 1.3s; }
+        .fx-banner.has-sw { display: flex; align-items: center; justify-content: center; gap: .55em; line-height: 1; }
+        .fx-banner.has-sw > span { display: block; padding-top: .08em; }   /* compensa o espaço acima das letras da Press Start 2P */
+        .fx-banner .fx-sw { display: block; flex: none; width: 1.25em; height: 1.25em;
+            filter: drop-shadow(2px 0 0 #000) drop-shadow(-2px 0 0 #000) drop-shadow(0 2px 0 #000) drop-shadow(0 -2px 0 #000) drop-shadow(3px 3px 0 #000); }
+        .fx-banner .fx-sw svg { display: block; width: 100%; height: 100%; }
+        #btn-give-up { font-size: 8px !important; line-height: 1.6; padding: 13px 6px; white-space: nowrap; }
+        html.parts-0 .sp-embers { display: none; }
+        html.parts-1 .sp-embers i:nth-child(n+9) { display: none; }
         @keyframes fxBan { 0% { transform: translate(-50%,-50%) scale(3) rotate(-6deg); opacity: 0; } 12% { transform: translate(-50%,-50%) scale(1) rotate(2deg); opacity: 1; }
             20% { transform: translate(-50%,-50%) scale(1.08) rotate(-1deg); } 80% { opacity: 1; transform: translate(-50%,-55%) scale(1); } 100% { opacity: 0; transform: translate(-50%,-90%) scale(.9); } }
         #fx-combo { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 9500; pointer-events: none; opacity: 0; transition: opacity .3s;
@@ -1199,7 +1207,7 @@
             if (PERF.q === 0 || document.hidden || isShopOpen || gameOver || menuActive) return;
             PERF.ema += (Math.min(dt, 100) - PERF.ema) * 0.05;
             if (PERF.ema > 21) PERF.slow++; else PERF.slow = Math.max(0, PERF.slow - 2);
-            if (PERF.slow > 90) { setQuality(PERF.q - 1); PERF.slow = 0; PERF.ema = 16.7; }
+            // (removido) antes aqui a qualidade caía sozinha quando o FPS baixava e desligava o filtro/shader
         }
         // shadowBlur é o efeito mais caro do canvas 2D: passa por um multiplicador de qualidade
         (function () {
@@ -1381,9 +1389,30 @@
         let isTutorialActive = true; 
         let menuActive = true; let nxStarted = false;
         const NXO = (function () { let o = {}; try { o = JSON.parse(localStorage.getItem('nexus_opts') || '{}') || {}; } catch (e) {}
-            return Object.assign({ music: 0.3, sfx: 1, px: 2, shake: true, dmg: true, flash: true, particles: 'all' }, o); })();
-        // multiplicador de partículas: TODAS = 1, MINIMAS = ~25%, NENHUMA = 0
-        const partMul = () => NXO.particles === 'none' ? 0 : NXO.particles === 'min' ? 0.25 : 1;
+            return Object.assign({ music: 0.3, sfx: 1, px: 2, shake: true, dmg: true, flash: true, parts: 2 }, o); })();
+
+        // ── PARTÍCULAS: modo (opção) + culling de tudo que está fora da tela ──
+        // modo: 2 = TODAS · 1 = MÍNIMAS (~25%) · 0 = NENHUMA
+        const PART = { mode: 2, keep: 1 };
+        const VP = { x0: -1e9, x1: 1e9, y0: -1e9, y1: 1e9 };   // retângulo visível, em coordenadas de mundo (antes do zoom)
+        function setParticleMode(m, clear) {
+            m = (m === 0 || m === 1) ? m : 2;
+            PART.mode = m; PART.keep = m === 2 ? 1 : m === 1 ? 0.25 : 0; NXO.parts = m;
+            const cl = document.documentElement.classList; cl.remove('parts-0', 'parts-1', 'parts-2'); cl.add('parts-' + m);
+            if (m === 0 && clear) { particles.length = 0; FX.parts.length = 0; }
+        }
+        setParticleMode(NXO.parts, false);
+        function vpUpdate() {
+            const cx = canvas.width / 2, cy = canvas.height / 2, pad = 160 / zoom;
+            VP.x0 = -cx / zoom + cx - pad; VP.x1 = (canvas.width - cx) / zoom + cx + pad;
+            VP.y0 = -cy / zoom + cy - pad; VP.y1 = (canvas.height - cy) / zoom + cy + pad;
+        }
+        // usado na hora de CRIAR partículas: se nasce fora da tela, nem cria (vivem ~1s, ninguém vê)
+        function onScreen(gx, gy) {
+            const p = cartToIso(gx, gy), cx = canvas.width / 2, cy = canvas.height / 2, pad = 160;
+            const sx = (p.x - cx) * zoom + cx, sy = (p.y - cy) * zoom + cy;
+            return sx > -pad && sx < canvas.width + pad && sy > -pad && sy < canvas.height + pad;
+        }
 
         const shopMods = {
             rareBonusChance:   0,   
@@ -1863,7 +1892,7 @@ const FX={hitstop:0,slowmo:0,flash:0,px:2,combo:0,comboT:0,list:[],parts:[],deca
 const R=(a,b)=>a+Math.random()*(b-a), PI2=Math.PI*2, ISO=(x,y)=>cartToIso(x,y);
 const scr=(gx,gy,dy=0)=>{const p=ISO(gx,gy),cx=canvas.width/2,cy=canvas.height/2;return{x:(p.x-cx)*zoom+cx,y:(p.y+dy-cy)*zoom+cy};};
 const hs=n=>{FX.hitstop=Math.max(FX.hitstop,n)}, fl=n=>{if(NXO.flash===false)return;FX.flash=Math.max(FX.flash,n)};
-function fxP(gx,gy,z,vx,vy,vz,col,life,sz,g,add,shrink){if(FX.parts.length>PERF.maxFx)return;const _pm=partMul();if(_pm<1&&(_pm===0||Math.random()>_pm))return;FX.parts.push({gx,gy,z,vx,vy,vz,col,life,max:life,sz,g:g==null?.25:g,add,shrink});}
+function fxP(gx,gy,z,vx,vy,vz,col,life,sz,g,add,shrink){if(PART.keep<1&&(PART.keep===0||Math.random()>PART.keep))return;if(FX.parts.length>PERF.maxFx||!onScreen(gx,gy))return;FX.parts.push({gx,gy,z,vx,vy,vz,col,life,max:life,sz,g:g==null?.25:g,add,shrink});}
 function fxBurst(gx,gy,z,n,cols,spd,up,life,sz,g,add,shrink){for(let i=0;i<n;i++){const a=R(0,PI2),s=R(.3,1)*spd;fxP(gx,gy,z,Math.cos(a)*s,Math.sin(a)*s,R(.3,1)*up,cols[i%cols.length],R(.6,1)*life,sz*R(.6,1.4),g,add,shrink);}}
 function fxDecal(gx,gy,r,col,a){const pts=[];for(let i=0;i<6;i++)pts.push({x:R(-r,r),y:R(-r,r)*.5,r:R(.25,.65)*r});FX.decals.push({gx,gy,col,a,pts});if(FX.decals.length>150)FX.decals.shift();}
 function fxAdd(life,draw,gx,gy,end){FX.list.push({life,max:life,draw,gx,gy,end});}
@@ -1909,7 +1938,16 @@ function fxRicochetDemo(t){const pts=[];for(let i=0;i<5;i++)pts.push({x:t.gridX+
   pts.forEach((q,i)=>setTimeout(()=>fxBurst(q.x,q.y,12,10,['#fff','#7dd3fc'],.1,2.4,16,3,.25,true,true),i*150));}
 // ── MORTE (gibs, sangue, combo), muzzle, status ──
 const COMBOS={5:['KILLING SPREE!','#fde047'],10:['MASSACRE!','#fb923c'],20:['IMPARÁVEL!!','#f43f5e'],35:['NOSSA, QUE JOGO FODA!!!','#a855f7'],50:['LENDÁRIO!!!!','#22d3ee']};
-function fxBanner(txt,col,small){const d=document.createElement('div');d.className='fx-banner'+(small?' sm':'');d.textContent=txt;d.style.color=col||'#fde047';document.body.appendChild(d);setTimeout(()=>d.remove(),small?1300:1900);}
+const FX_SWORDS=(()=>{let r='';const p=(x,y,c)=>{r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`};
+  for(const f of[0,1]){const X=x=>f?15-x:x;
+    for(let i=1;i<=10;i++){p(X(i),i,'currentColor');p(X(f?i-1:i+1),i,'#fff');}      // lâmina
+    p(X(8),13,'#f59e0b');p(X(9),12,'#f59e0b');p(X(10),11,'#f59e0b');p(X(11),10,'#f59e0b');p(X(12),9,'#f59e0b');p(X(11),11,'#f59e0b');  // guarda
+    p(X(12),12,'#92400e');p(X(13),13,'#92400e');p(X(14),14,'#f59e0b');}              // cabo + pomo
+  return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;})();
+function fxBanner(txt,col,small){const d=document.createElement('div');d.className='fx-banner'+(small?' sm':'');d.style.color=col||'#fde047';
+  if(txt.indexOf('⚔')<0)d.textContent=txt;
+  else{d.classList.add('has-sw');const sw=()=>{const i=document.createElement('i');i.className='fx-sw';i.innerHTML=FX_SWORDS;return i;},t=document.createElement('span');t.textContent=txt.replace(/⚔/g,'').trim();d.append(sw(),t,sw());}
+  document.body.appendChild(d);setTimeout(()=>d.remove(),small?1300:1900);}
 function fxDeath(e){const t=ENEMY_TYPES[e.enemyType],boss=e.enemyType==='boss',st=e.statusEffects.map(s=>s.type);
   for(let i=0,n=boss?38:13;i<n;i++)fxP(e.x,e.y,R(8,20),R(-.13,.13),R(-.13,.13),R(2,6),[t.color,'#7f1d1d','#b91c1c','#3f0d0d'][i%4],R(45,90),R(3,6),.3);
   fxDecal(e.x,e.y,boss?34:14,'#5b0b0b',.55);
@@ -1954,8 +1992,8 @@ function fxDrawDecals(){const k=map.length+'x'+map[0].length+waypoints.length;
   ctx.save();ctx.translate(camX-_fd.ox,camY-_fd.oy);ctx.fillStyle='rgba(255,255,255,.07)';ctx.fill(_fd.a);ctx.fillStyle='rgba(120,20,20,.35)';ctx.fill(_fd.b);ctx.restore();
   for(const d of FX.decals){const o=ISO(d.gx,d.gy);ctx.globalAlpha=d.a*Math.min(1,(d.life||999)/150);ctx.fillStyle=d.col;for(const q of d.pts){ctx.beginPath();ctx.ellipse(o.x+q.x,o.y+q.y,q.r,q.r*.5,0,0,PI2);ctx.fill();}}ctx.globalAlpha=1;
   }
-function fxDrawWorld(){ctx.save();for(const q of particles)q.draw();for(const f of FX.list){ctx.save();f.draw(1-f.life/f.max);ctx.restore();}
-  let _ad=null;for(const p of FX.parts){const o=ISO(p.gx,p.gy),s=p.sz*(p.shrink?p.life/p.max:1);ctx.globalAlpha=Math.min(1,p.life/p.max*1.6);const _a=!!p.add;if(_a!==_ad){_ad=_a;ctx.globalCompositeOperation=_a?'lighter':'source-over';}ctx.fillStyle=p.col;ctx.fillRect((o.x-s/2)|0,(o.y-p.z-s/2)|0,Math.max(1,s|0),Math.max(1,s|0));}ctx.restore();}
+function fxDrawWorld(){vpUpdate();ctx.save();for(const q of particles)q.draw();for(const f of FX.list){if(f.gx!=null&&(f.gx||f.gy)){const o=ISO(f.gx,f.gy),m=900/zoom;if(o.x<VP.x0-m||o.x>VP.x1+m||o.y<VP.y0-m||o.y>VP.y1+m)continue;}ctx.save();f.draw(1-f.life/f.max);ctx.restore();}
+  let _ad=null;for(const p of FX.parts){const o=ISO(p.gx,p.gy);if(o.x<VP.x0||o.x>VP.x1||o.y-p.z<VP.y0||o.y-p.z>VP.y1)continue;const s=p.sz*(p.shrink?p.life/p.max:1);ctx.globalAlpha=Math.min(1,p.life/p.max*1.6);const _a=!!p.add;if(_a!==_ad){_ad=_a;ctx.globalCompositeOperation=_a?'lighter':'source-over';}ctx.fillStyle=p.col;ctx.fillRect((o.x-s/2)|0,(o.y-p.z-s/2)|0,Math.max(1,s|0),Math.max(1,s|0));}ctx.restore();}
 FloatingText.prototype.draw=function(){if(NXO.dmg===false&&/^(⚡ )?\d+$/.test(this.text))return;const pop=this.life>.9?1+(this.life-.9)*7:1;ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,this.life*1.8));ctx.translate(Math.round(this.x),Math.round(this.y));ctx.scale(pop,pop);ctx.font=`${Math.round(this.size*.78)}px "Press Start 2P",monospace`;ctx.textAlign='center';ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='#0a0410';ctx.strokeText(this.text,0,0);ctx.fillStyle=this.color;ctx.fillText(this.text,0,0);ctx.restore();};
 // ── SHADER: Pixelation + dithering + paleta + vinheta + aberração cromática ──
 let _gl=null;
@@ -2379,8 +2417,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                         let cx3 = canvas.width/2; let cy3 = canvas.height/2;
                         let sx3 = (pos3.x - cx3) * zoom + cx3; let sy3 = (pos3.y - cy3) * zoom + cy3;
                         floatingTexts.push(new FloatingText(sx3, sy3 - 30, 'BOSS MORTO!', '#f97316', true));
-                        for(let i = 0, _n = Math.ceil(40 * partMul()); i < _n; i++) particles.push(new Particle(this.x, this.y, '#f97316', 0.3, 6));
-                        for(let i = 0, _n = Math.ceil(20 * partMul()); i < _n; i++) particles.push(new Particle(this.x, this.y, '#fde047', 0.4, 4));
+                        createParticles(this.x, this.y, '#f97316', 40, 0.3, 6);
+                        createParticles(this.x, this.y, '#fde047', 20, 0.4, 4);
                     }
                 }
                 this.squashV += (1.0 - this.squash) * 0.2; this.squashV *= 0.8; this.squash += this.squashV;
@@ -2717,13 +2755,20 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             }
             update() { this.gx += this.vx; this.gy += this.vy; this.z += this.vz; this.vz -= 0.2; this.life -= this.decay; }
             draw() {
-                let pos = cartToIso(this.gx, this.gy);
+                let pos = cartToIso(this.gx, this.gy), py = pos.y - this.z;
+                if (pos.x < VP.x0 || pos.x > VP.x1 || py < VP.y0 || py > VP.y1) return;   // fora da tela: não desenha
                 ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color;
                 ctx.beginPath(); ctx.arc(pos.x, pos.y - this.z, this.size, 0, Math.PI*2); ctx.fill();
                 ctx.globalAlpha = 1.0;
             }
         }
-        function createParticles(gx, gy, color, amt) { const _pm = partMul(); if (_pm === 0) return; if (_pm < 1) amt = Math.ceil(amt * _pm); const room = PERF.maxParticles - particles.length; if (room <= 0) return; if (amt > room) amt = room; for(let i=0; i<amt; i++) particles.push(new Particle(gx, gy, color, 0.5, 4)); }
+        function createParticles(gx, gy, color, amt, decay, size) {
+            if (PART.keep === 0 || !onScreen(gx, gy)) return;
+            if (PART.keep < 1) amt = Math.floor(amt * PART.keep + Math.random());   // arredondamento probabilístico: 1 partícula ainda aparece de vez em quando
+            const room = PERF.maxParticles - particles.length; if (room <= 0 || amt <= 0) return; if (amt > room) amt = room;
+            const d = decay == null ? 0.5 : decay, sz = size == null ? 4 : size;
+            for(let i=0; i<amt; i++) particles.push(new Particle(gx, gy, color, d, sz));
+        }
 
         const VFX_LAYERS = [
             {
@@ -5012,7 +5057,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     const ms = $('music-slider'), vs = $('volume-slider');
     function saveOpts() {
         NXO.music = +ms.value; NXO.sfx = +vs.value; NXO.px = FX.px;
-        LS.set(OPT_KEY, { music: NXO.music, sfx: NXO.sfx, px: NXO.px, shake: NXO.shake, dmg: NXO.dmg, flash: NXO.flash, particles: NXO.particles });
+        LS.set(OPT_KEY, { music: NXO.music, sfx: NXO.sfx, px: NXO.px, shake: NXO.shake, dmg: NXO.dmg, flash: NXO.flash, parts: NXO.parts });
     }
     ms.addEventListener('change', saveOpts); vs.addEventListener('change', saveOpts);
     ms.value = NXO.music; ms.dispatchEvent(new Event('input'));
@@ -5079,17 +5124,17 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     const onoff = v => v ? 'ON' : 'OFF';
     function optsHTML() {
         const px = [1, 2, 3, 4].map(n => `<button class="nx-btn ${FX.px === n ? 'on' : ''}" data-px="${n}">${n === 1 ? 'OFF' : n + 'x'}</button>`).join('');
-        const pt = [['all', 'TODAS'], ['min', 'MÍNIMAS'], ['none', 'NENHUMA']].map(([v, l]) => `<button class="nx-btn ${NXO.particles === v ? 'on' : ''}" data-pt="${v}">${l}</button>`).join('');
+        const pt = [['TODAS', 2], ['MÍNIMAS', 1], ['NENHUMA', 0]].map(([n, v]) => `<button class="nx-btn ${PART.mode === v ? 'on' : ''}" data-pt="${v}">${n}</button>`).join('');
         const tg = (k, t, d) => `<div class="nx-row"><label>${t}<small>${d}</small></label><button class="nx-btn ${NXO[k] ? 'on' : ''}" data-tg="${k}">${onoff(NXO[k])}</button></div>`;
         return `<div class="nx-sec">ÁUDIO</div>
             <div class="nx-row"><label>Música</label><input type="range" id="nx-mus" min="0" max="1" step="0.01" value="${ms.value}"></div>
             <div class="nx-row"><label>Efeitos sonoros</label><input type="range" id="nx-sfx" min="0" max="1" step="0.01" value="${vs.value}"></div>
             <div class="nx-sec">VÍDEO</div>
             <div class="nx-row"><label>Filtro pixel-art<small>Atalho: tecla P</small></label><div class="nx-seg">${px}</div></div>
+            <div class="nx-row"><label>Partículas<small>Menos partículas = mais FPS em PCs fracos</small></label><div class="nx-seg">${pt}</div></div>
             ${tg('shake', 'Tremor de tela', 'Desligue se a câmera tremendo incomoda')}
             ${tg('dmg', 'Números de dano', 'Os números que sobem ao acertar inimigos')}
             ${tg('flash', 'Flashes de luz', 'Clarões de explosões e raios (fotossensibilidade)')}
-            <div class="nx-row"><label>Partículas<small>Faíscas, fumaça e fragmentos dos efeitos</small></label><div class="nx-seg">${pt}</div></div>
             <div class="nx-row"><label>Tela cheia</label><button class="nx-btn" id="nx-fs">ALTERNAR</button></div>
             <div class="nx-sec">DADOS</div>
             <div class="nx-row"><label>Apagar progresso<small>Recorde, estatísticas, histórico e jogo salvo</small></label><button class="nx-btn danger" id="nx-wipe">APAGAR</button></div>`;
@@ -5100,8 +5145,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         $('nx-mus').onchange = saveOpts;
         $('nx-sfx').oninput = e => { vs.value = e.target.value; vs.dispatchEvent(new Event('input')); };
         $('nx-sfx').onchange = () => { saveOpts(); click(); };
+        b.querySelectorAll('[data-pt]').forEach(x => x.onclick = () => { click(); setParticleMode(+x.dataset.pt, true); saveOpts(); refreshOpts(); });
         b.querySelectorAll('[data-px]').forEach(x => x.onclick = () => { click(); FX.px = +x.dataset.px; nxPxChanged(); });
-        b.querySelectorAll('[data-pt]').forEach(x => x.onclick = () => { click(); NXO.particles = x.dataset.pt; if (NXO.particles === 'none') { particles.length = 0; FX.parts.length = 0; } else if (NXO.particles === 'min') { particles.length = Math.min(particles.length, 30); FX.parts.length = Math.min(FX.parts.length, 60); } saveOpts(); refreshOpts(); });
         b.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { click(); NXO[x.dataset.tg] = !NXO[x.dataset.tg]; saveOpts(); refreshOpts(); });
         $('nx-fs').onclick = () => { click(); if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); };
         $('nx-wipe').onclick = () => { click(); confirmBox('APAGAR PROGRESSO?', 'Isso apaga recorde, estatísticas, histórico e o jogo salvo. Não dá para desfazer.', 'APAGAR TUDO', () => { ['nexus_highscore', 'nexus_history', LIFE_KEY, SAVE_KEY].forEach(LS.del); refreshMenu(); showOpts(); }); };
@@ -5276,7 +5321,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const css = document.createElement('style');
 css.textContent = `
 .sp-logo { z-index: 3 !important; }
-.sp-logo .sp-splash { position: absolute; left: 62%; bottom: -4px; z-index: 3; width: max-content; max-width: clamp(140px, 34vw, 380px); text-align: center; white-space: normal; cursor: pointer; user-select: none;
+.sp-logo .sp-splash { position: absolute; left: 84%; bottom: -58px; z-index: 3; width: max-content; max-width: clamp(140px, 30vw, 340px); text-align: center; white-space: normal; cursor: pointer; user-select: none;
   font: clamp(12px, 2vw, 22px)/1.25 'Press Start 2P', monospace !important; letter-spacing: 0; color: #8dff4f;
   text-shadow: 3px 3px 0 #123300; transform: rotate(-12deg); transform-origin: 0 100%; animation: spSplash .5s ease-in-out infinite alternate; }
 @keyframes spSplash { from { transform: rotate(-12deg) scale(1); } to { transform: rotate(-12deg) scale(1.08); } }
