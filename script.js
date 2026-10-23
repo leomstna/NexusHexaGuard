@@ -255,6 +255,17 @@
             });
         }
 
+        // ── MOBILE/TOUCH: flag (classe definida no <head>), largura útil do painel lateral e deslocamento do dedo ao arrastar cartas ──
+        const NX_TOUCH = document.documentElement.classList.contains('nx-touch');
+        const NX_DRAG_DY = NX_TOUCH ? -70 : 0;                       // no toque a carta fica acima do dedo (senão o dedo cobre a torre-alvo)
+        const nxDY = e => (e && e.pointerType && e.pointerType !== 'mouse') ? NX_DRAG_DY : 0;
+        // desktop: sempre 300 (+extra), exatamente como antes. toque: borda direita REAL do painel (0 se recolhido)
+        function nxSideW(extra) {
+            extra = extra || 0;
+            if (!NX_TOUCH) return 300 + extra;
+            const sb = document.getElementById('sidebar'); if (!sb) return 0;
+            const r = sb.getBoundingClientRect(); return r.right > 8 ? r.right + extra : 0;
+        }
         const cursor = document.getElementById('custom-cursor');
         let cursorTarget = {x: window.innerWidth/2, y: window.innerHeight/2};
         let cursorCurrent = {x: window.innerWidth/2, y: window.innerHeight/2};
@@ -462,7 +473,7 @@
 
         window.addEventListener('wheel', e => {
             if(menuActive || isTutorialActive || gameOver) return
-            if(e.clientX < 310) return; 
+            if(e.clientX < nxSideW(10)) return; 
             if(isShopOpen) return;
             e.preventDefault();
             const delta = e.deltaY > 0 ? -0.18 : 0.18;
@@ -764,7 +775,7 @@
                     
                     el.onpointermove = (e) => { if(dragElement === el) { moveDrag(e); e.preventDefault(); } };
                     
-                    el.onpointerup = (e) => { if(dragElement === el) { el.classList.remove('dragging'); el.releasePointerCapture(e.pointerId); clearDropTarget(); checkCardDrop(e.clientX, e.clientY); } };
+                    el.onpointerup = (e) => { if(dragElement === el) { el.classList.remove('dragging'); el.releasePointerCapture(e.pointerId); clearDropTarget(); checkCardDrop(e.clientX, e.clientY + nxDY(e)); } };
                     
                     el.onpointercancel = (e) => {
                         if(dragElement === el) { el.classList.remove('dragging'); el.releasePointerCapture(e.pointerId); clearDropTarget(); returnCardToHand(); }
@@ -775,7 +786,8 @@
             }
         }
 
-        function moveDrag(e) {
+        function moveDrag(_e) {
+            const e = (nxDY(_e) ? { clientX: _e.clientX, clientY: _e.clientY + nxDY(_e) } : _e);
             dragElement.style.left = (e.clientX - 35) + 'px';
             dragElement.style.top  = (e.clientY - 50) + 'px';
             
@@ -3374,9 +3386,9 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         }
 
         window.addEventListener('mousemove', e => {
-            if(isTutorialActive || isShopOpen || dragElement || e.clientX < 300) {
+            if(isTutorialActive || isShopOpen || dragElement || e.clientX < nxSideW()) {
                 hoverGridX = -1; hoverGridY = -1;
-                if(e.clientX >= 300) tt.classList.remove('visible');
+                if(e.clientX >= nxSideW()) tt.classList.remove('visible');
                 window.lastHoveredTower = null; return; 
             }
             let p = screenToGrid(e.clientX, e.clientY); hoverGridX = p.x; hoverGridY = p.y;
@@ -3458,9 +3470,9 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 
         window.addEventListener('mousedown', e => {
             if(menuActive || isTutorialActive || gameOver) { return; }
-            if(e.target && e.target.closest && e.target.closest('#splash,.nx-modal,#nx-dlg,#nx-task,#giveup-overlay,#gameover-overlay,#lootbox-modal,#shop-overlay,#hand-container,#audio-controls-wrapper,#cheat-panel,#cat-modal')) return;
+            if(e.target && e.target.closest && e.target.closest('#splash,.nx-modal,#nx-dlg,#nx-task,#giveup-overlay,#gameover-overlay,#lootbox-modal,#shop-overlay,#hand-container,#audio-controls-wrapper,#cheat-panel,#cat-modal,#nx-mini,#nx-rotate,#sidebar,#nx-meta-btn,#nx-meta-modal,#team-modal,#tooltip')) return;
             if(e.button !== 0) return; 
-            if(isShopOpen || dragElement || e.clientX < 300) return;
+            if(isShopOpen || dragElement || e.clientX < nxSideW()) return;
             if(document.getElementById('giveup-overlay') && document.getElementById('giveup-overlay').style.display === 'flex') return;
             let pos = screenToGrid(e.clientX, e.clientY);
             
@@ -4170,7 +4182,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             let scaleH = availH / Math.max(contentH, 1);
             let scaleW = availW / Math.max(contentW, 1);
             let scale  = Math.min(1.0, scaleH, scaleW);
-            scale = Math.max(0.45, scale);
+            scale = Math.max(NX_TOUCH ? 0.3 : 0.45, scale);
 
             shopContent.style.transform = `scale(${scale})`;
             let shrink = (scale - 1) * contentH;
@@ -5008,7 +5020,7 @@ async function talk(lines, tok) {
     while (tok === S.tok && modalOpen()) await sleep(200);      // não fala por cima do seletor de time / modais
     for (const [e, t, sel] of lines) {
         if (tok !== S.tok) return false;
-        show('talk'); spot(sel); face(e); await type(t);
+        show('talk'); spot(sel); face(e); await type(window.nxTouchTxt ? nxTouchTxt(t) : t);
         if (tok !== S.tok) return false;
         await new Promise(r => { S.res = r; });
     }
@@ -5056,7 +5068,7 @@ async function guided() {
         const base = st.base ? st.base() : 0;
         if (!await talk(st.lines, tok)) return;
         if (st.wait) {
-            hl(st.hl); $('nx-hint').textContent = st.hint; show('task');
+            hl(st.hl); $('nx-hint').textContent = window.nxTouchTxt ? nxTouchTxt(st.hint) : st.hint; show('task');
             let said = false;
             while (tok === S.tok && !st.wait(base)) {
                 if (typeof gameOver !== 'undefined' && gameOver) { resetRun(false); return; }
@@ -5108,4 +5120,161 @@ window.showTutorial = function (fromMenu) {
     restartForTutorial();                                                    // partida em andamento: reseta tudo e roda o tutorial numa partida nova
 };
 window.hideTutorial = window.skipTutorial = skipTut;
+})();
+
+
+/* ══════════ Bloco JS MOBILE (adicionado) — controles de toque, HUD compacto. Só ativa em dispositivos touch (html.nx-touch); no PC não faz nada ══════════ */
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+
+    /* Textos do tutorial para toque (no PC o texto original é mantido) */
+    const TOUCH_TXT = [
+        [/Use \*W A S D\* para mover a câmera\./, '*Arraste um dedo* sobre o mapa para mover a câmera.'],
+        [/O \*scroll do mouse\* dá zoom, e dá pra arrastar a tela segurando o \*botão direito\*\./, 'O gesto de *pinça* (dois dedos) dá zoom no mapa.'],
+        [/Mova a câmera com W A S D \(ou use o scroll\)/, 'Arraste o mapa com um dedo (ou use a pinça)'],
+        [/Passe o mouse na torre pra ver os números\./, 'Toque na torre pra ver os números.'],
+        [/Passe a carta sobre a torre pra ver uma prévia dos status\./, 'Segure a carta sobre a torre pra ver uma prévia dos status.'],
+        [/\*clique na torre quebrada\*/, '*toque na torre quebrada*'],
+        [/e clique num espaço vazio/g, 'e toque num espaço vazio'],
+        [/Clique em \*INICIAR ONDA\*/, 'Toque em *INICIAR ONDA*'],
+        [/Clique em INICIAR ONDA/, 'Toque em INICIAR ONDA'],
+        [/clique em PRÓXIMA ONDA/, 'toque em PRÓXIMA ONDA'],
+        [/Últimos atalhos: \*ESC\* abre o menu e pausa o jogo, e \*P\* liga ou desliga o filtro pixel\./, 'Últimos atalhos: o botão *☰* (canto inferior direito) abre o menu e pausa o jogo, e o botão de grade liga ou desliga o filtro pixel.']
+    ];
+    window.nxTouchTxt = function (s) {
+        if (!NX_TOUCH || typeof s !== 'string') return s;
+        for (const [re, to] of TOUCH_TXT) s = s.replace(re, to);
+        return s;
+    };
+
+    if (!NX_TOUCH) return;
+
+    /* ── Evita zoom/gestos nativos do navegador durante o jogo ── */
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
+    document.addEventListener('dblclick', e => e.preventDefault());
+
+    /* ── Dica de controles (substitui o texto de teclado/mouse) ── */
+    const hint = $('controls-hint');
+    if (hint) hint.innerHTML = '<strong>1 dedo</strong>: mover câmera<br><strong>2 dedos</strong>: zoom (pinça)<br><strong>Toque</strong>: construir / ver torre<br>Arraste cartas até as torres.<br><strong>Segure a carta</strong> p/ detalhes!';
+
+    /* ── CÂMERA POR TOQUE: 1 dedo arrasta (pan), 2 dedos = pinça (zoom + pan). Toque curto continua construindo (eventos de mouse sintetizados) ── */
+    const cv = $('gameCanvas'), P = new Map();
+    let pinchD = 0, pinchX = 0, pinchY = 0, lastPanT = 0, lastMoveT = 0, panning = false;
+    const MOVE_SLOP = 10;
+    const blocked = () => menuActive || isTutorialActive || gameOver || isShopOpen || dragElement;
+    const isT = e => e.pointerType === 'touch' || e.pointerType === 'pen';
+    const two = () => { const a = [...P.values()]; return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2, d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1 }; };
+    function endAll() { P.clear(); if (panning) lastPanT = performance.now(); panning = false; isDragging = false; }
+
+    cv.addEventListener('pointerdown', e => {
+        if (!isT(e) || blocked() || P.size >= 2) return;
+        P.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, moved: false });
+        if (P.size === 2) {
+            const m = two(); pinchD = m.d; pinchX = m.x; pinchY = m.y;
+            P.forEach(p => { p.moved = true; });
+            panning = true; isDragging = true; dragVX = dragVY = 0; mouseX = m.x; mouseY = m.y;
+        }
+    });
+    window.addEventListener('pointermove', e => {
+        const p = P.get(e.pointerId); if (!p) return;
+        if (blocked()) { endAll(); return; }
+        p.x = e.clientX; p.y = e.clientY;
+        if (P.size === 2) {
+            const m = two();
+            zoomTarget = Math.max(0.4, Math.min(zoomTarget * (m.d / pinchD), 3.0));
+            camX += (m.x - pinchX) / zoom; camY += (m.y - pinchY) / zoom;
+            pinchD = m.d; pinchX = m.x; pinchY = m.y; mouseX = m.x; mouseY = m.y;     // âncora do zoom = centro da pinça
+            return;
+        }
+        if (!p.moved) {
+            if (Math.hypot(p.x - p.sx, p.y - p.sy) < MOVE_SLOP) return;               // ainda é um toque
+            p.moved = true; p.lx = p.sx; p.ly = p.sy; panning = true; isDragging = true; dragVX = dragVY = 0;
+            tt.classList.remove('visible');
+        }
+        const dx = p.x - p.lx, dy = p.y - p.ly; p.lx = p.x; p.ly = p.y;
+        camX += dx / zoom; camY += dy / zoom;                                          // 1:1 com o dedo
+        dragVX = dx * 0.25; dragVY = dy * 0.25; lastMoveT = performance.now();         // leve inércia ao soltar
+    }, { passive: true });
+    function up(e) {
+        const p = P.get(e.pointerId); if (!p) return;
+        P.delete(e.pointerId);
+        if (performance.now() - lastMoveT > 80) { dragVX = 0; dragVY = 0; }            // dedo parado antes de soltar = sem arremesso
+        if (P.size === 1) { const r = [...P.values()][0]; r.lx = r.x; r.ly = r.y; r.moved = true; }   // sobrou 1 dedo: continua arrastando
+        if (P.size === 0) { if (panning) lastPanT = performance.now(); panning = false; isDragging = false; }
+    }
+    window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    window.addEventListener('blur', endAll); document.addEventListener('visibilitychange', () => { if (document.hidden) endAll(); });
+    // depois de arrastar/pinçar o navegador não deve disparar "clique" de construção
+    window.addEventListener('mousedown', e => { if (e.target === cv && performance.now() - lastPanT < 450) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+
+    /* ── DETALHES DA CARTA: segurar ~0,5s sem mover (equivale ao "pousar o mouse 1s") ── */
+    let lpTimer = 0, lpStart = null;
+    function cardTip(card) {
+        if (!card) return;
+        tt.innerHTML = `<b style="color:var(--${card.rarity}); font-size:20px;">${card.name}</b><br><i style="color:#a1a1aa; font-size:14px; display:block; margin:8px 0;">"${card.desc}"</i><hr style="border-color:#27272a; margin:12px 0;"><span style="color:#22c55e">▲ ${card.buff}</span><br><span style="color:#ef4444">▼ ${card.debuff}</span>`;
+        tt.classList.add('visible');
+        const w = tt.offsetWidth || 260, h = tt.offsetHeight || 160;
+        tt.style.left = Math.max(8, Math.min(innerWidth - w - 8, lpStart.x - w / 2)) + 'px';
+        tt.style.top = Math.max(8, lpStart.y - h - 150) + 'px';
+    }
+    const hand = $('hand-container');
+    hand.addEventListener('pointerdown', e => {
+        if (!isT(e) || !e.target.closest || !e.target.closest('.hand-card')) return;
+        clearTimeout(lpTimer); lpStart = { x: e.clientX, y: e.clientY, id: e.pointerId, idx: draggingCardIndex };
+        lpTimer = setTimeout(() => { if (lpStart && dragElement && draggingCardIndex === lpStart.idx && !hoveredDropTower) cardTip(playerHand[lpStart.idx]); }, 500);
+    });
+    window.addEventListener('pointermove', e => { if (lpStart && e.pointerId === lpStart.id && Math.hypot(e.clientX - lpStart.x, e.clientY - lpStart.y) > 12) { clearTimeout(lpTimer); lpStart = null; } }, { passive: true });
+    const lpEnd = e => { if (lpStart && e.pointerId === lpStart.id) { clearTimeout(lpTimer); if (lpStart) tt.classList.remove('visible'); lpStart = null; } };
+    window.addEventListener('pointerup', lpEnd); window.addEventListener('pointercancel', lpEnd);
+
+    /* ── TOOLTIP: nunca sai da tela; durante arrasto de carta fica acima da carta (não debaixo do dedo) ── */
+    let clamping = false;
+    new MutationObserver(() => {
+        if (clamping || !tt.classList.contains('visible')) return;
+        clamping = true;
+        const w = tt.offsetWidth, h = tt.offsetHeight;
+        let l = parseFloat(tt.style.left) || 0, t = parseFloat(tt.style.top) || 0;
+        if (dragElement) t = Math.min(t, (parseFloat(dragElement.style.top) || 0) - h - 8);
+        tt.style.left = Math.max(8, Math.min(l, innerWidth - w - 8)) + 'px';
+        tt.style.top = Math.max(8, Math.min(t, innerHeight - h - 8)) + 'px';
+        clamping = false;
+    }).observe(tt, { attributes: true, attributeFilter: ['style', 'class'] });
+
+    /* ── HUD COMPACTO + GAVETA DO PAINEL LATERAL ── */
+    const sb = $('sidebar'), orig = { hp: $('hp'), gold: $('gold'), wave: $('wave'), go: $('btn-start-wave') };
+    const mini = document.createElement('div'); mini.id = 'nx-mini';
+    mini.innerHTML = '<button id="nx-mini-toggle" type="button" aria-label="Abrir/fechar painel"><i class="fa-solid fa-table-columns"></i></button>' +
+        '<span class="nx-m">❤️ <b id="nx-m-hp"></b></span><span class="nx-m">💰 <b id="nx-m-gold"></b></span><span class="nx-m">🌊 <b id="nx-m-wave"></b></span>' +
+        '<button id="nx-mini-go" type="button"></button>';
+    document.body.appendChild(mini);
+    const mHp = $('nx-m-hp'), mGold = $('nx-m-gold'), mWave = $('nx-m-wave'), mGo = $('nx-mini-go');
+    const toggle = $('nx-mini-toggle');
+    toggle.addEventListener('click', () => { try { SFX.ui_click(); } catch (e) {} sb.classList.toggle('nx-open'); toggle.classList.toggle('on', sb.classList.contains('nx-open')); });
+    mGo.addEventListener('click', () => { if (orig.go && !orig.go.disabled) orig.go.click(); });       // usa o botão original (mesma lógica, tutorial, etc.)
+    document.addEventListener('pointerdown', e => {                                                      // tocar no mapa fecha a gaveta
+        if (sb.classList.contains('nx-open') && e.target === cv) { sb.classList.remove('nx-open'); toggle.classList.remove('on'); }
+    });
+    function syncMini() {
+        const set = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+        set(mHp, orig.hp.textContent); set(mGold, orig.gold.textContent); set(mWave, orig.wave.textContent);
+        mHp.classList.toggle('danger', orig.hp.classList.contains('danger'));
+        const dis = !!orig.go.disabled; mGo.disabled = dis;
+        set(mGo, dis ? '⚔ EM ONDA' : '▶ ' + orig.go.innerText.replace(/^INICIAR\s*/i, '').trim());
+        mini.classList.toggle('hide', !!(menuActive || gameOver));
+    }
+    setInterval(syncMini, 200); syncMini();
+
+    /* ── Aviso de orientação (celular em retrato): não bloqueia o jogo ── */
+    const rot = document.createElement('div'); rot.id = 'nx-rotate';
+    rot.innerHTML = '<span>📱↻ Gire o aparelho para jogar na horizontal</span><button type="button" aria-label="Fechar">✕</button>';
+    document.body.appendChild(rot);
+    rot.querySelector('button').addEventListener('click', () => rot.classList.add('gone'));
+
+    /* ── Primeiro toque desbloqueia a música (alguns navegadores só aceitam pointer/touch como gesto) ── */
+    window.addEventListener('pointerup', function once(e) {
+        if (!isT(e)) return;
+        const m = $('bg-music'); if (m && m.paused) { m.volume = (typeof musicVol === 'function') ? musicVol() : m.volume; m.play().catch(() => {}); }
+        window.removeEventListener('pointerup', once);
+    });
 })();

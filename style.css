@@ -595,3 +595,124 @@ input[type=range][orient=vertical]::-moz-range-thumb, .nx-row input[type=range]:
 #nx-go-extra{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.35);border-radius:14px;padding:16px;margin-bottom:22px;color:#e4e4e7;font-family:sans-serif}
 #nx-go-extra .t{font-size:18px;font-weight:900;color:#fde047;margin-bottom:6px}
 #nx-go-extra button{background:#27272a;color:#f4f4f5;border:1px solid #3f3f46;border-radius:8px;padding:8px 14px;margin:8px 4px 0;font-weight:700;cursor:pointer}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE / TOUCH (adicionado) — tudo escopado em html.nx-touch: o PC não é afetado
+   ═══════════════════════════════════════════════════════════════════════════ */
+html.nx-touch, html.nx-touch body { height: 100%; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-text-size-adjust: 100%; }
+html.nx-touch body { position: fixed; inset: 0; width: 100%; }
+html.nx-touch #custom-cursor { display: none; }
+html.nx-touch #gameCanvas { touch-action: none; }
+html.nx-touch button, html.nx-touch .audio-btn, html.nx-touch .tower-option, html.nx-touch .hand-card { touch-action: manipulation; }
+html.nx-touch .hand-card { touch-action: none; -webkit-user-drag: none; }
+
+/* rolagem permitida só onde existe conteúdo rolável (o body continua touch-action: none) */
+html.nx-touch #sidebar, html.nx-touch #shop-overlay, html.nx-touch #gameover-overlay, html.nx-touch #nx-body, html.nx-touch #nx-meta-modal,
+html.nx-touch .nx-modal .nx-box, html.nx-touch #team-modal { touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* ── HUD compacto (sempre visível) ── */
+#nx-mini { display: none; }
+html.nx-touch #nx-mini {
+    position: fixed; z-index: 16; display: flex; align-items: center; gap: 6px;
+    top: calc(env(safe-area-inset-top, 0px) + 8px); left: calc(env(safe-area-inset-left, 0px) + 8px);
+    padding: 4px 6px; background: rgba(20,22,28,.93); border: 1px solid #2d313b; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.7);
+}
+html.nx-touch #nx-mini.hide { display: none; }
+html.nx-touch #nx-mini .nx-m { font-size: 14px; color: #a1a1aa; white-space: nowrap; padding: 0 4px; }
+html.nx-touch #nx-mini .nx-m b { color: #f4f4f5; font-size: 15px; }
+html.nx-touch #nx-m-hp { color: #22c55e !important; } html.nx-touch #nx-m-hp.danger { color: #ef4444 !important; }
+html.nx-touch #nx-m-gold { color: #fde047 !important; }
+html.nx-touch #nx-mini button { min-width: 44px; min-height: 44px; border: 1px solid #3f3f46; border-radius: 10px; background: #27272a; color: #f4f4f5; font: 9px 'Press Start 2P', monospace; padding: 0 10px; }
+html.nx-touch #nx-mini button i { font-size: 18px; }
+html.nx-touch #nx-mini button.on { background: #7c2d12; border-color: #fb923c; }
+html.nx-touch #nx-mini-go { background: linear-gradient(45deg, #16a34a, #22c55e); border-color: #22c55e; color: #fff; }
+html.nx-touch #nx-mini-go:disabled { background: #27272a; color: #71717a; border-color: #3f3f46; }
+
+/* ── Painel lateral vira gaveta (abre pelo botão do HUD; abre sozinha nos passos do tutorial que apontam para ele) ── */
+html.nx-touch #sidebar {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 60px); left: calc(env(safe-area-inset-left, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+    width: min(250px, 46vw); max-height: none; padding: 10px; border-radius: 14px;
+    transform: translateX(calc(-100% - 24px)); transition: transform .2s ease-out; z-index: 17;
+}
+html.nx-touch #sidebar.nx-open, html.nx-touch body:has(#nx-dlg.talk) #sidebar, html.nx-touch body:has(#sidebar .nx-hl) #sidebar { transform: none; }
+html.nx-touch body:has(#sidebar.nx-open) #nx-meta-btn, html.nx-touch body:has(#nx-dlg.talk) #nx-meta-btn, html.nx-touch body:has(#sidebar .nx-hl) #nx-meta-btn { display: none; }
+html.nx-touch #sidebar-title { display: none; }
+html.nx-touch .hud-section { padding: 6px 10px; margin-bottom: 6px; }
+html.nx-touch .hud-section-label { margin-bottom: 4px; }
+html.nx-touch .hud-row { padding: 3px 0; font-size: 13px; }
+html.nx-touch .tower-option { padding: 12px; margin-bottom: 6px; min-height: 44px; box-sizing: border-box; }
+html.nx-touch #sidebar-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; padding-top: 6px; }
+html.nx-touch #sidebar-buttons .btn-action { margin: 0 !important; min-height: 44px; padding: 8px 6px; font-size: 8px; line-height: 1.5; }
+html.nx-touch #btn-start-wave, html.nx-touch #btn-give-up { grid-column: 1 / -1; }
+html.nx-touch #btn-skip-shop:not(.visible), html.nx-touch #btn-speed:not(.visible) { display: none; }
+
+/* ── Dica de controles ── */
+html.nx-touch #controls-hint { top: calc(env(safe-area-inset-top, 0px) + 60px); right: calc(env(safe-area-inset-right, 0px) + 8px); font-size: 11px; line-height: 1.5; padding: 8px 10px; max-width: 34vw; opacity: .85; pointer-events: none; }
+
+/* ── Mão de cartas ── */
+html.nx-touch #hand-container {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); padding: 8px; gap: 8px; min-width: 90px; min-height: 100px; border-radius: 16px;
+    flex-wrap: wrap; max-width: max(150px, calc(100vw - 460px)); box-sizing: border-box;
+}
+html.nx-touch .hand-card { width: 62px; height: 88px; font-size: 10px; padding: 3px; }
+html.nx-touch .hand-card .mini-icon { font-size: 22px; }
+@media (hover: none) { .hand-card:hover { transform: none; } }
+
+/* ── Controles de áudio / menu (canto inferior direito, dedo-friendly, fora do notch) ── */
+html.nx-touch #audio-controls-wrapper { bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); right: calc(env(safe-area-inset-right, 0px) + 8px); gap: 8px; }
+html.nx-touch .audio-btn { width: 48px; height: 48px; }
+html.nx-touch #nx-meta-btn { left: calc(env(safe-area-inset-left, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); padding: 12px 14px; min-height: 44px; }
+
+/* ── Tooltip ── */
+html.nx-touch #tooltip { width: min(320px, 62vw); padding: 14px; font-size: 14px; }
+
+/* ── Loja, lootbox, game over, confirmações ── */
+html.nx-touch #shop-overlay { padding: calc(env(safe-area-inset-top, 0px) + 10px) 0 calc(env(safe-area-inset-bottom, 0px) + 16px) 0; }
+html.nx-touch #shop-title { font-size: clamp(12px, 3.4vw, 22px); line-height: 1.5; text-align: center; padding: 0 12px; margin-bottom: 8px; }
+html.nx-touch #shop-gold-display { font-size: 18px !important; margin-bottom: 4px !important; }
+html.nx-touch #shop-buttons { margin-top: 6px; }
+html.nx-touch #shop-buttons > div { flex-wrap: wrap; justify-content: center; gap: 8px !important; }
+html.nx-touch #reroll-btn, html.nx-touch #lootbox-btn, html.nx-touch #close-shop-btn { min-height: 44px; }
+html.nx-touch #lootbox-title { font-size: 18px !important; margin-bottom: 20px !important; text-align: center; padding: 0 12px; }
+html.nx-touch #lootbox-chest { font-size: 90px; }
+html.nx-touch #gameover-overlay { padding: calc(env(safe-area-inset-top, 0px) + 16px) 14px calc(env(safe-area-inset-bottom, 0px) + 16px) !important; }
+html.nx-touch #gameover-overlay > div > div:first-child { font-size: clamp(30px, 8vw, 52px) !important; }
+html.nx-touch #giveup-overlay > div { max-width: 92vw !important; padding: 22px !important; box-sizing: border-box; }
+html.nx-touch #giveup-overlay .btn-action { min-height: 48px; }
+
+/* ── Menus/modais (texto um pouco maior e botões com área de toque) ── */
+html.nx-touch #nx-body { font-size: 10px; }
+html.nx-touch .nx-btn { font-size: 9px; min-height: 44px; }
+html.nx-touch .nx-x { min-width: 44px; min-height: 44px; }
+html.nx-touch .nx-box { max-height: calc(100dvh - 24px); }
+html.nx-touch .nx-modal { padding: calc(env(safe-area-inset-top, 0px) + 10px) 10px calc(env(safe-area-inset-bottom, 0px) + 10px); }
+html.nx-touch #splash { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); box-sizing: border-box; }
+html.nx-touch #splash .sp-menu button { min-height: 44px; }
+html.nx-touch #nx-dlg { left: calc(env(safe-area-inset-left, 0px) + 8px); right: calc(env(safe-area-inset-right, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); }
+html.nx-touch #nx-task { max-width: calc(100vw - 16px); }
+@media (max-height: 480px) {
+    html.nx-touch #splash { gap: 6px; }
+    html.nx-touch .sp-logo { font-size: 20px !important; letter-spacing: 1px; text-shadow: 0 3px 0 #b45309, 0 6px 0 #7f1d1d, 0 0 30px rgba(249,115,22,.7); }
+    html.nx-touch .sp-menu { gap: 7px; }
+    html.nx-touch #splash .sp-menu button.sp-main { padding: 9px 10px; }
+    html.nx-touch #splash .sp-menu button.sp-sec { padding: 8px 6px; }
+    html.nx-touch .sp-lock { padding: 6px 8px; }
+    html.nx-touch #nx-kn { width: 78px; height: 72px; }
+    html.nx-touch #nx-txt { font-size: 13px; }
+    html.nx-touch #nx-box { padding: 16px 14px 12px; }
+}
+
+/* ── Aviso para girar o aparelho (só retrato, só celular; não bloqueia o jogo) ── */
+#nx-rotate { display: none; }
+@media (orientation: portrait) and (max-width: 700px) {
+    html.nx-touch #nx-rotate:not(.gone) {
+        display: flex; align-items: center; gap: 10px; position: fixed; z-index: 99998; left: 50%; transform: translateX(-50%);
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 150px); width: max-content; max-width: 92vw; padding: 8px 8px 8px 14px;
+        background: rgba(20,22,28,.95); border: 1px solid #eab308; border-radius: 12px; color: #fde047; font: 700 13px sans-serif; box-shadow: 0 6px 18px rgba(0,0,0,.7);
+    }
+    html.nx-touch #nx-rotate button { min-width: 44px; min-height: 44px; border: 1px solid #3f3f46; border-radius: 10px; background: #27272a; color: #f4f4f5; }
+    html.nx-touch #hand-container { max-width: calc(100vw - 16px); bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
+    html.nx-touch #controls-hint { display: none; }
+    html.nx-touch #nx-mini .nx-m { padding: 0 2px; font-size: 12px; }
+}
