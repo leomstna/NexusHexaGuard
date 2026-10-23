@@ -71,7 +71,7 @@ input[type=range][orient=vertical] {
 #nx-box { flex: 1; position: relative; cursor: pointer; background: var(--panel-bg); border: 1px solid rgba(251,146,60,.35);
     border-top: 2px solid #fb923c; border-radius: 14px; padding: 24px 28px 20px; min-height: 100px; box-sizing: border-box;
     box-shadow: 0 10px 30px rgba(0,0,0,.8); }
-#nx-name { position: absolute; top: -14px; left: 22px; font: 10px 'Press Start 2P', monospace; letter-spacing: 1px;
+#nx-name { position: absolute; z-index: 5; white-space: nowrap; top: -14px; left: 22px; font: 10px 'Press Start 2P', monospace; letter-spacing: 1px;
     background: #c2410c; color: #ffedd5; padding: 7px 12px; border-radius: 6px; box-shadow: 0 3px 0 #7c2d12; }
 #nx-txt { font-size: 17px; line-height: 1.55; color: #f4f4f5; min-height: 3.1em; padding-right: 14px; }
 #nx-txt b { color: #fde047; }
@@ -408,7 +408,7 @@ body {
 .hand-card.dragging { opacity: 0.65; box-shadow: 0 30px 60px rgba(0,0,0,0.9); cursor: grabbing; z-index: 1000; }
 .empty-hand-text { color: #52525b; font-size: 14px; position: absolute; pointer-events: none;}
 
-#controls-hint { position: absolute; top: 20px; right: 20px; text-align: right; color: #71717a; font-size: 14px; background: var(--panel-bg); padding: 15px; border-radius: 10px; border: 1px solid #27272a; }
+#controls-hint { position: absolute; z-index: 12; top: 20px; right: 20px; text-align: right; color: #71717a; font-size: 14px; background: var(--panel-bg); padding: 15px; border-radius: 10px; border: 1px solid #27272a; }
 
 #tooltip {
     position: absolute; pointer-events: none; background: rgba(15, 17, 21, 0.95);
@@ -667,6 +667,7 @@ html.nx-touch #btn-start-wave, html.nx-touch #btn-give-up { grid-column: 1 / -1;
 html.nx-touch #btn-skip-shop:not(.visible), html.nx-touch #btn-speed:not(.visible) { display: none; }
 
 /* ── Dica de controles ── */
+html.nx-touch #controls-hint.nx-hl { z-index: 99985; opacity: 1; }
 html.nx-touch #controls-hint { top: calc(env(safe-area-inset-top, 0px) + 60px); right: calc(env(safe-area-inset-right, 0px) + 8px); font-size: 11px; line-height: 1.5; padding: 8px 10px; max-width: 34vw; opacity: .85; pointer-events: none; }
 
 /* ── Mão de cartas ── */
@@ -729,7 +730,8 @@ html.nx-touch #hand-container { min-width: 130px; }
 html.nx-touch #nx-dlg.nx-top { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 8px); transform: translateY(-44px); }
 html.nx-touch #nx-dlg.nx-top.talk { transform: none; }
 html.nx-touch #nx-dlg.nx-side:not(.review) { left: calc(env(safe-area-inset-left, 0px) + min(250px, 46vw) + 22px); }
-html.nx-touch #nx-box { max-height: 46vh; overflow-y: auto; }
+html.nx-touch #nx-box { overflow: visible; }
+html.nx-touch #nx-txt { max-height: calc(46vh - 64px); overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 
 /* ── Aviso para girar o aparelho (só retrato, só celular; não bloqueia o jogo) ── */
 #nx-rotate { display: none; }
@@ -5247,7 +5249,9 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         const playlist = [
             "playlist/Blocky Memory Drift.mp3",
             "playlist/Mossy Save File.mp3",
-            "playlist/Wandering Through the Quiet.mp3"
+            "playlist/Wandering Through the Quiet.mp3",
+            "playlist/Boss Battle.mp3",
+            "playlist/Shadow Arpeggio.mp3"
         ];
         
         let currentTrack = 0;
