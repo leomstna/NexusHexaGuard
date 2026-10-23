@@ -183,16 +183,16 @@
         }
         #btn-start-wave { background: linear-gradient(45deg, #16a34a, #22c55e); }
         #btn-auto-wave { background: #3f3f46; color: #a1a1aa; margin-top: 8px;}
-        #btn-auto-wave.on, #btn-skip-shop.on {
+        #btn-auto-wave.on, #btn-skip-shop.on, #btn-speed.on {
             background: linear-gradient(45deg, #9a3412, #c2410c);
             color: #ffedd5;
             border: 1px solid #ea580c;
             box-shadow: 0 0 14px rgba(234, 88, 12, 0.35), 0 5px 15px rgba(0,0,0,0.4);
         }
-        #btn-auto-wave.on:hover, #btn-skip-shop.on:hover { background: linear-gradient(45deg, #c2410c, #ea580c); color: #fff7ed; }
-        #btn-auto-wave.on:active, #btn-skip-shop.on:active { background: #7c2d12; color: #ffedd5; }
+        #btn-auto-wave.on:hover, #btn-skip-shop.on:hover, #btn-speed.on:hover { background: linear-gradient(45deg, #c2410c, #ea580c); color: #fff7ed; }
+        #btn-auto-wave.on:active, #btn-skip-shop.on:active, #btn-speed.on:active { background: #7c2d12; color: #ffedd5; }
 
-        #btn-skip-shop {
+        #btn-skip-shop, #btn-speed {
             max-height: 0;
             margin: 0 !important;
             padding: 0;
@@ -208,7 +208,7 @@
             color: #a1a1aa;
         }
 
-        #btn-skip-shop.visible {
+        #btn-skip-shop.visible, #btn-speed.visible {
             max-height: 50px;
             margin-top: 8px !important;
             padding: 13px;
@@ -511,6 +511,12 @@
         #splash.out { visibility: hidden; transition: opacity .6s, transform .6s, visibility 0s .6s; }
         #splash.out * { animation-play-state: paused !important; }
         .sp-status { font: 9px 'Press Start 2P', monospace; color: #fb923c; text-shadow: 2px 2px 0 #000; min-height: 12px; z-index: 2; }
+        .sp-lock { display: none; font: 8px 'Press Start 2P', monospace; line-height: 1.7; text-align: center; color: #fde047; background: rgba(0,0,0,.6); border: 2px solid #ca8a04; padding: 9px 10px; text-shadow: 1px 1px 0 #000; }
+        .sp-menu.locked .sp-lock { display: block; }
+        .sp-lock.shake { animation: spNo .32s; }
+        @keyframes spNo { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+        #splash .sp-menu button.locked { filter: grayscale(1) brightness(.55); opacity: .8; cursor: not-allowed; }
+        #splash .sp-menu button.locked:hover, #splash .sp-menu button.locked:active { transform: none; }
         .sp-menu { display: flex; flex-direction: column; gap: 12px; width: min(360px, 84vw); z-index: 2; }
         .sp-row { display: flex; gap: 12px; }
         .sp-row button { flex: 1; min-width: 0; }
@@ -584,18 +590,19 @@
         <img id="nx-kn" alt="" draggable="false">
         <div id="nx-box">
             <div id="nx-name">CAVALEIRO LARANJA</div>
-            <button id="nx-skip" type="button">Pular</button>
+            <button id="nx-skip" type="button">Sair</button>
             <div id="nx-txt"></div>
             <div id="nx-caret">▼</div>
         </div>
     </div>
-    <div id="nx-task"><img id="nx-kn2" alt="" draggable="false"><span id="nx-hint"></span><button id="nx-skip2" type="button">Pular</button></div>
+    <div id="nx-task"><img id="nx-kn2" alt="" draggable="false"><span id="nx-hint"></span><button id="nx-skip2" type="button">Sair</button></div>
 
     <div id="splash"><div class="sp-embers"></div>
     <div class="sp-logo">NEXUS<br>HEXA GUARD</div>
     <div class="sp-status"></div>
     <div class="sp-menu">
         <button class="sp-main" data-act="play">▶ JOGAR</button>
+        <div class="sp-lock" id="sp-lock">Faça o tutorial em Como Jogar antes de começar.</div>
         <button class="sp-sec" data-act="new">↻ NOVO JOGO</button>
         <div class="sp-row">
             <button class="sp-sec" data-act="stats">ESTATÍSTICAS</button>
@@ -667,6 +674,7 @@
             <button id="btn-start-wave" class="btn-action magnet-btn targeting-trigger" onclick="startNextWave()">INICIAR ONDA</button>
             <button id="btn-auto-wave" class="btn-action magnet-btn targeting-trigger" onclick="toggleAutoWave()">AUTO-WAVE: OFF</button>
             <button id="btn-skip-shop" class="btn-action magnet-btn targeting-trigger" onclick="toggleSkipShop()">PULAR LOJA: OFF</button>
+            <button id="btn-speed" class="btn-action magnet-btn targeting-trigger" onclick="toggleSpeed()">VELOCIDADE: 1x</button>
             <button id="btn-give-up" class="btn-action magnet-btn targeting-trigger" onclick="giveUp()" style="background: linear-gradient(45deg, #7f1d1d, #991b1b); border: 1px solid #ef4444; color: #fca5a5; margin-top: 8px;">
                 DESISTIR (VER SCORE)
             </button>
@@ -1308,7 +1316,7 @@
         let waveTotalEnemyHp = 0;
         let waveEnemyDmgDealt = 0;
         let waveEnemyHpKilled = 0; 
-        let skipShop = false;
+        let skipShop = false; let gameSpeed = 1;   // gameSpeed: 1 ou 2 (só vale com Auto-Wave + Pular Loja ativos)
         let statTotalDmgDealt = 0;
         let statTotalDmgTaken = 0;
         let statEnemiesKilled = 0;
@@ -1767,7 +1775,7 @@
                             floatingTexts.push(new FloatingText(screenX, screenY, "JÁ APLICADA NESTA TORRE", '#ef4444')); applyShake(4);
                             returnCardToHand(); return;
                         }
-                        if (t.effects.length >= 3) { 
+                        if (!card.healsDur && !card.isMonk && t.effectCount >= 3) { 
                             SFX.ui_error();
                             floatingTexts.push(new FloatingText(screenX, screenY, "MÁXIMO 3 EFEITOS", '#ef4444')); applyShake(4); 
                             returnCardToHand(); return; 
@@ -1886,7 +1894,7 @@ function fxBanner(txt,col,small){const d=document.createElement('div');d.classNa
   if(txt.indexOf('⚔')<0)d.textContent=txt;
   else{d.classList.add('has-sw');const sw=()=>{const i=document.createElement('i');i.className='fx-sw';i.innerHTML=FX_SWORDS;return i;},t=document.createElement('span');t.textContent=txt.replace(/⚔/g,'').trim();d.append(sw(),t,sw());}
   document.body.appendChild(d);setTimeout(()=>d.remove(),small?1300:1900);}
-function fxDeath(e){const t=ENEMY_TYPES[e.enemyType],boss=e.enemyType==='boss',st=e.statusEffects.map(s=>s.type);
+function fxDeath(e){const t=ENEMY_TYPES[e.enemyType],boss=!!t.isBoss,st=e.statusEffects.map(s=>s.type);
   for(let i=0,n=boss?38:13;i<n;i++)fxP(e.x,e.y,R(8,20),R(-.13,.13),R(-.13,.13),R(2,6),[t.color,'#7f1d1d','#b91c1c','#3f0d0d'][i%4],R(45,90),R(3,6),.3);
   fxDecal(e.x,e.y,boss?34:14,'#5b0b0b',.55);
   if(st.includes('fire')){fxBurst(e.x,e.y,10,14,['#f97316','#fde047'],.1,3,30,3,.2,true,true);fxDecal(e.x,e.y,16,'#0a0503',.5);}
@@ -2042,7 +2050,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             wear: 0.25,         // desgaste base por disparo (ÚNICO ponto de ajuste; ~400 tiros para uma torre sem efeitos)
             perEffect: 0.45,    // +45% de desgaste por efeito: 3 efeitos = 2,35x (~170 tiros)
             warnPct: 0.25,      // aviso de "durabilidade baixa" abaixo de 25%
-            repairExtra: 10     // conserto = custo normal da torre + 10 de ouro
+            repairExtra: 10,    // 1º conserto = custo normal da torre + 10 de ouro
+            repairStep: 10      // cada conserto já feito encarece o próximo em +10 de ouro
         };
         // ── REPETIÇÃO DE CARTA NA MESMA TORRE ──
         // Bloqueia a 2ª cópia de cartas que só adicionam flag (sem efeito novo) e de cartas épicas/lendárias.
@@ -2079,6 +2088,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             get cappedGoldMult() { return Math.min(3.0, this.goldMultiplier); }
             get maxDur() { return Math.max(20, Math.round(DUR.base * Math.max(0.3, this.modDur))); }
             get broken() { return this.dur <= 0; }
+            get effectCount() { return this.effects.filter(c => !c.healsDur && !c.isMonk).length; }   // cartas que regeneram durabilidade e cartas de Monge não ocupam vaga
             get wearPerShot() { return DUR.wear * (1 + DUR.perEffect * this.effects.length) * Math.max(0.1, this.modDecay); }   // desgaste de cada disparo
             get damage() { let d = (this.baseDmg * this.level) * Math.max(0, this.modDmg); if (this.flags.has('arcane')) d += this.level * 5; return d; }
             get range() { return (this.baseRange + (this.level*0.2)) * this.modRange; }
@@ -2302,6 +2312,14 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 minWave: 3,
                 seekRange: 7, towerRange: 0.9, towerHit: 0.10, towerCd: 45,   // raio de busca, distância de ataque, fração da durabilidade máx. por golpe, intervalo (frames)
             },
+            demolisher: {
+                label: 'Boss Demolidor',
+                hpMult: 8, speedMult: 0.5, scaleMult: 2.1, goldMult: 12,
+                color: '#dc2626', icon: '\uf0e3',
+                minWave: 15,
+                isBoss: true, leakDmg: 3,
+                seekRange: 9, towerRange: 1.1, towerDmg: 33, towerCd: 110,   // sai da estrada atrás das torres; cada golpe tira 33 de durabilidade de uma vez
+            },
             boss: {
                 label: 'BOSS',
                 hpMult: 6, speedMult: 0.55, scaleMult: 2.2, goldMult: 8,
@@ -2344,7 +2362,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 
                 if(cfg.isBoss) {
                     let mid = canvas.width / 2;
-                    floatingTexts.push(new FloatingText(mid, canvas.height * 0.35, '⚠ BOSS ⚠', '#f97316', true));
+                    floatingTexts.push(new FloatingText(mid, canvas.height * 0.35, this.enemyType === 'demolisher' ? '⚠ BOSS DEMOLIDOR ⚠' : '⚠ BOSS ⚠', cfg.color, true));
                     applyShake(12);
                 }
             }
@@ -2449,7 +2467,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                         floatingTexts.push(new FloatingText(sx3, sy3 - 30, 'DIVIDE!', '#a855f7'));
                     }
 
-                    if(this.enemyType === 'boss') {
+                    if(ENEMY_TYPES[this.enemyType].isBoss) {
                         applyShake(20);
                         let pos3 = cartToIso(this.x, this.y);
                         let cx3 = canvas.width/2; let cy3 = canvas.height/2;
@@ -2461,8 +2479,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 }
                 this.squashV += (1.0 - this.squash) * 0.2; this.squashV *= 0.8; this.squash += this.squashV;
                 if(this.dead) { this.yOffset += 1.5; return; }
-                if(this.enemyType === 'breaker' && this.spawnProgress >= 1 && !(window.MP && window.MP.active)) {
-                    const bc = ENEMY_TYPES.breaker; let bt = null, bd = bc.seekRange;
+                if((this.enemyType === 'breaker' || this.enemyType === 'demolisher') && this.spawnProgress >= 1 && !(window.MP && window.MP.active)) {
+                    const bc = ENEMY_TYPES[this.enemyType]; let bt = null, bd = bc.seekRange;
                     for(const t of towers) { if(t.dur <= 0) continue; const d = Math.hypot(t.gridX - this.x, t.gridY - this.y); if(d < bd) { bd = d; bt = t; } }
                     this.atkTower = null;
                     if(bt) {
@@ -2473,10 +2491,10 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                         this.atkTower = bt;
                         if((this.atkCd = (this.atkCd || 0) - 1) <= 0) {
                             this.atkCd = bc.towerCd; this.squashV -= 0.25;
-                            const dmg = Math.max(2, bt.maxDur * bc.towerHit); bt.dur -= dmg; bt.scaleV -= 0.3;
+                            const dmg = bc.towerDmg ? bc.towerDmg : Math.max(2, bt.maxDur * bc.towerHit); bt.dur -= dmg; bt.scaleV -= (bc.towerDmg ? 0.9 : 0.3);
                             const sp = scr(bt.gridX, bt.gridY, -50);
-                            floatingTexts.push(new FloatingText(sp.x, sp.y, '-' + Math.round(dmg), '#c026d3'));
-                            createParticles(bt.gridX, bt.gridY, '#c026d3', 4); applyShake(2);
+                            floatingTexts.push(new FloatingText(sp.x, sp.y, '-' + Math.round(dmg), bc.towerDmg ? '#ef4444' : '#c026d3', !!bc.towerDmg));
+                            if(bc.towerDmg) { createParticles(bt.gridX, bt.gridY, '#dc2626', 18, 0.35, 5); fxShock(bt.gridX, bt.gridY, '#dc2626', 90, 6); applyShake(9); } else { createParticles(bt.gridX, bt.gridY, '#c026d3', 4); applyShake(2); }
                             if(bt.dur <= 0) durBreak(bt);
                         }
                         this.wobble += 0.4 * currentSpeedMod; return;
@@ -2500,6 +2518,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                             
                             let btnSkip = document.getElementById('btn-skip-shop');
                             if (btnSkip) { btnSkip.innerText = 'PULAR LOJA: OFF'; btnSkip.classList.remove('on'); btnSkip.classList.remove('visible'); }
+                            syncSpeedBtn();
                             
                             floatingTexts.push(new FloatingText(canvas.width/2, canvas.height * 0.35, "AUTO-WAVE CANCELADO!", '#ef4444', true));
                         }
@@ -2567,20 +2586,20 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     ctx.beginPath(); ctx.arc(0, -15, 24 + Math.sin(frameCount * 0.1) * 3, 0, Math.PI * 2); ctx.stroke();
                     ctx.restore();
                 }
-                if(this.enemyType === 'boss' && !this.dead) {
+                if(cfg.isBoss && !this.dead) {
                     for(let i = 0; i < 6; i++) {
                         let a = (frameCount * 0.04) + i * Math.PI * 2 / 6;
                         let r = 28 + Math.sin(frameCount * 0.08 + i) * 5;
                         ctx.save();
                         ctx.globalAlpha = 0.45 + Math.sin(frameCount * 0.12 + i) * 0.2;
-                        ctx.fillStyle = i % 2 === 0 ? '#f97316' : '#ef4444';
+                        ctx.fillStyle = i % 2 === 0 ? cfg.color : '#ef4444';
                         ctx.beginPath(); ctx.arc(Math.cos(a) * r, -15 + Math.sin(a) * (r / 2), 3.5, 0, Math.PI * 2); ctx.fill();
                         ctx.restore();
                     }
                     ctx.save();
                     ctx.font = 'bold 9px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                    ctx.fillStyle = '#f97316'; ctx.shadowColor = '#f97316'; ctx.shadowBlur = 8;
-                    ctx.fillText('BOSS', 0, -46);
+                    ctx.fillStyle = cfg.color; ctx.shadowColor = cfg.color; ctx.shadowBlur = 8;
+                    ctx.fillText(this.enemyType === 'demolisher' ? 'DEMOLIDOR' : 'BOSS', 0, -46);
                     ctx.restore();
                 }
 
@@ -2592,11 +2611,11 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     : isOnFire      ? '#fb923c'
                     : cfg.color;
 
-                let iconSize = this.enemyType === 'boss' ? 36 : this.enemyType === 'splitter' ? 28 : 24;
+                let iconSize = cfg.isBoss ? 36 : this.enemyType === 'splitter' ? 28 : 24;
                 ctx.fillStyle = enemyColor;
                 ctx.font = `900 ${iconSize}px "Font Awesome 6 Free"`;
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.shadowColor = enemyColor; ctx.shadowBlur = this.enemyType === 'boss' ? 15 : 0;
+                ctx.shadowColor = enemyColor; ctx.shadowBlur = cfg.isBoss ? 15 : 0;
                 ctx.fillText(cfg.icon, 0, -15);
                 ctx.shadowBlur = 0;
 
@@ -2609,7 +2628,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     ctx.font = '900 10px "Font Awesome 6 Free"';
                     icons.forEach((ic, i) => { ctx.fillStyle = ic.color; ctx.fillText(ic.icon, -8 + (i * 10), -42); });
 
-                    let barW = this.enemyType === 'boss' ? 40 : 24;
+                    let barW = cfg.isBoss ? 40 : 24;
                     let pct = this.hp / this.maxHp;
                     ctx.fillStyle = '#000'; ctx.fillRect(-barW / 2, -34, barW, 5);
                     ctx.fillStyle = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#eab308' : '#ef4444';
@@ -2655,8 +2674,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     let isCrit = Math.random() < this.critChance;
                     let finalDmg = isCrit ? this.dmg * this.critDamage : this.dmg;
 
-                    if(this.tower.bossKiller && this.tgt.enemyType === 'boss') finalDmg *= 4;
-                    if (this.tower.flags.has('void')) { let voidDmg = this.tgt.hp * 0.10; if(this.tgt.enemyType === 'boss') voidDmg = Math.min(voidDmg, 500); finalDmg += voidDmg; }
+                    if(this.tower.bossKiller && ENEMY_TYPES[this.tgt.enemyType].isBoss) finalDmg *= 4;
+                    if (this.tower.flags.has('void')) { let voidDmg = this.tgt.hp * 0.10; if(ENEMY_TYPES[this.tgt.enemyType].isBoss) voidDmg = Math.min(voidDmg, 500); finalDmg += voidDmg; }
                     if (this.tower.flags.has('plasma')) this.tower.modDmg = Math.min(5.0, this.tower.modDmg + 0.01);
 
                     this.tgt.hp -= finalDmg; this.tgt.hitTimer = 4; this.tgt.squash = 0.6; this.hitEnemies.add(this.tgt);
@@ -3521,15 +3540,15 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         const DUR_CARDS = [
             createCard("Chapa Reforçada", "common", '<i class="fa-solid fa-shield-halved"></i>', "Mais metal onde dói.", "+30% Durabilidade", "-5% Vel. Ataque", t => { t.modDur = (t.modDur || 1) + 0.30; t.modRate += 0.05; }),
             createCard("Graxa Pesada", "common", '<i class="fa-solid fa-oil-can"></i>', "Menos atrito, menos desgaste.", "-25% Desgaste", "-5% Dano", t => { t.modDecay = (t.modDecay || 1) - 0.25; t.modDmg -= 0.05; }),
-            createCard("Solda de Campo", "common", '<i class="fa-solid fa-screwdriver-wrench"></i>', "Remendo rápido entre ondas.", "Restaura 50% da Durabilidade", "-5% Alcance", t => { if (!t.isPreview) t.dur = Math.min(t.maxDur, t.dur + t.maxDur * 0.5); t.modRange -= 0.05; }),
+            createCard("Solda de Campo", "common", '<i class="fa-solid fa-screwdriver-wrench"></i>', "Remendo rápido entre ondas.", "Restaura 50% da Durabilidade (não ocupa vaga)", "-5% Alcance", t => { if (!t.isPreview) t.dur = Math.min(t.maxDur, t.dur + t.maxDur * 0.5); t.modRange -= 0.05; }),
             createCard("Liga de Titânio", "rare", '<i class="fa-solid fa-gem"></i>', "Leve e quase indestrutível.", "+50% Durab., -15% Desgaste", "-10% Vel. Ataque", t => { t.modDur = (t.modDur || 1) + 0.50; t.modDecay = (t.modDecay || 1) - 0.15; t.modRate += 0.10; }),
-            createCard("Nanobots de Reparo", "rare", '<i class="fa-solid fa-microchip"></i>', "Remendam a torre durante a batalha.", "Regenera 0.20 Durab./s", "-10% Dano", t => { t.durRegen = (t.durRegen || 0) + 0.20; t.modDmg -= 0.10; }),
+            createCard("Nanobots de Reparo", "rare", '<i class="fa-solid fa-microchip"></i>', "Remendam a torre durante a batalha.", "Regenera 0.20 Durab./s (não ocupa vaga)", "-10% Dano", t => { t.durRegen = (t.durRegen || 0) + 0.20; t.modDmg -= 0.10; }),
             createCard("Motor Superaquecido", "rare", '<i class="fa-solid fa-temperature-high"></i>', "Roda no limite.", "+25% Vel. Ataque", "+30% Desgaste", t => { t.modRate -= 0.25; t.modDecay = (t.modDecay || 1) + 0.30; }),
             createCard("Blindagem Pesada", "epic", '<i class="fa-solid fa-helmet-safety"></i>', "Aguenta o tranco.", "+80% Durabilidade", "-15% Alcance", t => { t.modDur = (t.modDur || 1) + 0.80; t.modRange -= 0.15; }),
             createCard("Sobrecarga Perigosa", "epic", '<i class="fa-solid fa-radiation"></i>', "Poder demais derrete o metal.", "+40% Dano", "+50% Desgaste", t => { t.modDmg += 0.40; t.modDecay = (t.modDecay || 1) + 0.50; }),
             createCard("Coração de Adamantium", "legendary", '<i class="fa-solid fa-heart-pulse"></i>', "Nada o quebra.", "+120% Durab., -40% Desgaste", "-15% Vel. Ataque", t => { t.modDur = (t.modDur || 1) + 1.20; t.modDecay = (t.modDecay || 1) - 0.40; t.modRate += 0.15; }),
         ];
-        DUR_CARDS.forEach(c => { c.isDur = true; arcanasPool.push(c); });
+        DUR_CARDS.forEach(c => { c.isDur = true; if (c.name === 'Solda de Campo' || c.name === 'Nanobots de Reparo') c.healsDur = true; arcanasPool.push(c); });
         arcanasPool.push(createCard("Brasa Viva", "common", '<i class="fa-solid fa-fire"></i>', "Tudo que toca, queima.", "Queima + Espalha Fogo", "-5% Dano", t=>{t.flags.add('fire'); t.modDmg-=0.05;}));
         arcanasPool.push(createCard("Ricochete Cromado", "rare", '<i class="fa-solid fa-arrows-split-up-and-left"></i>', "A bala quica de inimigo em inimigo.", "+3 Ricochetes", "-10% Dano", t=>{t.chainTargets+=3; t.flags.add('chain'); t.modDmg-=0.10;}));
         arcanasPool.push(createCard("Pára-Raios", "epic", '<i class="fa-solid fa-bolt-lightning"></i>', "Raios caem do céu e saltam entre inimigos.", "Raio + 2 Saltos + Atordoa", "-15% Vel. Ataque", t=>{t.flags.add('lightning'); t.chainTargets+=2; t.modRate+=0.15;}));
@@ -4013,6 +4032,9 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 let mid = Math.floor(queue.length / 2);
                 queue.splice(mid, 0, 'boss');
             }
+            if(w >= 15 && w % 15 === 0) {   // Boss Demolidor: a cada 15 ondas
+                queue.splice(Math.floor(queue.length / 3), 0, 'demolisher');
+            }
             return queue;
         }
 
@@ -4038,6 +4060,12 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             document.getElementById('btn-start-wave').disabled = true;
             document.getElementById('btn-start-wave').innerText = "ONDA EM PROGRESSO...";
             updateUI();
+            if(wave >= 15 && wave % 15 === 0) {
+                setTimeout(() => {
+                    floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height * 0.22, `⚠ WAVE ${wave} — BOSS DEMOLIDOR ⚠`, '#dc2626', true));
+                    applyShake(10);
+                }, 900);
+            }
             if(wave >= 5 && wave % 5 === 0) {
                 setTimeout(() => {
                     floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height * 0.3, `⚠ WAVE ${wave} — BOSS ⚠`, '#f97316', true));
@@ -4085,6 +4113,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 skipBtn.classList.remove('on'); 
                 skipBtn.classList.remove('visible'); 
             }
+            syncSpeedBtn();
         }
         function toggleSkipShop() {
             SFX.ui_click();
@@ -4092,6 +4121,18 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             let btn = document.getElementById('btn-skip-shop');
             btn.innerText = skipShop ? 'PULAR LOJA: ON' : 'PULAR LOJA: OFF';
             if(skipShop) btn.classList.add('on'); else btn.classList.remove('on');
+            syncSpeedBtn();
+        }
+        function toggleSpeed() {
+            if(!(autoWave && skipShop)) return;
+            SFX.ui_click(); gameSpeed = gameSpeed === 1 ? 2 : 1; syncSpeedBtn();
+        }
+        function syncSpeedBtn() {   // botão 2x só aparece com Pular Loja ligado; ao desligar, volta pra 1x
+            let b = document.getElementById('btn-speed'); if(!b) return;
+            const ok = autoWave && skipShop;
+            if(!ok) gameSpeed = 1;
+            b.innerText = 'VELOCIDADE: ' + gameSpeed + 'x';
+            b.classList.toggle('visible', ok); b.classList.toggle('on', ok && gameSpeed === 2);
         }
 
         function initMenu() {
@@ -4205,7 +4246,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     tt.classList.add('visible'); tt.style.left = (e.clientX + 15) + 'px'; tt.style.top = (e.clientY + 15) + 'px';
                 } else if (hoveredTower && dragElement && draggingCardIndex >= 0) {
                     let card = playerHand[draggingCardIndex];
-                    if(card && !card.isPill && !card.isApple && !card.isEcon && hoveredDropTower.effects.length < 3 && !cardRepeatBlocked(hoveredDropTower, card)) {
+                    if(card && !card.isPill && !card.isApple && !card.isEcon && (card.healsDur || card.isMonk || hoveredDropTower.effectCount < 3) && !cardRepeatBlocked(hoveredDropTower, card)) {
                         let after = previewCardStats(hoveredDropTower, card);
                         let b = hoveredTower; 
 
@@ -4306,9 +4347,10 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             requestAnimationFrame(mainFrame);
             let dt = now - _lastFrameT; _lastFrameT = now;
             if (dt > 250) dt = STEP_MS;              // voltou de outra aba / travou: não "acelera" o jogo
-            _acc += dt;
+            const _spd = (autoWave && skipShop) ? gameSpeed : 1;   // 2x só com Pular Loja ativo
+            _acc += dt * _spd;
             let steps = 0;
-            while (_acc >= STEP_MS && steps < 3) { if (!menuActive || (window.MP && window.MP.active)) gameUpdate(); _acc -= STEP_MS; steps++; }
+            while (_acc >= STEP_MS && steps < 3 * _spd) { if (!menuActive || (window.MP && window.MP.active)) gameUpdate(); _acc -= STEP_MS; steps++; }
             if (_acc >= STEP_MS) _acc = 0;           // PC não acompanha: o jogo desacelera em vez de entrar em espiral
             if (steps > 0 && !menuActive && (!isShopOpen || (++_shopSkip % 3 === 0))) gameRender();   // loja aberta = só 1/3 dos frames (fundo quase invisível)
             adaptQuality(dt);
@@ -4498,16 +4540,35 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         // (desgaste por disparo; substitui a antiga "Torre Condenada", que destruía torres aleatoriamente)
         const DOOM = { pending: null, timer: 0 };   // compatibilidade
         function doomReset() {}
-        function repairCost(t) { return towerTypes[t.type].cost + DUR.repairExtra; }
+        const _retireQ = new Set();   // torres que quebraram sem consertos restantes (removidas em durTick)
+        function towerRetire(t) {
+            _retireQ.delete(t);
+            const i = towers.indexOf(t); if (i < 0) return;
+            towers.splice(i, 1); lostTowers.push(t);
+            if (window.lastHoveredTower === t) { window.lastHoveredTower = null; try { tt.classList.remove('visible'); } catch (e) {} }
+            const gx = t.gridX, gy = t.gridY, s = scr(gx, gy, -50);
+            fxBoom(gx, gy, 1.6, '#ef4444'); fxShock(gx, gy, '#ffffff', 100, 8);
+            fxBurst(gx, gy, 5, 24, ['#52525b', '#27272a', '#a1a1aa', t.color], .25, 5, 55, 5, .35, false, false);
+            fxDecal(gx, gy, 32, '#0a0305', .7); createParticles(gx, gy, '#ef4444', 30);
+            applyShake(12); hs(3);
+            try { SFX.base_dmg(); } catch (e) {}
+            floatingTexts.push(new FloatingText(s.x, s.y, '\uD83D\uDCA5 ' + ((towerTypes[t.type] && towerTypes[t.type].name) || 'TORRE') + ' DESTRU\u00CDDA', '#ef4444', true));
+            floatingTexts.push(new FloatingText(s.x, s.y + 24, 'LIMITE DE CONSERTOS (' + REPAIR_MAX + '/' + REPAIR_MAX + ')', '#f87171'));
+            updateUI();
+        }
+        function repairCost(t) { return towerTypes[t.type].cost + DUR.repairExtra + (t.repairs || 0) * DUR.repairStep; }
         function durHtml(t) {
             if (window.MP && window.MP.active) return '';
             const m = t.maxDur, pc = Math.max(0, Math.min(1, t.dur / m));
             const col = pc > 0.6 ? '#22c55e' : pc > 0.3 ? '#eab308' : '#ef4444';
             if (t.dur <= 0) return '<span style="color:#ef4444;font-weight:bold;"><i class="fa-solid fa-screwdriver-wrench"></i> QUEBRADA</span><br>'
-                + '<span style="color:#e2e8f0">Consertar:</span> <span style="color:' + (gold >= repairCost(t) ? '#fde047' : '#f87171') + ';font-weight:bold;">' + repairCost(t) + 'g</span> <span style="color:#a1a1aa;font-size:12px;">' + (waveActive ? '(indisponível em combate)' : (t.repairs || 0) >= REPAIR_MAX ? '(sem consertos restantes: venda a torre)' : '(clique na torre · ' + (REPAIR_MAX - (t.repairs || 0)) + '/' + REPAIR_MAX + ' restantes)') + '</span>';
+                + '<span style="color:#e2e8f0">Consertar:</span> <span style="color:' + (gold >= repairCost(t) ? '#fde047' : '#f87171') + ';font-weight:bold;">' + repairCost(t) + 'g</span> <span style="color:#a1a1aa;font-size:12px;">' + (waveActive ? '(indisponível em combate)' : (t.repairs || 0) >= REPAIR_MAX ? '(limite de consertos atingido: a torre será removida)' : '(clique na torre · ' + (REPAIR_MAX - (t.repairs || 0)) + '/' + REPAIR_MAX + ' restantes)') + '</span>';
+            const _used = t.repairs || 0, _left = REPAIR_MAX - _used;
+            const repInfo = '<div style="margin-top:4px;font-size:12px;color:#a1a1aa;">Consertos: <b style="color:' + (_left > 0 ? '#e2e8f0' : '#ef4444') + '">' + _used + '/' + REPAIR_MAX + '</b> · '
+                + (_left > 0 ? 'próximo: <b style="color:#fde047">' + repairCost(t) + 'g</b>' : '<span style="color:#f87171">se quebrar, será destruída</span>') + '</div>';
             const wt = '-' + t.wearPerShot.toFixed(2) + '/tiro' + (t.durRegen ? ', +' + t.durRegen.toFixed(2) + '/s' : '');
             return '<span style="color:#e2e8f0">Durabilidade:</span> <span style="color:' + col + ';font-weight:bold;">' + Math.ceil(t.dur) + '/' + m + '</span> <span style="color:#a1a1aa;font-size:12px;">(' + wt + ')</span>'
-                + '<div style="height:5px;background:#27272a;border-radius:3px;margin-top:3px;overflow:hidden;"><div style="height:100%;width:' + (pc * 100).toFixed(0) + '%;background:' + col + ';"></div></div>';
+                + '<div style="height:5px;background:#27272a;border-radius:3px;margin-top:3px;overflow:hidden;"><div style="height:100%;width:' + (pc * 100).toFixed(0) + '%;background:' + col + ';"></div></div>' + repInfo;
         }
         function durBreak(t) {
             t.dur = 0; t.cooldown = 0; t._lowWarn = false;
@@ -4517,6 +4578,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             fxDecal(gx, gy, 26, '#0a0305', .6);
             applyShake(10); hs(3);
             try { SFX.base_dmg(); } catch (e) {}
+            if ((t.repairs || 0) >= REPAIR_MAX) { _retireQ.add(t); return; }   // sem consertos restantes: será removida
             const s = scr(gx, gy, -50);
             floatingTexts.push(new FloatingText(s.x, s.y, '\uD83D\uDD27 ' + ((towerTypes[t.type] && towerTypes[t.type].name) || 'TORRE') + ' QUEBRADA', '#f97316', true));
         }
@@ -4546,6 +4608,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             const fight = waveActive && !isShopOpen;
             for (const t of towers) {
                 if (t.dur <= 0) {   // quebrada: solta fumaça
+                    if ((t.repairs || 0) >= REPAIR_MAX) { _retireQ.add(t); continue; }   // (inclui saves antigos)
                     if (frameCount % 18 === 0) fxBurst(t.gridX, t.gridY, 28, 1, ['#52525b', '#3f3f46'], .03, 1.2, 45, 3, .02, false, true);
                     continue;
                 }
@@ -4562,6 +4625,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     try { SFX.ui_error(); } catch (e) {}
                 } else if (t._lowWarn && pc > DUR.warnPct + 0.05) t._lowWarn = false;
             }
+            if (_retireQ.size) [..._retireQ].forEach(towerRetire);
             if (frameCount % 15 === 0 && window.lastHoveredTower) {   // atualiza a durabilidade no tooltip
                 const el = document.getElementById('tt-dur'); if (el) el.innerHTML = durHtml(window.lastHoveredTower);
             }
@@ -4751,7 +4815,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 
             if (dragElement && hoveredDropTower && draggingCardIndex >= 0) {
                 let card = playerHand[draggingCardIndex];
-                if (card && !card.isPill && !card.isApple && !card.isEcon && hoveredDropTower.effects.length < 3 && !cardRepeatBlocked(hoveredDropTower, card)) {
+                if (card && !card.isPill && !card.isApple && !card.isEcon && (card.healsDur || card.isMonk || hoveredDropTower.effectCount < 3) && !cardRepeatBlocked(hoveredDropTower, card)) {
                     let clone = previewCardStats(hoveredDropTower, card);
                     let prevRange = hoveredDropTower.range;
                     let newRange = clone.range;
@@ -5269,6 +5333,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 
     /* ─────────────── MENU PRINCIPAL ─────────────── */
     const splash = () => $('splash');
+    const tutDone = () => { try { return localStorage.getItem('nexus_tutorial_done') === 'true'; } catch (e) { return true; } };
+    const playLocked = () => !tutDone() && !(nxStarted && !gameOver) && !(window.MP && window.MP.active);   // 1º acesso: só libera depois do tutorial
     function refreshMenu() {
         const s = splash(); if (!s) return;
         const save = LS.get(SAVE_KEY, null), inGame = nxStarted && !gameOver;
@@ -5276,6 +5342,9 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         if (inGame) { main.textContent = '▶ CONTINUAR'; nw.style.display = ''; st.textContent = `ONDA ${wave} · ${nf(gold)} OURO`; }
         else if (save) { main.textContent = '▶ CONTINUAR'; nw.style.display = ''; st.textContent = `JOGO SALVO: ONDA ${save.wave} · ${nf(save.gold)} OURO`; }
         else { main.textContent = '▶ JOGAR'; nw.style.display = 'none'; st.textContent = ''; }
+        const lk = playLocked();
+        [main, nw].forEach(b => { b.classList.toggle('locked', lk); b.setAttribute('aria-disabled', lk ? 'true' : 'false'); });
+        const menu = s.querySelector('.sp-menu'); if (menu) menu.classList.toggle('locked', lk);
     }
     function closeMenu() { const s = splash(); menuActive = false; if (s) s.classList.add('out'); }
     function openMenu() {
@@ -5289,6 +5358,11 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     document.addEventListener('click', e => {
         const b = e.target.closest && e.target.closest('#splash [data-act]'); if (!b) return;
         click();
+        if ((b.dataset.act === 'play' || b.dataset.act === 'new') && playLocked()) {   // bloqueado até concluir o tutorial
+            const l = $('sp-lock'); if (l) { l.classList.remove('shake'); void l.offsetWidth; l.classList.add('shake'); }
+            try { SFX.ui_error(); } catch (x) {}
+            return;
+        }
         switch (b.dataset.act) {
             case 'play': play(); break;
             case 'new': (nxStarted || LS.get(SAVE_KEY, null))
@@ -5683,7 +5757,10 @@ Object.values(SP).forEach(f => { new Image().src = DIR + f + '.png'; });
 
 const STEPS = [
   { lines: [["normal", "Finalmente acordou? Achei que ia precisar te carregar."],
-            ["apontando", "Esta é a sua base: ela tem *20 de Vida*. Se os inimigos chegarem ao fim do caminho, você toma dano.", ".hud-row:has(#hp)"],
+            ["apontando", "Esta é a sua base: ela tem *20 de Vida*. Se um inimigo chegar ao fim do caminho, você perde vida: *1* por inimigo comum e *3* por Boss.", ".hud-row:has(#hp)"],
+            ["apontando", "Aqui fica o seu *ouro*. Você ganha ouro matando inimigos e gasta com torres, cartas, consertos e expansões do mapa.", ".hud-row:has(#gold)"],
+            ["apontando", "*Expansões* mostra quantos cadeados você pode abrir (1 a cada 5 ondas). *Vendas* são as fichas da Pílula de Venda: você começa com 1 e ganha mais *1 a cada 10 ondas*.", ".hud-row:has(#expansions),.hud-row:has(#sells)"],
+            ["apontando", "Esta é a *onda* atual. A cada *5 ondas* aparece um *Boss*: grandalhão, lento e com muita vida. E a cada *15 ondas* surge também o *Boss Demolidor*, que destrói torres. O jogo também ajusta a *dificuldade* ao seu desempenho.", ".hud-section:has(#wave)"],
             ["pensando", "Dica: se o *Auto-Wave* e o *Pular Loja* estiverem ativos e você levar dano, eu desligo os dois por segurança. De nada.", "#btn-auto-wave,#btn-skip-shop"]] },
   { lines: [["apontando", "Use *W A S D* para mover a câmera. Não é tão complicado... eu acho.", "#controls-hint"],
             ["normal", "O *scroll do mouse* dá zoom, e dá pra arrastar a tela segurando o *botão direito*.", "#controls-hint"]],
@@ -5691,29 +5768,41 @@ const STEPS = [
     base: () => [camX, camY, zoomTarget],
     wait: b => Math.abs(camX - b[0]) + Math.abs(camY - b[1]) > 25 || Math.abs(zoomTarget - b[2]) > 0.05,
     ok: [["feliz", "Boa! Até que você aprende rápido."]] },
-  { lines: [["apontando", "Escolha uma torre no *menu lateral* e clique num espaço vazio (*losango livre*) do mapa para construir.", ".hud-section:has(#tower-list)"],
-            ["pensando", "Ah, e os *cadeados* no fim do caminho expandem o mapa, mas gastam ouro. Guarde essa ideia."]],
+  { lines: [["apontando", "Escolha uma torre no *menu lateral* e clique num espaço vazio (*losango livre*) do mapa para construir. Só dá pra construir *fora de combate*.", ".hud-section:has(#tower-list)"],
+            ["pensando", "São 3 torres: *Metralhadora* (25g, rápida e de curto alcance), *Canhão de Elite* (45g, longo alcance e dano alto, mas lento) e *Bobina Tesla* (40g, alcance médio e dano elétrico).", "#tower-list"],
+            ["pensando", "Ah, e os *cadeados* no fim do caminho expandem o mapa por *100 de ouro*. Você libera *1 expansão a cada 5 ondas*. Guarde essa ideia."]],
     hint: "Escolha uma torre e clique num espaço vazio do mapa", hl: '#tower-list',
     base: () => statTowersBuilt, wait: b => statTowersBuilt > b,
     ok: [["debochado", "Muito bem. Agora tente não estragar tudo."]] },
-  { lines: [["preparado", "Hora do show. Clique em *INICIAR ONDA* e segure a base.", "#btn-start-wave"]],
+  { lines: [["pensando", "Aviso: a partir da onda 3 surgem os *Sabotadores* (roxos). Eles saem do caminho pra atacar a *durabilidade* das suas torres. Os *Monges* (carta) protegem a torre deles."],
+            ["irritado", "E a cada *15 ondas* chega o *Boss Demolidor* (vermelho): ele também sai do caminho pra bater nas torres, mas cada golpe tira *33 de durabilidade de uma vez*. Mate-o rápido ou proteja suas torres!"],
+            ["preparado", "Hora do show. Clique em *INICIAR ONDA* e segure a base.", "#btn-start-wave"]],
     hint: "Clique em INICIAR ONDA", hl: '#btn-start-wave', wait: () => waveActive },
   { lines: [],
     hint: "Defenda a base até o fim da onda!", base: () => hp, wait: () => isShopOpen,
     watch: b => hp < b, say: [["irritado", "Opa, calma aí! Você está tentando perder de propósito?"]],
     ok: [["vitoria", "Conseguiu! Vou fingir que não estava preocupado."]] },
-  { lines: [["apontando", "No fim de cada onda a *loja* abre. Compre cartas com ouro.", "#shop-content"],
+  { lines: [["apontando", "No fim de cada onda a *loja* abre. Cada carta custa *20 de ouro* (a Pílula de Venda sai por 10).", "#shop-content"],
+            ["pensando", "Há 4 raridades: *comum*, *rara*, *épica* e *lendária*. Toda carta traz um *bônus* e quase sempre um *custo* (debuff). Leia antes de comprar."],
+            ["apontando", "Não gostou das opções? *Sortear Novas* custa *15g* e sobe *+10g* a cada uso. O preço volta ao normal na próxima loja.", "#reroll-btn"],
             ["apontando", "As cartas compradas vão para a sua *mão*, lá embaixo.", "#hand-container"],
-            ["pensando", "Cada torre aguenta até *3 efeitos*. Escolha bem."]],
+            ["pensando", "Algumas cartas são especiais: *Pílula de Venda* (vende uma torre e devolve ouro, gasta 1 ficha), *Maçã Dourada* (+5 de vida), cartas de *economia* (descontos e mais chance de raridade) e *Monges* (não ocupam vaga de efeito da torre)."],
+            ["pensando", "Cartas *Angelicais* e *Demoníacas* mudam o seu alinhamento: quanto mais você compra de um lado, mais cartas dele aparecem. As *exclusivas* só surgem com afinidade alta."],
+            ["pensando", "Cada torre aguenta até *3 efeitos* (cartas). Cartas que *regeneram durabilidade* e as cartas de *Monges* não contam nesse limite. Cartas *épicas*, *lendárias* e as que dão um efeito especial não repetem na mesma torre."]],
     hint: "Compre uma carta e clique em PRÓXIMA ONDA", hl: '#all-cards,#close-shop-btn', wait: () => !isShopOpen },
   { skip: () => playerHand.length === 0,
-    lines: [["vem", "Agora *arraste a carta* da mão e solte em cima de uma torre para aplicar o upgrade.", "#hand-container"]],
+    lines: [["vem", "Agora *arraste a carta* da mão e solte em cima de uma torre para aplicar o upgrade. Passe a carta sobre a torre pra ver uma prévia dos status.", "#hand-container"]],
     hint: "Arraste uma carta da mão até uma torre", hl: '#hand-container',
     base: () => statCardsUsed, wait: b => statCardsUsed > b,
     ok: [["surpreso", "Olha só! Torre com carta é torre feliz."]] },
+  { lines: [["apontando", "Preste atenção na *durabilidade*: toda torre se desgasta a *cada tiro*, e quanto mais efeitos ela tem, mais rápido desgasta. Passe o mouse na torre pra ver os números."],
+            ["irritado", "Quando chega a *0*, a torre *quebra*: para de atirar e perde os efeitos visuais. Os Sabotadores e o Boss Demolidor (33 de dano por golpe) aceleram isso."],
+            ["apontando", "Entre as ondas, *clique na torre quebrada* pra consertar. Custa o *preço da torre + 10g*, e *cada conserto encarece o próximo em +10g*."],
+            ["bravo", "Cada torre tem no máximo *3 consertos* por partida. Se quebrar de novo depois do 3º, ela é *destruída* e some do mapa. Cartas de durabilidade ajudam a evitar isso."]] },
   { lines: [["pensando", "Últimos atalhos: *ESC* abre o menu e pausa o jogo, e *P* liga ou desliga o filtro pixel."],
             ["debochado", "O *AUTO-WAVE* inicia as ondas sozinho e o *PULAR LOJA* ignora a loja. O jogo também *salva sozinho* entre as ondas.", "#btn-auto-wave,#btn-skip-shop"],
-            ["vitoria", "Pronto, o treino acabou. Vou preparar uma partida nova pra você... Boa sorte, e tente não morrer."]] }
+            ["apontando", "Com o *AUTO-WAVE* e o *PULAR LOJA* ligados, aparece o botão *VELOCIDADE*: ele alterna entre *1x* e *2x* e acelera o jogo todo. Se você desligar o Pular Loja, a velocidade volta pra 1x.", "#btn-auto-wave,#btn-skip-shop,#btn-speed"],
+            ["vitoria", "Pronto, o treino acabou. Vou te levar de volta ao menu: o *JOGAR* já está liberado. Boa sorte, e tente não morrer."]] }
 ];
 
 const root = $('nx-dlg'), box = $('nx-box'), txt = $('nx-txt'), kn = $('nx-kn'), task = $('nx-task'), dim = $('nx-dim');
@@ -5721,10 +5810,24 @@ let spotSel = null, spotRaf = 0;
 function paintSpot() {                                         // recorta "buracos" no escurecimento sobre os elementos citados
     spotRaf = 0; if (!spotSel) return;
     const W = innerWidth, H = innerHeight, P = 14, R = 16; let d = `M0 0H${W}V${H}H0Z`, n = 0;
+    const rects = [];
     document.querySelectorAll(spotSel).forEach(el => {
         const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return;
         const x = Math.max(0, r.left - P), y = Math.max(0, r.top - P), w = Math.min(W, r.right + P) - x, h = Math.min(H, r.bottom + P) - y;
-        if (w <= 0 || h <= 0) return; n++;
+        if (w > 0 && h > 0) rects.push({ x, y, x2: x + w, y2: y + h });
+    });
+    for (let ch = true; ch;) {   // une buracos que se sobrepõem (senão a área comum volta a ficar escura)
+        ch = false;
+        for (let i = 0; i < rects.length && !ch; i++) for (let j = i + 1; j < rects.length && !ch; j++) {
+            const a = rects[i], b = rects[j];
+            if (a.x < b.x2 && b.x < a.x2 && a.y < b.y2 && b.y < a.y2) {
+                a.x = Math.min(a.x, b.x); a.y = Math.min(a.y, b.y); a.x2 = Math.max(a.x2, b.x2); a.y2 = Math.max(a.y2, b.y2);
+                rects.splice(j, 1); ch = true;
+            }
+        }
+    }
+    rects.forEach(q => {
+        const x = q.x, y = q.y, w = q.x2 - q.x, h = q.y2 - q.y; n++;
         d += `M${x + R} ${y}Q${x} ${y} ${x} ${y + R}V${y + h - R}Q${x} ${y + h} ${x + R} ${y + h}H${x + w - R}Q${x + w} ${y + h} ${x + w} ${y + h - R}V${y + R}Q${x + w} ${y} ${x + w - R} ${y}Z`;   // sentido anti-horário = buraco
     });
     if (n) { dim.style.clipPath = `path('${d}')`; dim.classList.add('on', 'block'); } else { dim.classList.remove('on', 'block'); }
@@ -5793,7 +5896,7 @@ function end() {
     if (S.typing && S.fin) S.fin();
     if (S.res) { const r = S.res; S.res = null; r(); }
     hl(); spot(null); S.mode = null; root.classList.remove('talk', 'review'); task.classList.remove('on');
-    S.review = false; isTutorialActive = false; mark();
+    S.review = false; isTutorialActive = false;
 }
 /* fim do tutorial guiado: a partida de treino é descartada (sem save, sem estatísticas) e começa uma partida nova */
 function resetRun(finished) {
@@ -5809,14 +5912,14 @@ function restartForTutorial() {                                  // descarta a p
     if (S.resetting) return; S.resetting = true;
     S.tok++; clearInterval(S.timer); hl(); spot(null);
     root.classList.remove('talk', 'review'); task.classList.remove('on'); S.mode = null; isTutorialActive = false; window.NXTUTRUN = true;
-    try { localStorage.removeItem('nexus_save_v1'); localStorage.removeItem('nexus_tutorial_done'); } catch (e) {}
+    try { localStorage.removeItem('nexus_save_v1'); sessionStorage.setItem('nexus_tut_force', '1'); } catch (e) {}
     dim.style.background = '#000'; dim.style.clipPath = 'none'; dim.classList.add('on');
     setTimeout(() => { try { sessionStorage.setItem('nexus_autostart', '1'); } catch (e) {} location.reload(); }, 450);
 }
-const skipTut = () => { if (S.guided && !S.review) resetRun(true); else end(); };
+const skipTut = () => { if (S.guided && !S.review) resetRun(false); else end(); };   // sair NÃO libera o Play: só concluir o tutorial
 
 async function guided() {
-    const tok = ++S.tok; S.review = false; S.guided = true; window.NXTUTRUN = true; root.classList.remove('review'); $('nx-skip').textContent = 'Pular';
+    const tok = ++S.tok; S.review = false; S.guided = true; window.NXTUTRUN = true; root.classList.remove('review'); $('nx-skip').textContent = 'Sair';
     for (const st of STEPS) {
         if (tok !== S.tok) return;
         if (st.skip && st.skip()) continue;
@@ -5858,7 +5961,8 @@ setInterval(() => {
     if (S.tried || menuActive || !nxStarted) return;
     S.tried = true;
     if (window.MP && window.MP.active) return;
-    if (done()) return;
+    let _force = false; try { _force = sessionStorage.getItem('nexus_tut_force') === '1'; sessionStorage.removeItem('nexus_tut_force'); } catch (e) {}
+    if (done() && !_force) return;
     if (wave === 1 && towers.length === 0 && !waveActive && !gameOver) guided(); else mark();    // save em andamento: não repete
 }, 200);
 
