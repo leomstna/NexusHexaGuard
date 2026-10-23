@@ -47,86 +47,49 @@
             width: 8px; height: 100px; padding: 0 5px; outline: none; background: transparent;
             cursor: pointer;
         }
-        /* ── TUTORIAL STEPPER (REMASTERIZADO) ── */
-        #tutorial-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 10, 0.95);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 100000; transition: opacity 0.5s ease;
-        }
-        .tutorial-container {
-            position: relative;
-            background: linear-gradient(180deg, #18181b, #0f1115); 
-            border: 1px solid #27272a; border-top: 1px solid #3f3f46;
-            border-radius: 16px; width: 100%; max-width: 550px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.02);
-            display: flex; flex-direction: column;
-            animation: tutEnter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes tutEnter {
-            from { transform: scale(0.9) translateY(20px); opacity: 0; }
-            to { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        
-        /* BOTÃO DE PULAR TÁTICO */
-        .tut-btn-skip {
-            position: absolute; top: 16px; right: 16px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05);
-            color: #a1a1aa; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;
-            padding: 6px 12px; border-radius: 6px;
-            cursor: pointer; transition: all 0.2s; z-index: 10;
-        }
-        .tut-btn-skip:hover {
-            background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4);
-            color: #fca5a5; transform: translateY(-1px);
-        }
+        /* ── CAVALEIRO LARANJA: DIÁLOGOS DO TUTORIAL ── */
+        #nx-dlg { position: fixed; left: 310px; right: 130px; bottom: 14px; z-index: 99999; display: flex; align-items: flex-end;
+            pointer-events: none; visibility: hidden; opacity: 0; transform: translateY(44px);
+            transition: opacity .35s, transform .4s cubic-bezier(.2,.9,.3,1.15), visibility 0s .4s; }
+        #nx-dlg.talk { visibility: visible; opacity: 1; transform: none; pointer-events: auto; transition-delay: 0s; }
+        #nx-dlg.review { z-index: 100002; left: 0; right: 0; margin: 0 auto; width: min(860px, 94vw); }
+        #nx-dlg.hold, #nx-task.hold { opacity: 0 !important; pointer-events: none !important; }
+        #nx-kn { width: 190px; height: 177px; flex: none; margin-right: -12px; position: relative; z-index: 2; pointer-events: none;
+            filter: drop-shadow(0 6px 10px rgba(0,0,0,.7)); transform-origin: 50% 100%; }
+        #nx-kn.kpop { animation: kpop .3s ease-out; }
+        @keyframes kpop { 0% { transform: scale(.9) translateY(6px); } 60% { transform: scale(1.04); } 100% { transform: none; } }
+        #nx-box { flex: 1; position: relative; cursor: pointer; background: var(--panel-bg); border: 1px solid rgba(251,146,60,.35);
+            border-top: 2px solid #fb923c; border-radius: 14px; padding: 24px 28px 20px; min-height: 100px; box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,.8); }
+        #nx-name { position: absolute; top: -14px; left: 22px; font: 10px 'Press Start 2P', monospace; letter-spacing: 1px;
+            background: #c2410c; color: #ffedd5; padding: 7px 12px; border-radius: 6px; box-shadow: 0 3px 0 #7c2d12; }
+        #nx-txt { font-size: 17px; line-height: 1.55; color: #f4f4f5; min-height: 3.1em; padding-right: 14px; }
+        #nx-txt b { color: #fde047; }
+        #nx-caret { position: absolute; right: 18px; bottom: 9px; color: #fb923c; font-size: 13px; opacity: 0; }
+        #nx-box.done #nx-caret { opacity: 1; animation: kblink 1s ease-in-out infinite; }
+        @keyframes kblink { 0%,100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(4px); opacity: .35; } }
+        #nx-skip, #nx-skip2 { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: #a1a1aa; cursor: pointer;
+            font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; padding: 5px 10px; border-radius: 6px; }
+        #nx-skip { position: absolute; top: 8px; right: 12px; }
+        #nx-skip:hover, #nx-skip2:hover { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.4); color: #fca5a5; }
+        #nx-task { position: fixed; top: 14px; left: 50%; z-index: 99999; display: flex; align-items: center; gap: 12px; max-width: min(520px, 92vw);
+            background: var(--panel-bg); border: 1px solid rgba(251,146,60,.5); border-radius: 14px; padding: 6px 12px 6px 8px; pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,.7); opacity: 0; transform: translate(-50%, -90px); transition: opacity .3s, transform .4s cubic-bezier(.2,.9,.3,1.15); }
+        #nx-task.on { opacity: 1; transform: translate(-50%, 0); }
+        #nx-task img { width: 52px; height: 48px; flex: none; }
+        #nx-hint { font-size: 14px; line-height: 1.35; color: #f4f4f5; }
+        #nx-skip2 { pointer-events: auto; flex: none; }
+        /* escurece tudo, menos o que o Cavaleiro está explicando (buracos via clip-path) */
+        #nx-dim { position: fixed; inset: 0; z-index: 99980; background: rgba(4,5,10,.82); opacity: 0; visibility: hidden;
+            pointer-events: none; transition: opacity .3s, visibility 0s .3s; }
+        #nx-dim.on { opacity: 1; visibility: visible; transition-delay: 0s; }
+        #nx-dim.block { pointer-events: auto; }
+        #nx-dim.hold { opacity: 0 !important; pointer-events: none !important; }
+        .nx-hl { animation: nxhl 1.1s ease-in-out infinite; border-radius: 10px; outline: 3px solid #fb923c; outline-offset: 9px; }
+        @keyframes nxhl { 0%,100% { outline-color: #fb923c; box-shadow: 0 0 8px rgba(251,146,60,.5); } 50% { outline-color: #fde047; box-shadow: 0 0 22px rgba(253,224,71,.7); } }
+        @media (max-width: 900px) { #nx-dlg { left: 8px; right: 8px; bottom: 8px; } #nx-kn { width: 124px; height: 116px; margin-right: -10px; } #nx-txt { font-size: 15px; } #nx-box { padding: 22px 18px 18px; } }
+        @media (max-width: 520px) { #nx-kn { width: 86px; height: 80px; } #nx-name { font-size: 8px; } #nx-hint { font-size: 12px; } #nx-task img { width: 40px; height: 37px; } }
 
-        .tut-header {
-            display: flex; align-items: center; justify-content: center;
-            padding: 40px 50px 20px;
-        }
-        .tut-step-indicator {
-            width: 32px; height: 32px; border-radius: 8px;
-            background: #18181b; border: 1px solid #3f3f46; color: #71717a;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 14px; transition: all 0.3s;
-        }
-        .tut-step-indicator.active {
-            background: rgba(234, 179, 8, 0.15); border-color: #eab308; color: #fde047;
-            box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
-            transform: scale(1.15);
-        }
-        .tut-step-indicator.completed {
-            background: #22c55e; border-color: #16a34a; color: #fff;
-        }
-        .tut-line {
-            height: 2px; flex-grow: 1; background: #27272a; margin: 0 10px;
-            transition: background 0.3s;
-        }
-        .tut-line.completed { background: #22c55e; }
-        
-        .tut-content-wrapper { position: relative; height: 260px; overflow: hidden; }
-        .tut-step {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            padding: 0 50px; box-sizing: border-box; text-align: center;
-            opacity: 0; transform: translateX(30px); pointer-events: none;
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        .tut-step.active { opacity: 1; transform: translateX(0); pointer-events: all; }
-        .tut-step.exit-left { transform: translateX(-30px); opacity: 0; }
-        .tut-step h2 { color: #f4f4f5; margin-bottom: 10px; font-size: 22px; }
-        .tut-step p { color: #a1a1aa; line-height: 1.6; font-size: 15px; }
-
-        .tut-footer { display: flex; justify-content: space-between; padding: 20px 50px 30px; }
-        .tut-btn {
-            padding: 12px 24px; border-radius: 8px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;
-            cursor: pointer; border: none; transition: all 0.2s;
-        }
-        .tut-btn.secondary { background: transparent; color: #71717a; border: 1px solid #3f3f46; }
-        .tut-btn.secondary:hover { color: #f4f4f5; background: rgba(255,255,255,0.05); border-color: #52525b; }
-        .tut-btn.primary { background: #eab308; color: #000; box-shadow: 0 4px 10px rgba(234, 179, 8, 0.3); }
-        .tut-btn.primary:hover { background: #fde047; box-shadow: 0 6px 15px rgba(234, 179, 8, 0.5); transform: translateY(-2px); }
-        
         :root {
             --common: #a0a0a0;
             --rare: #0070dd;
@@ -616,77 +579,17 @@
 <body>
     <div style="font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; visibility: hidden; pointer-events: none;">\uf05b\uf135\uf0e7</div>
 
-    <div id="tutorial-overlay">
-        <div class="tutorial-container">
-            
-            <button class="tut-btn-skip" onclick="skipTutorial()" data-tooltip="Já vi isso antes">Pular</button>
-            
-            <div class="tut-header">
-                <div class="tut-step-indicator active" id="dot-0">1</div>
-                <div class="tut-line"></div>
-                <div class="tut-step-indicator" id="dot-1">2</div>
-                <div class="tut-line"></div>
-                <div class="tut-step-indicator" id="dot-2">3</div>
-                <div class="tut-line"></div>
-                <div class="tut-step-indicator" id="dot-3">4</div>
-                <div class="tut-line"></div>
-                <div class="tut-step-indicator" id="dot-4">5</div>
-            </div>
-
-            <div class="tut-content-wrapper">
-                <div class="tut-step active" id="tut-step-0">
-                    <h2>Bem-vindo ao Nexus Hexa Guard</h2>
-                    <div style="font-size: 50px; color: #eab308; margin: 15px 0;">🏰</div>
-                    <p>Sua base possui <strong>20 de Vida</strong>. Se os inimigos chegarem ao fim do caminho, você toma dano.<br><br><span style="color:#ef4444; font-size:13px; font-weight:bold;">⚠ Dica: Se o "Auto-Wave" e "Pular Loja" estiverem ativos e você tomar dano, eles serão desativados por segurança!</span></p>
-                </div>
-
-                <div class="tut-step" id="tut-step-1">
-                    <h2>Controles de Câmera</h2>
-                    <div style="font-size: 40px; color: #38bdf8; margin: 15px 0;">
-                        <i class="fa-solid fa-arrows-up-down-left-right"></i>
-                    </div>
-                    <ul style="text-align: left; background: #18181b; padding: 15px 30px; border-radius: 10px; border: 1px solid #27272a; display: inline-block;">
-                        <li style="margin-bottom: 8px;">Mova a câmera com <strong>[W] [A] [S] [D]</strong>.</li>
-                        <li style="margin-bottom: 8px;">Aproxime ou afaste usando o <strong>[Scroll do Mouse]</strong>.</li>
-                        <li>Arraste a tela segurando o <strong>[Botão Direito]</strong>.</li>
-                    </ul>
-                </div>
-
-                <div class="tut-step" id="tut-step-2">
-                    <h2>Construção Tática</h2>
-                    <div style="font-size: 40px; color: #22c55e; margin: 15px 0;">
-                        <i class="fa-solid fa-hammer"></i>
-                    </div>
-                    <p>Selecione uma torre no menu lateral e <strong>clique em um espaço vazio (roxo escuro)</strong> no mapa para construir.<br><br>Você também pode gastar ouro nos <strong>Cadeados</strong> (<i class="fa-solid fa-lock" style="color: #a1a1aa;"></i>) no fim do caminho para expandir o mapa!</p>
-                </div>
-
-                <div class="tut-step" id="tut-step-3">
-                    <h2>Cartas e Evolução</h2>
-                    <div style="font-size: 40px; color: #a335ee; margin: 15px 0;">
-                        <i class="fa-solid fa-cards"></i> 🃏
-                    </div>
-                    <p>No fim de cada onda, a loja abre. Compre cartas com ouro e elas irão para a sua mão (na parte inferior da tela).<br><br><strong>Arraste as cartas da mão e solte em cima das torres</strong> para aplicar os upgrades. Cada torre suporta até 3 efeitos.</p>
-                </div>
-
-                <div class="tut-step" id="tut-step-4">
-                    <h2>Atalhos &amp; Dicas</h2>
-                    <div style="font-size: 36px; color: #fb923c; margin: 10px 0;"><i class="fa-solid fa-keyboard"></i></div>
-                    <ul style="list-style:none; text-align:left; background:#18181b; padding:12px 22px; border-radius:10px; border:1px solid #27272a; display:inline-block; font-size:13px; line-height:1.9; margin:0;">
-                        <li><strong style="color:#fde047">[ESC]</strong> abre o menu e pausa o jogo.</li>
-                        <li><strong style="color:#fde047">[P]</strong> troca o filtro pixel (ON / OFF).</li>
-                        <li><strong style="color:#fb923c">AUTO-WAVE</strong> inicia as ondas sozinho.</li>
-                        <li><strong style="color:#fb923c">PULAR LOJA</strong> ignora a loja no auto-wave.</li>
-                        <li>O jogo <strong>salva sozinho</strong> entre as ondas.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="tut-footer">
-                <button id="tut-btn-prev" class="tut-btn secondary" onclick="changeTutStep(-1)" style="visibility: hidden;">Voltar</button>
-                <button id="tut-btn-next" class="tut-btn primary" onclick="changeTutStep(1)">Próximo</button>
-            </div>
+    <div id="nx-dim"></div>
+    <div id="nx-dlg">
+        <img id="nx-kn" alt="" draggable="false">
+        <div id="nx-box">
+            <div id="nx-name">CAVALEIRO LARANJA</div>
+            <button id="nx-skip" type="button">Pular</button>
+            <div id="nx-txt"></div>
+            <div id="nx-caret">▼</div>
         </div>
     </div>
+    <div id="nx-task"><img id="nx-kn2" alt="" draggable="false"><span id="nx-hint"></span><button id="nx-skip2" type="button">Pular</button></div>
 
     <div id="splash"><div class="sp-embers"></div>
     <div class="sp-logo">NEXUS<br>HEXA GUARD</div>
@@ -1297,7 +1200,7 @@
                     L.moveTo(px - W2, py); L.lineTo(px, py + H2); L.lineTo(px, py + H2 + 10); L.lineTo(px - W2, py + 10); L.closePath();
                     R_.moveTo(px, py + H2); R_.lineTo(px + W2, py); R_.lineTo(px + W2, py + 10); R_.lineTo(px, py + H2 + 10); R_.closePath();
                     // tom da tile = ruído por tile + ruído em blocos 2x2 (forma manchas claras/escuras como na referência)
-                    const shade = Math.min(NT - 1, Math.floor((_tileRand(x, y, 1) * 0.55 + _tileRand(x >> 1, y >> 1, 2) * 0.45) * NT));
+                    const shade = Math.min(NT - 2, Math.floor(_tileRand(x, y, 1) * (NT - 1)));   // variação suave por tile, sem manchas claras em bloco
                     const T = type ? G.t1 : G.top[shade];
                     T.moveTo(px, py - H2); T.lineTo(px + W2, py); T.lineTo(px, py + H2); T.lineTo(px - W2, py); T.closePath();
                     G.stroke.moveTo(px, py - H2); G.stroke.lineTo(px + W2, py); G.stroke.lineTo(px, py + H2); G.stroke.lineTo(px - W2, py); G.stroke.closePath();
@@ -1415,7 +1318,7 @@
         let statCrits = 0;
         let statRerolls = 0; let gameOverAlpha = 0; let isShopOpen = false; let waveActive = false;
         let rerollCost = 15;
-        let isTutorialActive = true; 
+        let isTutorialActive = false; 
         let menuActive = true; let nxStarted = false;
         const NXO = (function () { let o = {}; try { o = JSON.parse(localStorage.getItem('nexus_opts') || '{}') || {}; } catch (e) {}
             return Object.assign({ music: 0.3, sfx: 1, px: 2, shake: true, dmg: true, flash: true, parts: 2 }, o); })();
@@ -4191,65 +4094,6 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             if(skipShop) btn.classList.add('on'); else btn.classList.remove('on');
         }
 
-        let currentTutStep = 0;
-        const totalTutSteps = 5;
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if(localStorage.getItem('nexus_tutorial_done') === 'true') {
-                isTutorialActive = false;
-                document.getElementById('tutorial-overlay').style.display = 'none';
-            }
-        });
-
-        function changeTutStep(dir) {
-            SFX.ui_click();
-            let oldStep = currentTutStep;
-            currentTutStep += dir;
-
-            if (currentTutStep >= totalTutSteps) { hideTutorial(); return; }
-
-            document.getElementById(`tut-step-${oldStep}`).classList.remove('active');
-            if (dir > 0) { document.getElementById(`tut-step-${oldStep}`).classList.add('exit-left'); }
-            
-            let newStepEl = document.getElementById(`tut-step-${currentTutStep}`);
-            newStepEl.classList.remove('exit-left');
-            newStepEl.classList.add('active');
-
-            for (let i = 0; i < totalTutSteps; i++) {
-                let dot = document.getElementById(`dot-${i}`);
-                if (i < currentTutStep) {
-                    dot.className = 'tut-step-indicator completed';
-                    dot.innerHTML = '<i class="fa-solid fa-check"></i>';
-                } else if (i === currentTutStep) {
-                    dot.className = 'tut-step-indicator active';
-                    dot.innerHTML = i + 1;
-                } else {
-                    dot.className = 'tut-step-indicator';
-                    dot.innerHTML = i + 1;
-                }
-                if (i < totalTutSteps - 1) {
-                    let line = dot.nextElementSibling;
-                    if (i < currentTutStep) line.classList.add('completed');
-                    else line.classList.remove('completed');
-                }
-            }
-
-            let btnPrev = document.getElementById('tut-btn-prev');
-            let btnNext = document.getElementById('tut-btn-next');
-            btnPrev.style.visibility = currentTutStep === 0 ? 'hidden' : 'visible';
-            btnNext.innerText = currentTutStep === totalTutSteps - 1 ? (window.__tutFromMenu ? 'Entendi' : 'Jogar Agora') : 'Próximo';
-            if(currentTutStep === totalTutSteps - 1) {
-                btnNext.style.background = '#16a34a'; btnNext.style.color = '#fff'; btnNext.style.boxShadow = '0 5px 15px rgba(22, 163, 74, 0.4)';
-            } else {
-                btnNext.style.background = '#eab308'; btnNext.style.color = '#000'; btnNext.style.boxShadow = '0 4px 10px rgba(234, 179, 8, 0.3)';
-            }
-        }
-
-        function skipTutorial() {
-            SFX.ui_click();
-            hideTutorial();
-        }
-
         function initMenu() {
             try {
                 const list = document.getElementById('tower-list'); 
@@ -4411,7 +4255,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 
         window.addEventListener('mousedown', e => {
             if(menuActive || isTutorialActive || gameOver) { return; }
-            if(e.target && e.target.closest && e.target.closest('#splash,.nx-modal,#tutorial-overlay,#giveup-overlay,#gameover-overlay,#lootbox-modal,#shop-overlay,#hand-container,#audio-controls-wrapper,#cheat-panel,#cat-modal')) return;
+            if(e.target && e.target.closest && e.target.closest('#splash,.nx-modal,#nx-dlg,#nx-task,#giveup-overlay,#gameover-overlay,#lootbox-modal,#shop-overlay,#hand-container,#audio-controls-wrapper,#cheat-panel,#cat-modal')) return;
             if(e.button !== 0) return; 
             if(isShopOpen || dragElement || e.clientX < 300) return;
             if(document.getElementById('giveup-overlay') && document.getElementById('giveup-overlay').style.display === 'flex') return;
@@ -5292,7 +5136,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     const life = () => Object.assign({}, LIFE0, LS.get(LIFE_KEY, {}));
     let sessAcc = 0;
     function flushTime() { if (!sessAcc) return; const l = life(); l.time += sessAcc; sessAcc = 0; LS.set(LIFE_KEY, l); }
-    setInterval(() => { if (nxStarted && !menuActive && !gameOver && !document.hidden) { sessAcc++; if (sessAcc >= 15) flushTime(); } }, 1000);
+    setInterval(() => { if (nxStarted && !menuActive && !gameOver && !document.hidden && !window.NXTUTRUN) { sessAcc++; if (sessAcc >= 15) flushTime(); } }, 1000);
 
     function commitRun() {
         const l = life();
@@ -5364,31 +5208,6 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             <div class="nx-sec">OBRIGADO POR JOGAR</div><p style="color:#fb923c">Boa sorte defendendo a base!</p></div>`, 'credits');
     }
 
-    /* ─────────────── TUTORIAL = "COMO JOGAR" ─────────────── */
-    function resetTut() {
-        currentTutStep = 0;
-        document.querySelectorAll('.tut-step').forEach((el, i) => { el.classList.remove('exit-left'); el.classList.toggle('active', i === 0); });
-        for (let i = 0; i < totalTutSteps; i++) {
-            const d = $('dot-' + i); if (!d) continue;
-            d.className = 'tut-step-indicator' + (i === 0 ? ' active' : ''); d.innerHTML = i + 1;
-            if (d.nextElementSibling && d.nextElementSibling.classList.contains('tut-line')) d.nextElementSibling.classList.remove('completed');
-        }
-        $('tut-btn-prev').style.visibility = 'hidden';
-        const n = $('tut-btn-next'); n.innerText = 'Próximo'; n.style.background = '#eab308'; n.style.color = '#000'; n.style.boxShadow = '0 4px 10px rgba(234,179,8,.3)';
-    }
-    window.showTutorial = function (fromMenu) {
-        const o = $('tutorial-overlay'); if (!o) return;
-        window.__tutFromMenu = !!fromMenu; resetTut();
-        o.style.display = 'flex'; o.style.zIndex = fromMenu ? '100002' : ''; void o.offsetWidth; o.style.opacity = '1';
-        if (!fromMenu) isTutorialActive = true;
-    };
-    window.hideTutorial = function () {
-        isTutorialActive = false; LS.set('nexus_tutorial_done', true);
-        const o = $('tutorial-overlay'); if (!o) return;
-        o.style.opacity = '0';
-        setTimeout(() => { o.style.display = 'none'; o.style.zIndex = ''; window.__tutFromMenu = false; }, 400);
-    };
-
     /* ─────────────── SALVAR / CARREGAR ─────────────── */
     const T_SKIP = new Set(['effects', 'flags', 'cooldown', 'angle', 'scale', 'scaleV']);
     function serTower(t) {
@@ -5402,6 +5221,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     }
     function saveGame() {
         if (window.MP && window.MP.active) return false;
+        if (window.NXTUTRUN) return false;   // partida do tutorial nunca é salva
         if (!nxStarted || gameOver || waveActive || isShopOpen) return false;
         if (enemies.some(e => !e.dead)) return false;
         if (wave === 1 && towers.length === 0 && playerHand.length === 0) return false;
@@ -5474,7 +5294,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             case 'new': (nxStarted || LS.get(SAVE_KEY, null))
                 ? confirmBox('NOVO JOGO?', 'O progresso atual (e o jogo salvo) será perdido.', 'COMEÇAR DE NOVO', newGame) : newGame(); break;
             case 'stats': showStats(); break;
-            case 'how': showTutorial(true); break;
+            case 'how': play(); showTutorial(true); break;   // fecha o menu, vai pro mapa e roda o tutorial lá
             case 'opts': showOpts(); break;
             case 'credits': showCredits(); break;
         }
@@ -5482,8 +5302,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     window.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
         if ($('nx-modal').classList.contains('open')) { closeModal(); return; }
-        const tut = $('tutorial-overlay');
-        if (window.__tutFromMenu && tut && tut.style.display !== 'none') { hideTutorial(); return; }
+        if (window.NXTUT && NXTUT.reviewing) { NXTUT.stop(); return; }
         if (menuActive) { if (nxStarted) closeMenu(); } else openMenu();
     });
 
@@ -5765,6 +5584,7 @@ const MILES = [10, 25, 50, 100, 200]; let milesHit = 0; let _dSig = '', _dT = 0;
 function tick() {
   try {
     const k = statEnemiesKilled, g = statGoldEarned, tn = Date.now();
+    if (window.NXTUTRUN) { lastK = k; lastG = g; return; }   // tutorial não conta p/ missões/conquistas
     if (k < lastK) { lastK = k; combo = 0; milesHit = 0; maxCombo = 0; }
     if (g < lastG) lastG = g;
     if (k > lastK) {
@@ -5845,6 +5665,217 @@ window.addEventListener('keydown', e => {
 });
 })();
 </script>
+    <script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   NEXUS HEXA GUARD — TUTORIAL DO CAVALEIRO LARANJA (substitui o tutorial antigo)
+   • Edite as falas em STEPS. Cada fala é [expressão, "texto com *negrito*"].
+   • wait(base): condição real do jogo para liberar o passo; base() guarda o estado inicial.
+   • Sprites em cavaleiro/ (nomes em SP).  Modo guiado = 1ª partida; modo revisão = "COMO JOGAR".
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+'use strict';
+const $ = id => document.getElementById(id), sleep = ms => new Promise(r => setTimeout(r, ms));
+const DIR = 'cavaleiro/';
+const SP = { normal: '01_normal', lado: '02_olhando_pro_lado', irritado: '03_irritado', feliz: '04_feliz', surpreso: '05_surpreso', confuso: '06_confuso',
+    bravo: '08_bravo', rindo: '11_rindo', pensando: '13_pensando', apontando: '19_apontando', debochado: '21_debochado', preparado: '22_preparado',
+    vem: '25_vem_aqui', shhh: '27_shhh', vitoria: '28_vitoria' };
+Object.values(SP).forEach(f => { new Image().src = DIR + f + '.png'; });
+
+const STEPS = [
+  { lines: [["normal", "Finalmente acordou? Achei que ia precisar te carregar."],
+            ["apontando", "Esta é a sua base: ela tem *20 de Vida*. Se os inimigos chegarem ao fim do caminho, você toma dano.", ".hud-row:has(#hp)"],
+            ["pensando", "Dica: se o *Auto-Wave* e o *Pular Loja* estiverem ativos e você levar dano, eu desligo os dois por segurança. De nada.", "#btn-auto-wave,#btn-skip-shop"]] },
+  { lines: [["apontando", "Use *W A S D* para mover a câmera. Não é tão complicado... eu acho.", "#controls-hint"],
+            ["normal", "O *scroll do mouse* dá zoom, e dá pra arrastar a tela segurando o *botão direito*.", "#controls-hint"]],
+    hint: "Mova a câmera com W A S D (ou use o scroll)",
+    base: () => [camX, camY, zoomTarget],
+    wait: b => Math.abs(camX - b[0]) + Math.abs(camY - b[1]) > 25 || Math.abs(zoomTarget - b[2]) > 0.05,
+    ok: [["feliz", "Boa! Até que você aprende rápido."]] },
+  { lines: [["apontando", "Escolha uma torre no *menu lateral* e clique num espaço vazio (*losango livre*) do mapa para construir.", ".hud-section:has(#tower-list)"],
+            ["pensando", "Ah, e os *cadeados* no fim do caminho expandem o mapa, mas gastam ouro. Guarde essa ideia."]],
+    hint: "Escolha uma torre e clique num espaço vazio do mapa", hl: '#tower-list',
+    base: () => statTowersBuilt, wait: b => statTowersBuilt > b,
+    ok: [["debochado", "Muito bem. Agora tente não estragar tudo."]] },
+  { lines: [["preparado", "Hora do show. Clique em *INICIAR ONDA* e segure a base.", "#btn-start-wave"]],
+    hint: "Clique em INICIAR ONDA", hl: '#btn-start-wave', wait: () => waveActive },
+  { lines: [],
+    hint: "Defenda a base até o fim da onda!", base: () => hp, wait: () => isShopOpen,
+    watch: b => hp < b, say: [["irritado", "Opa, calma aí! Você está tentando perder de propósito?"]],
+    ok: [["vitoria", "Conseguiu! Vou fingir que não estava preocupado."]] },
+  { lines: [["apontando", "No fim de cada onda a *loja* abre. Compre cartas com ouro.", "#shop-content"],
+            ["apontando", "As cartas compradas vão para a sua *mão*, lá embaixo.", "#hand-container"],
+            ["pensando", "Cada torre aguenta até *3 efeitos*. Escolha bem."]],
+    hint: "Compre uma carta e clique em PRÓXIMA ONDA", hl: '#all-cards,#close-shop-btn', wait: () => !isShopOpen },
+  { skip: () => playerHand.length === 0,
+    lines: [["vem", "Agora *arraste a carta* da mão e solte em cima de uma torre para aplicar o upgrade.", "#hand-container"]],
+    hint: "Arraste uma carta da mão até uma torre", hl: '#hand-container',
+    base: () => statCardsUsed, wait: b => statCardsUsed > b,
+    ok: [["surpreso", "Olha só! Torre com carta é torre feliz."]] },
+  { lines: [["pensando", "Últimos atalhos: *ESC* abre o menu e pausa o jogo, e *P* liga ou desliga o filtro pixel."],
+            ["debochado", "O *AUTO-WAVE* inicia as ondas sozinho e o *PULAR LOJA* ignora a loja. O jogo também *salva sozinho* entre as ondas.", "#btn-auto-wave,#btn-skip-shop"],
+            ["vitoria", "Pronto, o treino acabou. Vou preparar uma partida nova pra você... Boa sorte, e tente não morrer."]] }
+];
+
+const root = $('nx-dlg'), box = $('nx-box'), txt = $('nx-txt'), kn = $('nx-kn'), task = $('nx-task'), dim = $('nx-dim');
+let spotSel = null, spotRaf = 0;
+function paintSpot() {                                         // recorta "buracos" no escurecimento sobre os elementos citados
+    spotRaf = 0; if (!spotSel) return;
+    const W = innerWidth, H = innerHeight, P = 14, R = 16; let d = `M0 0H${W}V${H}H0Z`, n = 0;
+    document.querySelectorAll(spotSel).forEach(el => {
+        const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return;
+        const x = Math.max(0, r.left - P), y = Math.max(0, r.top - P), w = Math.min(W, r.right + P) - x, h = Math.min(H, r.bottom + P) - y;
+        if (w <= 0 || h <= 0) return; n++;
+        d += `M${x + R} ${y}Q${x} ${y} ${x} ${y + R}V${y + h - R}Q${x} ${y + h} ${x + R} ${y + h}H${x + w - R}Q${x + w} ${y + h} ${x + w} ${y + h - R}V${y + R}Q${x + w} ${y} ${x + w - R} ${y}Z`;   // sentido anti-horário = buraco
+    });
+    if (n) { dim.style.clipPath = `path('${d}')`; dim.classList.add('on', 'block'); } else { dim.classList.remove('on', 'block'); }
+    spotRaf = requestAnimationFrame(paintSpot);
+}
+function spot(sel) {                                           // sel vazio = sem escurecer
+    spotSel = sel || null;
+    if (!spotSel) { dim.classList.remove('on', 'block'); cancelAnimationFrame(spotRaf); spotRaf = 0; return; }
+    if (!spotRaf) spotRaf = requestAnimationFrame(paintSpot);
+}
+const S = { tok: 0, mode: null, typing: false, res: null, lock: 0, review: false, timer: 0, fin: null, tried: false };
+const done = () => { try { return localStorage.getItem('nexus_tutorial_done') === 'true'; } catch (e) { return true; } };
+const mark = () => { try { localStorage.setItem('nexus_tutorial_done', 'true'); } catch (e) {} };
+kn.onerror = () => { if (!kn.dataset.fb) { kn.dataset.fb = 1; kn.src = DIR + SP.normal + '.png'; } };
+
+function face(k) {
+    const f = DIR + (SP[k] || SP.normal) + '.png';
+    if (kn.getAttribute('src') === f) return;
+    kn.src = f; $('nx-kn2').src = f; kn.classList.remove('kpop'); void kn.offsetWidth; kn.classList.add('kpop');
+}
+function html(s, n) {                       // *negrito*; revela n caracteres visíveis
+    let o = '', b = false, c = 0;
+    for (const ch of s) { if (ch === '*') { b = !b; o += b ? '<b>' : '</b>'; continue; } if (c >= n) break; c++; o += ch === '<' ? '&lt;' : ch === '&' ? '&amp;' : ch; }
+    return o + (b ? '</b>' : '');
+}
+function type(s) {
+    return new Promise(res => {
+        const len = s.replace(/\*/g, '').length; let n = 0;
+        S.typing = true; box.classList.remove('done'); clearInterval(S.timer);
+        const fin = () => { clearInterval(S.timer); S.typing = false; S.fin = null; txt.innerHTML = html(s, len); box.classList.add('done'); res(); };
+        S.fin = fin; txt.innerHTML = '';
+        S.timer = setInterval(() => { n++; txt.innerHTML = html(s, n); if (n >= len) fin(); }, 26);
+    });
+}
+function show(m) {
+    S.mode = m; root.classList.toggle('talk', m === 'talk'); task.classList.toggle('on', m === 'task');
+    isTutorialActive = (m === 'talk');                           // fala = trava a entrada do jogo; tarefa = libera
+    if (m === 'talk') { const a = document.activeElement; if (a && a.blur) a.blur(); }
+}
+function hl(sel) {
+    document.querySelectorAll('.nx-hl').forEach(e => e.classList.remove('nx-hl'));
+    if (sel) document.querySelectorAll(sel).forEach(e => e.classList.add('nx-hl'));
+}
+const modalOpen = () => document.querySelector('#team-modal.open,#nx-modal.open') || ($('gameover-overlay') && $('gameover-overlay').style.display === 'flex');
+
+async function talk(lines, tok) {
+    if (!lines || !lines.length) return tok === S.tok;
+    while (tok === S.tok && modalOpen()) await sleep(200);      // não fala por cima do seletor de time / modais
+    for (const [e, t, sel] of lines) {
+        if (tok !== S.tok) return false;
+        show('talk'); spot(sel); face(e); await type(t);
+        if (tok !== S.tok) return false;
+        await new Promise(r => { S.res = r; });
+    }
+    if (tok === S.tok) spot(null);
+    return tok === S.tok;
+}
+function adv() {                                                            // 1º comando completa o texto, o 2º avança
+    if (S.mode !== 'talk' || performance.now() < S.lock) return;
+    S.lock = performance.now() + 180;
+    if (S.typing) { if (S.fin) S.fin(); return; }
+    if (S.res) { const r = S.res; S.res = null; r(); }
+}
+function end() {
+    S.tok++; clearInterval(S.timer);
+    if (S.typing && S.fin) S.fin();
+    if (S.res) { const r = S.res; S.res = null; r(); }
+    hl(); spot(null); S.mode = null; root.classList.remove('talk', 'review'); task.classList.remove('on');
+    S.review = false; isTutorialActive = false; mark();
+}
+/* fim do tutorial guiado: a partida de treino é descartada (sem save, sem estatísticas) e começa uma partida nova */
+function resetRun(finished) {
+    if (S.resetting) return; S.resetting = true;
+    if (finished) mark();                                         // se morreu no treino, ele reaparece na próxima partida
+    S.tok++; clearInterval(S.timer); hl(); spot(null);
+    root.classList.remove('talk', 'review'); task.classList.remove('on'); S.mode = null; isTutorialActive = false;
+    try { localStorage.removeItem('nexus_save_v1'); } catch (e) {}
+    dim.style.background = '#000'; dim.style.clipPath = 'none'; dim.classList.add('on');
+    setTimeout(() => { try { sessionStorage.removeItem('nexus_autostart'); } catch (e) {} location.reload(); }, 550);   // volta pro menu inicial
+}
+function restartForTutorial() {                                  // descarta a partida atual (sem salvar) e recarrega já com o tutorial pendente
+    if (S.resetting) return; S.resetting = true;
+    S.tok++; clearInterval(S.timer); hl(); spot(null);
+    root.classList.remove('talk', 'review'); task.classList.remove('on'); S.mode = null; isTutorialActive = false; window.NXTUTRUN = true;
+    try { localStorage.removeItem('nexus_save_v1'); localStorage.removeItem('nexus_tutorial_done'); } catch (e) {}
+    dim.style.background = '#000'; dim.style.clipPath = 'none'; dim.classList.add('on');
+    setTimeout(() => { try { sessionStorage.setItem('nexus_autostart', '1'); } catch (e) {} location.reload(); }, 450);
+}
+const skipTut = () => { if (S.guided && !S.review) resetRun(true); else end(); };
+
+async function guided() {
+    const tok = ++S.tok; S.review = false; S.guided = true; window.NXTUTRUN = true; root.classList.remove('review'); $('nx-skip').textContent = 'Pular';
+    for (const st of STEPS) {
+        if (tok !== S.tok) return;
+        if (st.skip && st.skip()) continue;
+        const base = st.base ? st.base() : 0;
+        if (!await talk(st.lines, tok)) return;
+        if (st.wait) {
+            hl(st.hl); $('nx-hint').textContent = st.hint; show('task');
+            let said = false;
+            while (tok === S.tok && !st.wait(base)) {
+                if (typeof gameOver !== 'undefined' && gameOver) { resetRun(false); return; }
+                if (st.watch && !said && st.watch(base)) { said = true; if (!await talk(st.say, tok)) return; hl(st.hl); show('task'); }
+                await sleep(150);
+            }
+            hl(); if (tok !== S.tok) return;
+            if (!await talk(st.ok, tok)) return;
+        }
+    }
+    if (tok === S.tok) resetRun(true);
+}
+async function review() {
+    const tok = ++S.tok; S.review = true; S.guided = false; root.classList.remove('review'); $('nx-skip').textContent = 'Fechar';
+    if (!await talk(STEPS.flatMap(s => s.lines), tok)) return;
+    end();
+}
+
+box.addEventListener('click', adv);
+$('nx-skip').addEventListener('click', e => { e.stopPropagation(); skipTut(); });
+$('nx-skip2').addEventListener('click', skipTut);
+[root, task].forEach(el => ['mousedown', 'mouseup', 'wheel', 'touchstart', 'contextmenu'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation(), { passive: true })));
+window.addEventListener('keydown', e => {                                   // Espaço/Enter só avançam a fala (nunca acionam botões do jogo)
+    if (S.mode !== 'talk' || (e.key !== ' ' && e.key !== 'Enter') || (typeof menuActive !== 'undefined' && menuActive && !S.review)) return;
+    e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) adv();
+}, true);
+
+// início automático: 1ª partida nova (mesmo momento do tutorial antigo: ao sair do menu pela 1ª vez)
+setInterval(() => {
+    const hold = menuActive && !S.review;
+    root.classList.toggle('hold', hold); task.classList.toggle('hold', hold); dim.classList.toggle('hold', hold);
+    if (S.tried || menuActive || !nxStarted) return;
+    S.tried = true;
+    if (window.MP && window.MP.active) return;
+    if (done()) return;
+    if (wave === 1 && towers.length === 0 && !waveActive && !gameOver) guided(); else mark();    // save em andamento: não repete
+}, 200);
+
+window.NXTUT = { get reviewing() { return S.review && S.mode === 'talk'; }, stop: end, start: guided };
+// se morrer/desistir durante o treino: não mostra tela final, não grava recorde/histórico/estatísticas/💎
+const _gosTut = showGameOverScreen;
+showGameOverScreen = function () { if (window.NXTUTRUN) { resetRun(false); return; } return _gosTut.apply(this, arguments); };
+window.showTutorial = function (fromMenu) {
+    if (S.guided && !S.resetting) return;                                    // treino já em andamento: só fecha o menu
+    end(); S.tried = true;                                                   // evita o início automático duplicado
+    const fresh = typeof wave !== 'undefined' && wave === 1 && towers.length === 0 && !waveActive && !gameOver;
+    if (fresh) { guided(); return; }
+    restartForTutorial();                                                    // partida em andamento: reseta tudo e roda o tutorial numa partida nova
+};
+window.hideTutorial = window.skipTutorial = skipTut;
+})();
+    </script>
     <script src="mp.js"></script>
 </body>
 </html>
