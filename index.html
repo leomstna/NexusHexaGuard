@@ -654,8 +654,8 @@ html.nx-touch #sidebar {
     width: min(250px, 46vw); max-height: none; padding: 10px; border-radius: 14px;
     transform: translateX(calc(-100% - 24px)); transition: transform .2s ease-out; z-index: 17;
 }
-html.nx-touch #sidebar.nx-open, html.nx-touch body:has(#nx-dlg.talk) #sidebar, html.nx-touch body:has(#sidebar .nx-hl) #sidebar { transform: none; }
-html.nx-touch body:has(#sidebar.nx-open) #nx-meta-btn, html.nx-touch body:has(#nx-dlg.talk) #nx-meta-btn, html.nx-touch body:has(#sidebar .nx-hl) #nx-meta-btn { display: none; }
+html.nx-touch #sidebar.nx-open, html.nx-touch #sidebar.nx-force { transform: none; }
+html.nx-touch body:has(#sidebar.nx-open) #nx-meta-btn, html.nx-touch body:has(#sidebar.nx-force) #nx-meta-btn, html.nx-touch body:has(#nx-dlg.talk) #nx-meta-btn { display: none; }
 html.nx-touch #sidebar-title { display: none; }
 html.nx-touch .hud-section { padding: 6px 10px; margin-bottom: 6px; }
 html.nx-touch .hud-section-label { margin-bottom: 4px; }
@@ -721,6 +721,15 @@ html.nx-touch #nx-task { max-width: calc(100vw - 16px); }
     html.nx-touch #nx-txt { font-size: 13px; }
     html.nx-touch #nx-box { padding: 16px 14px 12px; }
 }
+
+
+/* ── Mobile: "Nenhuma Carta" centralizado; diálogo do tutorial sai da frente do alvo ── */
+html.nx-touch .empty-hand-text { position: static; white-space: nowrap; text-align: center; font-size: 12px; padding: 0 10px; }
+html.nx-touch #hand-container { min-width: 130px; }
+html.nx-touch #nx-dlg.nx-top { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 8px); transform: translateY(-44px); }
+html.nx-touch #nx-dlg.nx-top.talk { transform: none; }
+html.nx-touch #nx-dlg.nx-side:not(.review) { left: calc(env(safe-area-inset-left, 0px) + min(250px, 46vw) + 22px); }
+html.nx-touch #nx-box { max-height: 46vh; overflow-y: auto; }
 
 /* ── Aviso para girar o aparelho (só retrato, só celular; não bloqueia o jogo) ── */
 #nx-rotate { display: none; }
@@ -1763,7 +1772,7 @@ html.nx-touch #close-shop-btn { margin-top: 0 !important; width: auto !important
                         }, 250);
                     };
                     
-                    el.onpointerleave = () => { clearTimeout(hoverTimer); hoverTimer = null; tt.classList.remove('visible'); };
+                    el.onpointerleave = (ev) => { if (ev && ev.pointerType && ev.pointerType !== 'mouse') return; clearTimeout(hoverTimer); hoverTimer = null; tt.classList.remove('visible'); };
                     
                     el.onpointerdown = (e) => {
                         if(dragElement || isCardReturning) return; 
@@ -5997,7 +6006,7 @@ function paintSpot() {                                         // recorta "burac
     spotRaf = requestAnimationFrame(paintSpot);
 }
 function spot(sel) {                                           // sel vazio = sem escurecer
-    spotSel = sel || null;
+    spotSel = sel || null; window.nxSpotSel = spotSel;
     if (!spotSel) { dim.classList.remove('on', 'block'); cancelAnimationFrame(spotRaf); spotRaf = 0; return; }
     if (!spotRaf) spotRaf = requestAnimationFrame(paintSpot);
 }
@@ -6172,6 +6181,10 @@ window.hideTutorial = window.skipTutorial = skipTut;
     if (!NX_TOUCH) return;
 
     /* ── Evita zoom/gestos nativos do navegador durante o jogo ── */
+    // novo gesto (1º dedo) = todo toque anterior já terminou: descarta estado preso (causa dos bugs com 2 dedos)
+    window.addEventListener('pointerdown', e => { if ((e.pointerType === 'touch' || e.pointerType === 'pen') && e.isPrimary && window.__nxP && window.__nxP.size) window.__nxEnd(); }, true);
+    window.addEventListener('touchend', e => { if (e.touches.length === 0 && window.__nxP && window.__nxP.size) window.__nxEnd(); }, { passive: true });
+    window.addEventListener('touchcancel', e => { if (e.touches.length === 0 && window.__nxP && window.__nxP.size) window.__nxEnd(); }, { passive: true });
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
     document.addEventListener('dblclick', e => e.preventDefault());
 
@@ -6186,7 +6199,8 @@ window.hideTutorial = window.skipTutorial = skipTut;
     const blocked = () => menuActive || isTutorialActive || gameOver || isShopOpen || dragElement;
     const isT = e => e.pointerType === 'touch' || e.pointerType === 'pen';
     const two = () => { const a = [...P.values()]; return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2, d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1 }; };
-    function endAll() { P.clear(); if (panning) lastPanT = performance.now(); panning = false; isDragging = false; }
+    function endAll() { P.clear(); if (panning) lastPanT = performance.now(); panning = false; isDragging = false; dragVX = dragVY = 0; }
+    window.__nxP = P; window.__nxEnd = endAll;
 
     cv.addEventListener('pointerdown', e => {
         if (!isT(e) || blocked() || P.size >= 2) return;
@@ -6231,22 +6245,27 @@ window.hideTutorial = window.skipTutorial = skipTut;
 
     /* ── DETALHES DA CARTA: segurar ~0,5s sem mover (equivale ao "pousar o mouse 1s") ── */
     let lpTimer = 0, lpStart = null;
-    function cardTip(card) {
+    function cardTip(card, px, py) {
         if (!card) return;
         tt.innerHTML = `<b style="color:var(--${card.rarity}); font-size:20px;">${card.name}</b><br><i style="color:#a1a1aa; font-size:14px; display:block; margin:8px 0;">"${card.desc}"</i><hr style="border-color:#27272a; margin:12px 0;"><span style="color:#22c55e">▲ ${card.buff}</span><br><span style="color:#ef4444">▼ ${card.debuff}</span>`;
         tt.classList.add('visible');
         const w = tt.offsetWidth || 260, h = tt.offsetHeight || 160;
-        tt.style.left = Math.max(8, Math.min(innerWidth - w - 8, lpStart.x - w / 2)) + 'px';
-        tt.style.top = Math.max(8, lpStart.y - h - 150) + 'px';
+        tt.style.left = Math.max(8, Math.min(innerWidth - w - 8, px - w / 2)) + 'px';
+        tt.style.top = Math.max(8, py - h - 120) + 'px';
     }
     const hand = $('hand-container');
     hand.addEventListener('pointerdown', e => {
         if (!isT(e) || !e.target.closest || !e.target.closest('.hand-card')) return;
-        clearTimeout(lpTimer); lpStart = { x: e.clientX, y: e.clientY, id: e.pointerId, idx: draggingCardIndex };
-        lpTimer = setTimeout(() => { if (lpStart && dragElement && draggingCardIndex === lpStart.idx && !hoveredDropTower) cardTip(playerHand[lpStart.idx]); }, 500);
+        clearTimeout(lpTimer); lpStart = { x: e.clientX, y: e.clientY, id: e.pointerId, idx: draggingCardIndex, t: performance.now(), shown: false };
+        lpTimer = setTimeout(() => { if (lpStart && draggingCardIndex === lpStart.idx && !hoveredDropTower) { lpStart.shown = true; cardTip(playerHand[lpStart.idx], lpStart.x, lpStart.y); } }, 450);
     });
-    window.addEventListener('pointermove', e => { if (lpStart && e.pointerId === lpStart.id && Math.hypot(e.clientX - lpStart.x, e.clientY - lpStart.y) > 12) { clearTimeout(lpTimer); lpStart = null; } }, { passive: true });
-    const lpEnd = e => { if (lpStart && e.pointerId === lpStart.id) { clearTimeout(lpTimer); if (lpStart) tt.classList.remove('visible'); lpStart = null; } };
+    window.addEventListener('pointermove', e => { if (lpStart && e.pointerId === lpStart.id && Math.hypot(e.clientX - lpStart.x, e.clientY - lpStart.y) > 18) { clearTimeout(lpTimer); lpStart = null; } }, { passive: true });
+    const lpEnd = e => {
+        if (!lpStart || e.pointerId !== lpStart.id) return;
+        clearTimeout(lpTimer); const s = lpStart; lpStart = null;
+        if (e.type === 'pointerup' && !s.shown && performance.now() - s.t < 350) cardTip(playerHand[s.idx], s.x, s.y);   // toque rápido = mostra info (some sozinho em ~3,5s)
+        else tt.classList.remove('visible');
+    };
     window.addEventListener('pointerup', lpEnd); window.addEventListener('pointercancel', lpEnd);
 
     /* ── TOOLTIP: nunca sai da tela; durante arrasto de carta fica acima da carta (não debaixo do dedo) ── */
@@ -6294,6 +6313,24 @@ window.hideTutorial = window.skipTutorial = skipTut;
         mini.classList.toggle('hide', !!(menuActive || gameOver));
     }
     setInterval(syncMini, 200); syncMini();
+
+    /* ── TUTORIAL no toque: gaveta abre só quando o alvo está nela (e fecha ao tocar no mapa); diálogo sai da frente do alvo ── */
+    const dlg = $('nx-dlg'); let tutKey = '', tutClosed = false;
+    function tutLayout() {
+        const talk = dlg.classList.contains('talk'), sel = window.nxSpotSel;
+        let els = [];
+        try { els = talk ? (sel ? [...document.querySelectorAll(sel)] : []) : [...document.querySelectorAll('.nx-hl')]; } catch (e) {}
+        const inSb = els.some(el => sb.contains(el));
+        const key = (talk ? 't' : 'h') + (sel || '') + inSb;
+        if (key !== tutKey) { tutKey = key; tutClosed = false; }
+        sb.classList.toggle('nx-force', inSb && !tutClosed && (talk || !!document.querySelector('.nx-hl')));
+        let top = false;
+        if (talk && els.length && !inSb) { const ys = els.map(el => el.getBoundingClientRect()).filter(r => r.width > 2); if (ys.length) top = ys.reduce((a, r) => a + (r.top + r.bottom) / 2, 0) / ys.length > innerHeight * 0.5; }
+        dlg.classList.toggle('nx-top', top); dlg.classList.toggle('nx-side', talk && inSb);
+    }
+    setInterval(tutLayout, 150);
+    document.addEventListener('pointerdown', e => { if (e.target === cv) { tutClosed = true; sb.classList.remove('nx-force'); } });
+    toggle.addEventListener('click', () => { tutClosed = true; sb.classList.remove('nx-force'); });
 
     /* ── Aviso de orientação (celular em retrato): não bloqueia o jogo ── */
     const rot = document.createElement('div'); rot.id = 'nx-rotate';
