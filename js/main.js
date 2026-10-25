@@ -4512,7 +4512,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         b.querySelectorAll('[data-pt]').forEach(x => x.onclick = () => { click(); setParticleMode(+x.dataset.pt, true); saveOpts(); refreshOpts(); });
         b.querySelectorAll('[data-px]').forEach(x => x.onclick = () => { click(); FX.px = +x.dataset.px; nxPxChanged(); });
         b.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { click(); NXO[x.dataset.tg] = !NXO[x.dataset.tg]; saveOpts(); refreshOpts(); });
-        $('nx-fs').onclick = () => { click(); if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); };
+        $('nx-fs').onclick = () => { click(); let D = document; try { if (window.parent !== window && parent.document) D = parent.document; } catch (e) {}   // jogo roda num iframe: a tela cheia fica na página-pai e sobrevive aos reloads
+            if (D.fullscreenElement) D.exitFullscreen(); else D.documentElement.requestFullscreen().catch(() => {}); };
         $('nx-wipe').onclick = () => { click(); confirmBox('APAGAR PROGRESSO?', 'Isso apaga TUDO: recorde, estatísticas, histórico, conquistas, missões, melhorias, opções, tutorial e o jogo salvo. Você volta a ser um jogador novo. Não dá para desfazer.', 'APAGAR TUDO', () => {
             /* Bloqueia qualquer gravação (beforeunload/visibilitychange/pagehide regravariam o estado em memória), apaga tudo e recarrega do zero */
             try { Storage.prototype.setItem = function () {}; } catch (e) {}
@@ -4588,8 +4589,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     }
     setInterval(saveGame, 3000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) { saveGame(); flushTime(); } });
-    window.addEventListener('beforeunload', () => { saveGame(); flushTime(); try { if (document.fullscreenElement) sessionStorage.setItem('nx_fs', '1'); } catch (e) {} });
-    try { if (sessionStorage.getItem('nx_fs')) { sessionStorage.removeItem('nx_fs'); const reFs = () => { document.documentElement.requestFullscreen().catch(() => {}); }; document.addEventListener('pointerdown', reFs, { once: true, capture: true }); } } catch (e) {}
+    window.addEventListener('beforeunload', () => { saveGame(); flushTime(); });
 
     window.nxRetry = function () { LS.del(SAVE_KEY); sessionStorage.setItem('nexus_autostart', '1'); location.reload(); };
     window.nxToMenu = function () { LS.del(SAVE_KEY); sessionStorage.removeItem('nexus_autostart'); location.reload(); };
@@ -5126,6 +5126,7 @@ function render() {
     '<div class="nxm-s">CONQUISTAS (' + ACH.filter(a => A[a.id]).length + '/' + ACH.length + ')</div>' + ACH.map(a => '<div class="nxm-row nxm-ach' + (A[a.id] ? ' on' : '') + '"><div><b>' + (A[a.id] ? '🏆 ' : '🔒 ') + a.n + '</b><small>' + a.d + '</small></div><span>+' + a.r + '💎</span></div>').join('') + '</div>';
 }
 function openM() { render(); modal.classList.add('open'); } function closeM() { modal.classList.remove('open'); }
+window.nxMeta = on => { if (on) { if (!modal.classList.contains('open')) openM(); } else if (modal.classList.contains('open')) closeM(); };
 btn.onclick = openM;
 modal.addEventListener('click', e => {
   if (e.target === modal || e.target.closest('[data-x]')) return closeM();
@@ -5231,10 +5232,10 @@ const STEPS = [
             ["bravo", "Cada torre tem no máximo *3 consertos* por partida. Se quebrar de novo depois do 3º, ela é *destruída* e some do mapa. Cartas de durabilidade ajudam a evitar isso."]] },
   { lines: [["pensando", "Fora das ondas você junta *Cristais Hexa* 💎: eles vêm de *abates*, *ondas*, *missões diárias* e *conquistas*, e ficam salvos mesmo quando você perde.", "#nx-meta-btn"],
             ["apontando", "Clique no botão *💎 LOJA* para gastar cristais em *upgrades permanentes* (ouro inicial, vida da base, dano...). Quando você juntar *10 💎*, uma notificação avisa que já dá pra jogar na roleta!", "#nx-meta-btn"],
-            ["debochado", "Lá dentro tem a *ROLETA*: escolha a aposta (*2, 5, 10, 25* ou *TUDO*) e gire. Você pode perder a aposta, receber metade de volta ou ganhar *2x* e *3x*.", "#nx-meta-btn"],
-            ["apontando", "As casas *🍀 Bênção* devolvem a aposta e dão um *benefício*. As *☠️ Maldição* pagam *1,5x*, mas trazem um *malefício*. Esses efeitos valem só na *próxima partida*, aparecem em *DESTINO* e somem quando ela termina."],
-            ["pensando", "E tem o seu *nível*: você ganha *XP* matando inimigos, vencendo ondas e cumprindo missões. Cada nível dá *💎* e bônus permanentes de *ouro inicial*, *dano* e *vida da base*.", "#nx-lv-sec"],
-            ["feliz", "A barra colorida mostra quanto falta para o próximo nível. Evolua sempre!", "#nx-lv-sec"]] },
+            ["debochado", "Agora olha *aqui dentro*: tem a *ROLETA*: escolha a aposta (*2, 5, 10, 25* ou *TUDO*) e gire. Você pode perder a aposta, receber metade de volta ou ganhar *2x* e *3x*.", "#nxr"],
+            ["apontando", "As casas *🍀 Bênção* devolvem a aposta e dão um *benefício*. As *☠️ Maldição* pagam *1,5x*, mas trazem um *malefício*. Esses efeitos valem só na *próxima partida*, aparecem em *DESTINO* e somem quando ela termina.", "#nxr"],
+            ["pensando", "E tem o seu *nível*: você ganha *XP* matando inimigos, vencendo ondas e cumprindo missões. Cada nível dá *💎* e bônus permanentes de *ouro inicial*, *dano* e *vida da base*.", ".nxl"],
+            ["feliz", "A barra colorida mostra quanto falta para o próximo nível. Evolua sempre!", ".nxl"]] },
   { lines: [["pensando", "Últimos atalhos: *ESC* abre o menu e pausa o jogo, e *P* liga ou desliga o filtro pixel."],
             ["debochado", "O *AUTO-WAVE* inicia as ondas sozinho e o *PULAR LOJA* ignora a loja. O jogo também *salva sozinho* entre as ondas.", "#btn-auto-wave,#btn-skip-shop"],
             ["apontando", "Com o *AUTO-WAVE* e o *PULAR LOJA* ligados, aparece o botão *VELOCIDADE*: ele alterna entre *1x* e *2x* e acelera o jogo todo. Se você desligar o Pular Loja, a velocidade volta pra 1x.", "#btn-auto-wave,#btn-skip-shop,#btn-speed"],
@@ -5327,10 +5328,13 @@ async function talk(lines, tok) {
     while (tok === S.tok && modalOpen()) await sleep(200);      // não fala por cima do seletor de time / modais
     for (const [e, t, sel] of lines) {
         if (tok !== S.tok) return false;
+        const inM = !!sel && /^(#nxr|\.nxl)/.test(sel);   // alvo dentro da LOJA 💎: abre o modal e rola até ele
+        try { window.nxMeta && nxMeta(inM); if (inM) setTimeout(() => { const el = document.querySelector(sel); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); }, 60); } catch (x) {}
         show('talk'); spot(sel); face(e); await type(window.nxTouchTxt ? nxTouchTxt(t) : t);
         if (tok !== S.tok) return false;
         await new Promise(r => { S.res = r; });
     }
+    try { window.nxMeta && nxMeta(false); } catch (x) {}
     if (tok === S.tok) spot(null);
     return tok === S.tok;
 }
@@ -5344,6 +5348,7 @@ function end() {
     S.tok++; clearInterval(S.timer);
     if (S.typing && S.fin) S.fin();
     if (S.res) { const r = S.res; S.res = null; r(); }
+    try { window.nxMeta && nxMeta(false); } catch (x) {}
     hl(); spot(null); S.mode = null; root.classList.remove('talk', 'review'); task.classList.remove('on');
     S.review = false; isTutorialActive = false;
 }
