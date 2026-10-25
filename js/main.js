@@ -3692,7 +3692,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                     score: score,
                     wave: wave,
                     buildClass: buildClass,
-                    color: colorClass
+                    color: colorClass,
+                    team: (window.NXTEAM && NXTEAM.name) || ''
                 });
                 
                 if (historyArray.length > 5) historyArray.pop();
@@ -3706,7 +3707,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 hList.innerHTML = historyArray.map(match => `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #1f1f23;">
                         <div>
-                            <div style="font-weight:bold; color:#f4f4f5;">Score: <span style="color:#fde047">${match.score.toLocaleString('pt-BR')}</span></div>
+                            ${match.team ? `<div style="font-size:12px; color:#a1a1aa; font-weight:bold;">${String(match.team).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</div>` : ''}<div style="font-weight:bold; color:#f4f4f5;">Score: <span style="color:#fde047">${match.score.toLocaleString('pt-BR')}</span></div>
                             <div style="font-size:12px; color:${match.color}; font-weight:bold; text-shadow: 0 0 5px ${match.color}50;">${match.buildClass} (Onda ${match.wave})</div>
                         </div>
                         <div style="color:#52525b; font-size:12px; font-weight:bold;">${match.date}</div>
@@ -4475,7 +4476,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         const l = life(), hs = LS.get('nexus_highscore', 0), hist = LS.get('nexus_history', []);
         let h = '';
         if (nxStarted && !gameOver) {
-            h += `<div class="nx-sec">PARTIDA ATUAL</div><div class="nx-grid">${stat(wave, 'Onda')}${stat(nf(statEnemiesKilled), 'Inimigos derrotados')}${stat(nf(statTotalDmgDealt), 'Dano causado')}${stat(statTowersBuilt, 'Torres construídas')}${stat(statCardsUsed, 'Cartas usadas')}${stat(nf(statGoldEarned) + 'g', 'Ouro ganho')}</div>`;
+            h += `<div class="nx-sec">PARTIDA ATUAL${(window.NXTEAM && NXTEAM.name) ? ' — ' + String(NXTEAM.name).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) : ''}</div><div class="nx-grid">${stat(wave, 'Onda')}${stat(nf(statEnemiesKilled), 'Inimigos derrotados')}${stat(nf(statTotalDmgDealt), 'Dano causado')}${stat(statTowersBuilt, 'Torres construídas')}${stat(statCardsUsed, 'Cartas usadas')}${stat(nf(statGoldEarned) + 'g', 'Ouro ganho')}</div>`;
         }
         h += `<div class="nx-sec">HISTÓRICO GERAL</div><div class="nx-grid">${stat(nf(hs), 'Recorde de score')}${stat(l.bestWave || '-', 'Melhor onda')}${stat(l.games, 'Partidas jogadas')}${stat(nf(l.kills), 'Inimigos derrotados')}${stat(nf(l.dmg), 'Dano total causado')}${stat(nf(l.dmgTaken), 'Dano sofrido')}${stat(nf(l.towers), 'Torres construídas')}${stat(nf(l.cards), 'Cartas usadas')}${stat(nf(l.gold) + 'g', 'Ouro ganho')}${stat(nf(l.crits), 'Críticos')}${stat(nf(l.rerolls), 'Rerolls na loja')}${stat(fmtTime(l.time), 'Tempo jogado')}</div>`;
         h += `<div class="nx-sec">ÚLTIMAS PARTIDAS</div>`;
@@ -4587,7 +4588,8 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     }
     setInterval(saveGame, 3000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) { saveGame(); flushTime(); } });
-    window.addEventListener('beforeunload', () => { saveGame(); flushTime(); });
+    window.addEventListener('beforeunload', () => { saveGame(); flushTime(); try { if (document.fullscreenElement) sessionStorage.setItem('nx_fs', '1'); } catch (e) {} });
+    try { if (sessionStorage.getItem('nx_fs')) { sessionStorage.removeItem('nx_fs'); const reFs = () => { document.documentElement.requestFullscreen().catch(() => {}); }; document.addEventListener('pointerdown', reFs, { once: true, capture: true }); } } catch (e) {}
 
     window.nxRetry = function () { LS.del(SAVE_KEY); sessionStorage.setItem('nexus_autostart', '1'); location.reload(); };
     window.nxToMenu = function () { LS.del(SAVE_KEY); sessionStorage.removeItem('nexus_autostart'); location.reload(); };
