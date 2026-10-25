@@ -86,7 +86,7 @@ html #hand-container.ovf{padding-left:40px;padding-right:40px}
 .hand-arrow{position:fixed;z-index:21;width:28px;height:56px;padding:0;border:1px solid rgba(253,224,71,.35);border-radius:10px;background:linear-gradient(180deg,rgba(39,39,42,.96),rgba(15,17,21,.96));color:#fde047;box-shadow:0 4px 12px rgba(0,0,0,.6);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s,background .15s,transform .1s;touch-action:manipulation}
 .hand-arrow svg{width:14px;height:14px;display:block}
 .hand-arrow.on{opacity:1;pointer-events:auto}
-.hand-arrow.on.dis{opacity:.28;pointer-events:none}
+.hand-arrow.on.dis{opacity:.55;pointer-events:auto;cursor:default;filter:grayscale(.6)}
 .hand-arrow.on:hover{background:linear-gradient(180deg,#c2410c,#7c2d12);border-color:#fb923c;color:#fff7ed}
 .hand-arrow.on:active{transform:scale(.92)}
 #hand-prog{position:fixed;z-index:21;height:3px;border-radius:2px;background:rgba(255,255,255,.1);pointer-events:none;opacity:0;transition:opacity .15s}
