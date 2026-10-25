@@ -72,3 +72,16 @@ html.nx-touch #nx-meta-btn.tut-show{display:block!important}
 html.nx-touch .nxr-go{min-height:48px;padding:12px 30px}
 html.nx-touch .nxr-chip{padding:10px}
 html.nx-touch .nxm-box{padding:16px}
+
+/* ── MÃO DE CARTAS: faixa de 1 linha com rolagem lateral ── */
+#hand-container{width:max-content;max-width:max(300px,calc(100vw - 660px));flex-wrap:nowrap!important;justify-content:flex-start!important;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x;scrollbar-width:thin;scrollbar-color:#52525b transparent;box-sizing:border-box}
+#hand-container::-webkit-scrollbar{height:6px}
+#hand-container::-webkit-scrollbar-thumb{background:#52525b;border-radius:4px}
+#hand-container::-webkit-scrollbar-track{background:transparent}
+#hand-container .hand-card{flex:0 0 auto}
+.hand-arrow{position:fixed;z-index:21;width:28px;height:52px;padding:0;border:1px solid #3f3f46;border-radius:8px;background:rgba(15,17,21,.88);color:#fde047;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s,background .15s;touch-action:manipulation}
+.hand-arrow.show{opacity:1;pointer-events:auto}
+.hand-arrow:hover{background:#7c2d12;border-color:#fb923c}
+html.nx-touch #hand-container{flex-wrap:nowrap!important;max-width:max(150px,calc(100vw - 460px));min-height:0}
+@media (orientation: portrait) and (max-width: 700px){html.nx-touch #hand-container{max-width:calc(100vw - 16px)}}
+@media (max-height: 430px){html.nx-touch #hand-container{padding:6px;gap:6px}html.nx-touch .hand-card{width:54px;height:76px;font-size:9px}html.nx-touch .hand-card .mini-icon{font-size:19px}}
