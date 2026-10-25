@@ -73,15 +73,27 @@ html.nx-touch .nxr-go{min-height:48px;padding:12px 30px}
 html.nx-touch .nxr-chip{padding:10px}
 html.nx-touch .nxm-box{padding:16px}
 
-/* ── MÃO DE CARTAS: faixa de 1 linha com rolagem lateral ── */
-#hand-container{width:max-content;max-width:max(300px,calc(100vw - 660px));flex-wrap:nowrap!important;justify-content:flex-start!important;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x;scrollbar-width:thin;scrollbar-color:#52525b transparent;box-sizing:border-box}
-#hand-container::-webkit-scrollbar{height:6px}
-#hand-container::-webkit-scrollbar-thumb{background:#52525b;border-radius:4px}
-#hand-container::-webkit-scrollbar-track{background:transparent}
-#hand-container .hand-card{flex:0 0 auto}
-.hand-arrow{position:fixed;z-index:21;width:28px;height:52px;padding:0;border:1px solid #3f3f46;border-radius:8px;background:rgba(15,17,21,.88);color:#fde047;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s,background .15s;touch-action:manipulation}
-.hand-arrow.show{opacity:1;pointer-events:auto}
-.hand-arrow:hover{background:#7c2d12;border-color:#fb923c}
-html.nx-touch #hand-container{flex-wrap:nowrap!important;max-width:max(150px,calc(100vw - 460px));min-height:0}
+/* ── MÃO DE CARTAS: painel (#hand-container) com faixa rolável (#hand-scroll) ── */
+#hand-container{width:max-content;max-width:max(300px,calc(100vw - 660px));box-sizing:border-box;border:1px solid rgba(255,255,255,.07);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#hand-scroll{display:flex;flex-wrap:nowrap;align-items:center;gap:inherit;flex:0 1 auto;min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x;scrollbar-width:none;padding:12px 0 2px;margin:-12px 0 -2px}
+#hand-scroll::-webkit-scrollbar{display:none}
+#hand-scroll:empty{display:none}
+#hand-scroll .hand-card{flex:0 0 auto}
+html.nx-touch #hand-container{max-width:max(150px,calc(100vw - 460px));min-height:0}
 @media (orientation: portrait) and (max-width: 700px){html.nx-touch #hand-container{max-width:calc(100vw - 16px)}}
 @media (max-height: 430px){html.nx-touch #hand-container{padding:6px;gap:6px}html.nx-touch .hand-card{width:54px;height:76px;font-size:9px}html.nx-touch .hand-card .mini-icon{font-size:19px}}
+html #hand-container.ovf{padding-left:40px;padding-right:40px}
+.hand-arrow{position:fixed;z-index:21;width:28px;height:56px;padding:0;border:1px solid rgba(253,224,71,.35);border-radius:10px;background:linear-gradient(180deg,rgba(39,39,42,.96),rgba(15,17,21,.96));color:#fde047;box-shadow:0 4px 12px rgba(0,0,0,.6);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s,background .15s,transform .1s;touch-action:manipulation}
+.hand-arrow svg{width:14px;height:14px;display:block}
+.hand-arrow.on{opacity:1;pointer-events:auto}
+.hand-arrow.on.dis{opacity:.28;pointer-events:none}
+.hand-arrow.on:hover{background:linear-gradient(180deg,#c2410c,#7c2d12);border-color:#fb923c;color:#fff7ed}
+.hand-arrow.on:active{transform:scale(.92)}
+#hand-prog{position:fixed;z-index:21;height:3px;border-radius:2px;background:rgba(255,255,255,.1);pointer-events:none;opacity:0;transition:opacity .15s}
+#hand-prog.on{opacity:1}
+#hand-prog i{position:absolute;top:0;bottom:0;border-radius:2px;background:#fde047;box-shadow:0 0 6px rgba(253,224,71,.6)}
+/* ── LOJA: título não quebra em telas menores, conteúdo centralizado na vertical e fundo mais opaco (some a interface por trás) ── */
+#shop-overlay{background:rgba(0,0,0,.96)}
+#shop-title{font-size:clamp(12px,2.5vw,32px);text-align:center;padding:0 12px;box-sizing:border-box;max-width:100%}
+html:not(.nx-touch) #shop-title{margin-top:auto}
+html:not(.nx-touch) #shop-buttons{margin-bottom:auto}
