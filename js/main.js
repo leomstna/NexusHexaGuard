@@ -4791,8 +4791,9 @@ const _sw = startNextWave;
 startNextWave = function () {
   if (lastBonusWave !== wave) {
     lastBonusWave = wave;
-    if (wave === 1) { gold += lvl('gold') * 15; hp += lvl('hp') * 2; }
+    if (wave === 1) { gold += lvl('gold') * 15; hp += lvl('hp') * 2; gold += lvGold(); hp += lvHp(); fxActivate(); }
     else if (lvl('wave')) { gold += lvl('wave') * 6; ft('+' + lvl('wave') * 6 + 'g Imposto de guerra', '#fde047'); }
+    if (wave > 1) { const fw = fxSum('wave'); if (fw) { gold += fw; ft('+' + fw + 'g Maré de Sorte', '#4ade80'); } }
     try { updateUI(); } catch (e) {}
   }
   return _sw.apply(this, arguments);
@@ -4812,19 +4813,21 @@ function tick() {
     if (k < lastK) { lastK = k; combo = 0; milesHit = 0; maxCombo = 0; }
     if (g < lastG) lastG = g;
     if (k > lastK) {
-      D.k += k - lastK; combo += k - lastK; lastK = k; comboT = tn + 2500; maxCombo = Math.max(maxCombo, combo);
+      addXp((k - lastK) / 8); D.k += k - lastK; combo += k - lastK; lastK = k; comboT = tn + 2500; maxCombo = Math.max(maxCombo, combo);
       const el = $('nx-combo'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
       while (milesHit < MILES.length && combo >= MILES[milesHit]) { const b = MILES[milesHit] * 2; gold += b; ft('COMBO x' + MILES[milesHit] + '  +' + b + 'g', '#f97316'); try { updateUI(); } catch (e) {} milesHit++; }
     }
     if (g > lastG) { D.g += g - lastG; lastG = g; }
     if (combo && tn > comboT) { combo = 0; milesHit = 0; }
     D.w = Math.max(D.w, wave);
+    if (!xpWave) xpWave = wave;
+    if (wave > xpWave) { const gw = 6 + wave * 2; xpWave = wave; addXp(gw); ft('+' + gw + ' XP', '#60a5fa'); } else if (wave < xpWave) xpWave = wave;
     const c = $('nx-combo'); const _op = combo >= 3 ? '1' : '0'; if (c.style.opacity !== _op) c.style.opacity = _op;
     const _h = 'COMBO x' + combo + '<small>PRÓXIMO BÔNUS EM ' + (MILES[milesHit] || '∞') + '</small>'; if (c._h !== _h) { c._h = _h; c.innerHTML = _h; }
     const s = { k, w: wave, c: maxCombo, t: towers.length, g };
     let dirty = false;
-    ACH.forEach(a => { if (!A[a.id] && a.f(s)) { A[a.id] = 1; dirty = true; gain(a.r); toast('🏆 ' + a.n + ' +' + a.r + '💎'); } });
-    MIS.forEach(m => { if (!D.done[m.id] && D[m.id] >= m.t) { D.done[m.id] = 1; dirty = true; gain(15); toast('📋 Missão cumprida: ' + m.n + ' +15💎'); } });
+    ACH.forEach(a => { if (!A[a.id] && a.f(s)) { A[a.id] = 1; dirty = true; gain(a.r); addXp(10); toast('🏆 ' + a.n + ' +' + a.r + '💎'); } });
+    MIS.forEach(m => { if (!D.done[m.id] && D[m.id] >= m.t) { D.done[m.id] = 1; dirty = true; gain(15); addXp(25); toast('📋 Missão cumprida: ' + m.n + ' +15💎'); } });
     const _sg = D.k + '|' + D.g + '|' + D.w; if (dirty || (_sg !== _dSig && tn - _dT > 2000)) { _dSig = _sg; _dT = tn; LS.set('nexus_daily', D); } if (dirty) LS.set('nexus_ach', A);
   } catch (e) {}
 }
@@ -4835,14 +4838,202 @@ window.addEventListener('pagehide', _flushD); document.addEventListener('visibil
 /* ── UI: botão, combo e modal ── */
 const cb = document.createElement('div'); cb.id = 'nx-combo'; document.body.appendChild(cb);
 const btn = document.createElement('button'); btn.id = 'nx-meta-btn'; document.body.appendChild(btn);
-function refreshBtn() { btn.textContent = '💎 ' + M.c + ' · LOJA'; }
+let _rOk;
+function refreshBtn() {
+  btn.textContent = '💎 ' + M.c + ' · LOJA';
+  const ok = M.c >= 10;
+  if (_rOk === false && ok && !modal.classList.contains('open')) {
+    toast('🎰 Você já tem 💎 suficiente pra jogar na roleta!');
+    try { const w = $('nx-toasts'), t = w && w.lastChild; if (t) { t.style.cursor = 'pointer'; t.onclick = () => { t.remove(); openM(); }; } } catch (e) {}
+  }
+  _rOk = ok;
+}
 refreshBtn();
 const modal = document.createElement('div'); modal.id = 'nx-meta-modal'; document.body.appendChild(modal);
 ['mousedown', 'mouseup', 'pointerdown', 'touchstart', 'wheel', 'click'].forEach(ev => modal.addEventListener(ev, e => e.stopPropagation()));
+/* ── nível do jogador (XP por abates, ondas, missões e conquistas) ── */
+if (!M.lv) M.lv = 1; if (!M.xp) M.xp = 0;
+const LV_MAX = 99;
+const lvNeed = l => 60 + l * 25;
+const lvReward = l => 3 + Math.floor(l / 2) + (l % 5 === 0 ? 10 : 0);
+const lvGold = () => Math.min(100, 2 * (M.lv - 1));
+const lvDmg = () => Math.min(.15, .01 * Math.floor((M.lv - 1) / 2));
+const lvHp = () => Math.min(8, Math.floor((M.lv - 1) / 5));
+const lvRank = l => l >= 40 ? 'Lenda do Nexus' : l >= 30 ? 'Herói' : l >= 20 ? 'Comandante' : l >= 15 ? 'Capitão' : l >= 10 ? 'Guardião' : l >= 5 ? 'Soldado' : 'Recruta';
+const lvPerks = () => '+' + lvGold() + ' ouro inicial · +' + Math.round(lvDmg() * 100) + '% dano · +' + lvHp() + ' vida da base';
+let xpRun = 0, xpWave = 0;
+function lvHud() {
+  const sb = $('sidebar'); if (!sb) return; let sec = $('nx-lv-sec');
+  if (!sec) { sec = document.createElement('div'); sec.id = 'nx-lv-sec'; sec.className = 'hud-section'; sb.insertBefore(sec, sb.querySelector('.hud-section')); }
+  const nd = lvNeed(M.lv), pc = Math.min(100, M.xp / nd * 100);
+  sec.innerHTML = '<div class="hud-section-label">NÍVEL</div><div class="hud-row"><span class="hud-icon">⭐</span><span class="hud-key">Nv ' + M.lv + ' · ' + lvRank(M.lv) + '</span></div><div class="nxl-bar sm"><i style="width:' + pc + '%"></i></div><div style="font-size:10px;color:#71717a;margin:3px 0 0">' + Math.floor(M.xp) + ' / ' + nd + ' XP</div>';
+}
+function lvHTML() {
+  const l = M.lv, nd = lvNeed(l), pc = Math.min(100, M.xp / nd * 100);
+  return '<div class="nxm-s">⭐ NÍVEL DO JOGADOR</div><div class="nxl"><div class="nxl-badge">' + l + '</div><div class="nxl-main"><b>' + lvRank(l) + '</b>' +
+    '<div class="nxl-bar"><i style="width:' + pc + '%"></i></div><small>' + Math.floor(M.xp) + ' / ' + nd + ' XP' + (l < LV_MAX ? ' · próximo nível: +' + lvReward(l + 1) + '💎' : ' · NÍVEL MÁXIMO') + '</small>' +
+    '<small class="nxl-perk">🎖️ ' + lvPerks() + '</small></div></div>';
+}
+function addXp(n) {
+  if (!(n > 0) || M.lv >= LV_MAX) return;
+  const before = Math.floor(M.xp); M.xp += n; xpRun += n; let up = 0;
+  while (M.lv < LV_MAX && M.xp >= lvNeed(M.lv)) { M.xp -= lvNeed(M.lv); M.lv++; up++; const r = lvReward(M.lv); M.c += r; toast('⬆️ NÍVEL ' + M.lv + ' · ' + lvRank(M.lv) + ' · +' + r + '💎'); }
+  saveM();
+  if (up) {
+    refreshBtn(); ft('⬆ NÍVEL ' + M.lv + '!', '#fde047');
+    try { fxBanner('⬆ NÍVEL ' + M.lv + ' ⬆', '#fde047'); } catch (e) {}
+    try { rJingle([523, 659, 784, 1047, 1319], 90); } catch (e) {}
+    if (modal.classList.contains('open') && !rSpin) render();
+  }
+  if (up || Math.floor(M.xp) !== before) lvHud();
+}
+lvHud();
+window.nxLv = () => M.lv;
+
+/* ── destino: bênçãos e maldições da roleta (valem na PRÓXIMA partida) ── */
+const FX = {
+  b_gold: { t: 'b', ico: '💰', n: 'Cofre Dourado', d: '+60 de ouro inicial', once() { gold += 60; } },
+  b_hp: { t: 'b', ico: '🛡️', n: 'Escudo Antigo', d: '+6 de vida da base', once() { hp += 6; } },
+  b_dmg: { t: 'b', ico: '⚔️', n: 'Fúria Hexa', d: '+20% de dano das torres', dmg: .20 },
+  b_wave: { t: 'b', ico: '🍀', n: 'Maré de Sorte', d: '+10 de ouro no início de cada onda', wave: 10 },
+  b_loot: { t: 'b', ico: '🪙', n: 'Saque Farto', d: '+30% de ouro por abate', loot: .30 },
+  b_slow: { t: 'b', ico: '🧊', n: 'Brisa Gélida', d: 'Inimigos 10% mais lentos', spd: -.10 },
+  c_hp: { t: 'c', ico: '🩸', n: 'Sangria', d: '-5 de vida da base', once() { hp = Math.max(1, hp - 5); } },
+  c_gold: { t: 'c', ico: '💸', n: 'Rapina', d: '-40 de ouro inicial', once() { gold = Math.max(0, gold - 40); } },
+  c_dmg: { t: 'c', ico: '🥀', n: 'Fraqueza', d: '-15% de dano das torres', dmg: -.15 },
+  c_ehp: { t: 'c', ico: '👹', n: 'Horda Robusta', d: 'Inimigos com +20% de vida', ehp: .20 },
+  c_spd: { t: 'c', ico: '🐺', n: 'Fúria Selvagem', d: 'Inimigos 10% mais rápidos', spd: .10 },
+  c_loot: { t: 'c', ico: '🕳️', n: 'Saque Pobre', d: '-25% de ouro por abate', loot: -.25 }
+};
+const FXB = Object.keys(FX).filter(k => FX[k].t === 'b'), FXC = Object.keys(FX).filter(k => FX[k].t === 'c');
+const fxSum = k => (M.act || []).reduce((a, id) => a + ((FX[id] && FX[id][k]) || 0), 0);
+function fxHud() {
+  let sec = $('nx-fx-sec'); const a = (M.act || []).filter(id => FX[id]);
+  if (!a.length) { if (sec) sec.style.display = 'none'; return; }
+  if (!sec) { const sb = $('sidebar'); if (!sb) return; sec = document.createElement('div'); sec.id = 'nx-fx-sec'; sec.className = 'hud-section'; sb.insertBefore(sec, $('sidebar-buttons') || null); }
+  sec.style.display = '';
+  sec.innerHTML = '<div class="hud-section-label">DESTINO</div>' + a.map(id => { const f = FX[id]; return '<div class="hud-row" title="' + f.d + '"><span class="hud-icon">' + f.ico + '</span><span class="hud-key" style="color:' + (f.t === 'b' ? '#4ade80' : '#f87171') + '">' + f.n + '</span></div>'; }).join('');
+}
+function fxActivate() {
+  if (window.NXTUTRUN) return;
+  const p = (M.fx || []).filter(id => FX[id]); M.act = p.slice(); M.fx = []; saveM();
+  p.forEach(id => { try { if (FX[id].once) FX[id].once(); } catch (e) {} });
+  try { updateUI(); } catch (e) {} fxHud();
+  if (p.length) { ft('🎰 DESTINO ATIVO', '#c084fc'); toast('🎰 Destino: ' + p.map(id => FX[id].ico + ' ' + FX[id].n).join(' · ')); }
+}
+try {
+  const d2 = Object.getOwnPropertyDescriptor(Tower.prototype, 'damage');
+  Object.defineProperty(Tower.prototype, 'damage', { configurable: true, get() { return d2.get.call(this) * Math.max(.1, 1 + fxSum('dmg') + lvDmg()); } });
+} catch (e) {}
+try {
+  const eu = Enemy.prototype.update;
+  Enemy.prototype.update = function () {
+    if (!this._fx) {
+      this._fx = 1; const hm = 1 + fxSum('ehp'), sm = 1 + fxSum('spd'), lm = 1 + fxSum('loot');
+      if (hm !== 1) { const o = this.maxHp; this.hp = Math.max(1, Math.floor(this.hp * hm)); this.maxHp = this.hp; try { waveTotalEnemyHp += this.maxHp - o; } catch (e) {} }
+      if (sm !== 1) this.baseSpeed *= Math.max(.3, sm);
+      if (lm !== 1 && this.goldReward) this.goldReward = Math.max(1, Math.round(this.goldReward * Math.max(.1, lm)));
+    }
+    return eu.apply(this, arguments);
+  };
+} catch (e) {}
+fxHud();
+
+/* ── roleta de cristais ── */
+const RSL = [{ m: 0 }, { m: 2 }, { m: 1, k: 'b' }, { m: 0 }, { m: 3 }, { m: 1.5, k: 'c' }, { m: 0 }, { m: .5 }, { m: 1, k: 'b' }, { m: 2 }, { m: 0 }, { m: 1.5, k: 'c' }, { m: 0 }, { m: 1, k: 'b' }, { m: 0 }, { m: 1.5, k: 'c' }];
+const RCOL = { 0: ['#23232a', '#34343c'], .5: ['#92400e', '#c2610c'], 2: ['#15803d', '#22a050'], 3: ['#1d4ed8', '#3b82f6'], b: ['#0f766e', '#14b8a6'], c: ['#7f1d1d', '#b91c1c'] };
+const rCol = (sl, i) => RCOL[sl.k || sl.m][i % 2];
+let rBet = 5, rSpin = false, rRot = 0, rMsg = '', rCls = '', rHl = -1, rLast = -1, rAC;
+function rBeep(f, d, v, t) {
+  try {
+    const vol = +(($('volume-slider') || {}).value || 1); if (!vol) return;
+    rAC = rAC || new (window.AudioContext || window.webkitAudioContext)();
+    const o = rAC.createOscillator(), g = rAC.createGain(), n = rAC.currentTime;
+    o.type = t || 'square'; o.frequency.value = f; g.gain.setValueAtTime(v * vol, n); g.gain.exponentialRampToValueAtTime(.0001, n + d);
+    o.connect(g); g.connect(rAC.destination); o.start(n); o.stop(n + d);
+  } catch (e) {}
+}
+function rJingle(notes, gap, type) { notes.forEach((f, i) => setTimeout(() => rBeep(f, .22, .09, type || 'triangle'), i * gap)); }
+function rHTML() {
+  if (rBet > M.c) rBet = M.c; if (rBet < 1) rBet = Math.min(5, M.c);
+  const n = RSL.length, s = 360 / n, off = rSpin || M.c < 1, bets = [2, 5, 10, 25];
+  const g = RSL.map((sl, i) => rCol(sl, i) + ' ' + i * s + 'deg ' + (i + 1) * s + 'deg').join(',');
+  const lb = RSL.map((sl, i) => '<span style="font-size:' + (sl.k ? 20 : sl.m >= 3 ? 17 : 15) + 'px;transform:rotate(' + (i * s + s / 2) + 'deg) translateY(calc(var(--w) * -.37))">' + (sl.k === 'b' ? '🍀' : sl.k === 'c' ? '☠️' : sl.m === 0 ? '💀' : sl.m === .5 ? '½' : sl.m + 'x') + '</span>').join('');
+  const hl = rHl >= 0 ? '<div class="nxr-hl" style="background:conic-gradient(transparent ' + rHl * s + 'deg,rgba(255,255,255,.55) ' + rHl * s + 'deg ' + (rHl + 1) * s + 'deg,transparent ' + (rHl + 1) * s + 'deg)"></div>' : '';
+  const bulbs = Array.from({ length: 24 }, (_, i) => '<i class="nxr-bulb" style="transform:rotate(' + i * 15 + 'deg) translateY(calc((var(--w) + 40px) / -2 + 10px));animation-delay:' + (i % 2 ? '.35s' : '0s') + '"></i>').join('');
+  const pend = (M.fx || []).filter(id => FX[id]);
+  return '<div class="nxm-s">🎰 ROLETA DE CRISTAIS</div><div class="nxr' + (rSpin ? ' spin' : '') + '" id="nxr">' +
+    '<div class="nxr-bal">SALDO <b>💎 <span id="nxr-bal">' + M.c + '</span></b></div>' +
+    '<div class="nxr-wrap"><div class="nxr-rim">' + bulbs + '</div><div class="nxr-ptr" id="nxr-ptr"></div>' +
+    '<div class="nxr-wheel" id="nxr-wheel" style="background:conic-gradient(' + g + ');transform:rotate(' + rRot + 'deg)">' + lb + hl + '</div><div class="nxr-hub">💎</div></div>' +
+    '<div class="nxr-msg ' + rCls + '" id="nxr-msg">' + rMsg + '</div>' +
+    '<div class="nxr-bets">' + bets.map(b => '<button class="nxr-b' + (rBet === b ? ' on' : '') + '" data-bet="' + b + '" ' + (rSpin || M.c < b ? 'disabled' : '') + '>' + b + '</button>').join('') +
+    '<button class="nxr-b nxr-all' + (M.c > 0 && rBet === M.c && !bets.includes(rBet) ? ' on' : '') + '" data-bet="all" ' + (off ? 'disabled' : '') + '>TUDO</button></div>' +
+    '<button class="nxr-go" id="nxr-go" data-spin="1" ' + (off ? 'disabled' : '') + '>' + (rSpin ? 'GIRANDO…' : M.c < 1 ? 'SEM 💎' : 'GIRAR · ' + rBet + ' 💎') + '</button>' +
+    '<small class="nxr-info">💀 perde · ½ metade · 2x · 3x<br>🍀 Bênção: devolve a aposta + benefício · ☠️ Maldição: paga 1.5x + malefício</small>' +
+    '<div class="nxr-fxh">🔮 DESTINO DA PRÓXIMA PARTIDA</div><div class="nxr-fx">' +
+    (pend.length ? pend.map(id => '<div class="nxr-chip ' + FX[id].t + '"><span>' + FX[id].ico + '</span><div><b>' + FX[id].n + '</b><small>' + FX[id].d + '</small></div></div>').join('') : '<small class="nxr-info">Nenhum efeito. Caia numa 🍀 ou ☠️ para sortear um.</small>') + '</div></div>';
+}
+function rBurst(n, cols) {
+  const w = document.querySelector('.nxr-wrap'); if (!w) return; cols = cols || ['#fde047', '#22c55e', '#3b82f6', '#d946ef', '#f97316', '#fff'];
+  for (let i = 0; i < n; i++) { const e = document.createElement('i'); e.className = 'nxr-cf';
+    e.style.cssText = '--dx:' + (Math.random() * 360 - 180) + 'px;--dy:' + (-Math.random() * 220 - 40) + 'px;--r:' + (Math.random() * 720 - 360) + 'deg;background:' + cols[i % cols.length] + ';animation-delay:' + Math.random() * .15 + 's';
+    w.appendChild(e); setTimeout(() => e.remove(), 1900); }
+}
+function rCount(from, to) {
+  const el = $('nxr-bal'); if (!el) return; const t0 = performance.now();
+  (function f(t) { const k = Math.min(1, (t - t0) / 900); el.textContent = Math.round(from + (to - from) * k); if (k < 1) requestAnimationFrame(f); })(t0);
+}
+function rTick() {
+  const w = $('nxr-wheel'); if (!w || !rSpin) return;
+  const m = getComputedStyle(w).transform; let a = 0;
+  if (m && m !== 'none') { const v = m.match(/matrix\(([^)]+)\)/); if (v) { const q = v[1].split(',').map(Number); a = Math.atan2(q[1], q[0]) * 180 / Math.PI; } }
+  const idx = Math.floor((((-a) % 360) + 360) % 360 / (360 / RSL.length));
+  if (idx !== rLast) { rLast = idx; rBeep(850 + Math.random() * 120, .04, .06); const p = $('nxr-ptr'); if (p) { p.classList.remove('tk'); void p.offsetWidth; p.classList.add('tk'); } }
+  requestAnimationFrame(rTick);
+}
+function rGo() {
+  if (rSpin || rBet < 1 || rBet > M.c) return;
+  rSpin = true; rHl = -1; rMsg = ''; rCls = ''; rLast = -1;
+  const i = Math.floor(Math.random() * RSL.length), sl = RSL[i], mult = sl.m, bet = rBet, pay = Math.floor(bet * mult), before = M.c;
+  let fid = null;
+  if (sl.k) { const pool = sl.k === 'b' ? FXB : FXC, have = M.fx || [], av = pool.filter(x => !have.includes(x)), arr = av.length ? av : pool; fid = arr[Math.floor(Math.random() * arr.length)]; M.fx = have.concat(fid).slice(-5); }
+  M.c += pay - bet; saveM();
+  const s = 360 / RSL.length, c = i * s + s / 2 + (Math.random() - .5) * s * .7;
+  rRot += 360 * 7 + ((-c - rRot) % 360 + 360) % 360;
+  const w = $('nxr-wheel'); if (w) { w.style.transition = 'transform 5s cubic-bezier(.12,.6,.1,1)'; w.style.transform = 'rotate(' + rRot + 'deg)'; }
+  const go = $('nxr-go'); if (go) { go.disabled = true; go.textContent = 'GIRANDO…'; }
+  const box = $('nxr'); if (box) box.classList.add('spin'); const mg = $('nxr-msg'); if (mg) mg.textContent = '';
+  const bl = $('nxr-bal'); if (bl) bl.textContent = before - bet;
+  document.querySelectorAll('.nxr-b').forEach(x => x.disabled = true);
+  rBeep(300, .15, .08, 'sawtooth'); requestAnimationFrame(rTick);
+  setTimeout(() => {
+    rSpin = false; rHl = i; const big = !sl.k && mult >= 3, f = fid && FX[fid]; let txt;
+    if (f) {
+      rCls = sl.k === 'b' ? 'win' : 'curse';
+      txt = (sl.k === 'b' ? '🍀 BÊNÇÃO: ' : '☠️ MALDIÇÃO: ') + f.ico + ' ' + f.n + '!';
+      rMsg = txt + '<small class="nxr-sub">' + f.d + ' · vale na próxima partida' + (pay > bet ? ' · +' + (pay - bet) + '💎' : '') + '</small>';
+    } else {
+      rCls = mult === 0 ? 'lose' : pay > bet ? (big ? 'big' : 'win') : 'half';
+      txt = mult === 0 ? '💀 Perdeu ' + bet + '💎' : pay > bet ? (big ? '🔥 JACKPOT ' + mult + 'x! ' : '🎉 ' + mult + 'x! ') + '+' + (pay - bet) + '💎' : '↘ Voltaram ' + pay + '💎';
+      rMsg = txt;
+    }
+    refreshBtn();
+    if (modal.classList.contains('open')) {
+      render(); rCount(before - bet, M.c);
+      const bx = $('nxr'); if (bx) bx.classList.add(mult === 0 || sl.k === 'c' ? 'shk' : big ? 'jack' : 'flash');
+      if (sl.k === 'b') rBurst(40, ['#14b8a6', '#4ade80', '#fde047', '#fff']); else if (sl.k === 'c') rBurst(26, ['#b91c1c', '#7e22ce', '#111']); else if (pay > bet) rBurst(big ? 70 : 32);
+    }
+    if (sl.k === 'c') rJingle([196, 185, 147, 98], 160, 'sawtooth'); else if (sl.k === 'b') rJingle([523, 659, 784, 1047], 110);
+    else if (mult === 0) rJingle([220, 165, 110], 130, 'sawtooth'); else if (pay > bet) rJingle(big ? [523, 659, 784, 1047, 1319] : [523, 659, 784], 110); else rBeep(330, .25, .08);
+    toast((sl.k === 'c' || mult === 0 ? '💀 ' : '🎰 ') + txt);
+  }, 5200);
+}
 function render() {
   modal.innerHTML = '<div class="nxm-box"><div class="nxm-h"><b>💎 ' + M.c + ' Cristais Hexa</b><button class="nxm-x" data-x="1">FECHAR [ESC]</button></div>' +
-    '<div class="nxm-s">UPGRADES PERMANENTES</div>' + UPG.map(u => { const l = lvl(u.id), mx = l >= u.max;
+    lvHTML() + '<div class="nxm-s">UPGRADES PERMANENTES</div>' + UPG.map(u => { const l = lvl(u.id), mx = l >= u.max;
       return '<div class="nxm-row"><div><b>' + u.n + ' (' + l + '/' + u.max + ')</b><small>' + u.d + '</small></div><button class="nxm-buy" data-b="' + u.id + '" ' + (mx || M.c < cost(u.id) ? 'disabled' : '') + '>' + (mx ? 'MÁXIMO' : cost(u.id) + ' 💎') + '</button></div>'; }).join('') +
+    rHTML() +
     '<div class="nxm-s">MISSÕES DE HOJE (+15💎 cada)</div>' + MIS.map(m => { const p = Math.min(D[m.id] || 0, m.t);
       return '<div class="nxm-row" style="display:block"><b>' + (D.done[m.id] ? '✅ ' : '') + m.n + '</b> <small style="display:inline">' + p + '/' + m.t + '</small><div class="nxm-bar"><i style="width:' + (p / m.t * 100) + '%"></i></div></div>'; }).join('') +
     '<div class="nxm-s">CONQUISTAS (' + ACH.filter(a => A[a.id]).length + '/' + ACH.length + ')</div>' + ACH.map(a => '<div class="nxm-row nxm-ach' + (A[a.id] ? ' on' : '') + '"><div><b>' + (A[a.id] ? '🏆 ' : '🔒 ') + a.n + '</b><small>' + a.d + '</small></div><span>+' + a.r + '💎</span></div>').join('') + '</div>';
@@ -4851,6 +5042,8 @@ function openM() { render(); modal.classList.add('open'); } function closeM() { 
 btn.onclick = openM;
 modal.addEventListener('click', e => {
   if (e.target === modal || e.target.closest('[data-x]')) return closeM();
+  const bt = e.target.closest('[data-bet]'); if (bt) { if (!rSpin) { rBet = bt.dataset.bet === 'all' ? M.c : +bt.dataset.bet; render(); } return; }
+  if (e.target.closest('[data-spin]')) return rGo();
   const b = e.target.closest('[data-b]'); if (!b) return;
   const id = b.dataset.b, u = UPG.find(x => x.id === id);
   if (u && lvl(id) < u.max && M.c >= cost(id)) { M.c -= cost(id); M.u[id] = lvl(id) + 1; saveM(); refreshBtn(); try { SFX.ui_click(); } catch (er) {} render(); toast('✔ ' + u.n + ' nível ' + lvl(id) + (wave === 1 ? ' (vale a partir da próxima partida)' : '')); }
@@ -4864,13 +5057,13 @@ showGameOverScreen = function () {
   const r = _go.apply(this, arguments);
   try {
     if (!awarded) {
-      awarded = true;
+      awarded = true; M.act = []; try { fxHud(); } catch (e) {}
       const g = Math.max(1, Math.floor((wave - 1) * 2 + statEnemiesKilled / 25)); gain(g);
       let teaser = wave > prevBest && prevBest > 0 ? '🏆 NOVO RECORDE DE ONDAS!' : wave === prevBest ? 'Você igualou seu recorde. Só mais UMA onda passa dele!' : prevBest ? 'Faltaram só ' + (prevBest - wave) + ' onda(s) para igualar seu recorde (onda ' + prevBest + ')!' : 'Seu primeiro recorde está feito. Dá pra superar!';
       const next = UPG.filter(u => lvl(u.id) < u.max).sort((a, b) => cost(a.id) - cost(b.id))[0];
       const hint = next ? (M.c >= cost(next.id) ? '💎 Você já pode comprar <b>' + next.n + '</b>!' : 'Faltam <b>' + (cost(next.id) - M.c) + '💎</b> para <b>' + next.n + '</b>.') : 'Todos os upgrades no máximo!';
       const x = document.createElement('div'); x.id = 'nx-go-extra';
-      x.innerHTML = '<div class="t">' + teaser + '</div>+' + g + '💎 ganhos nesta partida (total ' + M.c + ')<br>' + hint + '<br><button data-go="shop">💎 LOJA</button><button data-go="share">📋 COMPARTILHAR</button><div style="color:#71717a;font-size:12px;margin-top:10px">Aperte ENTER para jogar de novo</div>';
+      x.innerHTML = '<div class="t">' + teaser + '</div>+' + g + '💎 ganhos nesta partida (total ' + M.c + ')<br>⭐ +' + Math.floor(xpRun) + ' XP nesta partida (Nível ' + M.lv + ')<br>' + hint + '<br><button data-go="shop">💎 LOJA</button><button data-go="share">📋 COMPARTILHAR</button><div style="color:#71717a;font-size:12px;margin-top:10px">Aperte ENTER para jogar de novo</div>';
       x.addEventListener('click', e => {
         const a = e.target.closest('[data-go]'); if (!a) return;
         if (a.dataset.go === 'shop') openM();
@@ -4949,6 +5142,12 @@ const STEPS = [
             ["irritado", "Quando chega a *0*, a torre *quebra*: para de atirar e perde os efeitos visuais. Os Sabotadores e o Boss Demolidor (33 de dano por golpe) aceleram isso."],
             ["apontando", "Entre as ondas, *clique na torre quebrada* pra consertar. Custa o *preço da torre + 10g*, e *cada conserto encarece o próximo em +10g*."],
             ["bravo", "Cada torre tem no máximo *3 consertos* por partida. Se quebrar de novo depois do 3º, ela é *destruída* e some do mapa. Cartas de durabilidade ajudam a evitar isso."]] },
+  { lines: [["pensando", "Fora das ondas você junta *Cristais Hexa* 💎: eles vêm de *abates*, *ondas*, *missões diárias* e *conquistas*, e ficam salvos mesmo quando você perde.", "#nx-meta-btn"],
+            ["apontando", "Clique no botão *💎 LOJA* para gastar cristais em *upgrades permanentes* (ouro inicial, vida da base, dano...). Quando você juntar *10 💎*, uma notificação avisa que já dá pra jogar na roleta!", "#nx-meta-btn"],
+            ["debochado", "Lá dentro tem a *ROLETA*: escolha a aposta (*2, 5, 10, 25* ou *TUDO*) e gire. Você pode perder a aposta, receber metade de volta ou ganhar *2x* e *3x*.", "#nx-meta-btn"],
+            ["apontando", "As casas *🍀 Bênção* devolvem a aposta e dão um *benefício*. As *☠️ Maldição* pagam *1,5x*, mas trazem um *malefício*. Esses efeitos valem só na *próxima partida*, aparecem em *DESTINO* e somem quando ela termina."],
+            ["pensando", "E tem o seu *nível*: você ganha *XP* matando inimigos, vencendo ondas e cumprindo missões. Cada nível dá *💎* e bônus permanentes de *ouro inicial*, *dano* e *vida da base*.", "#nx-lv-sec"],
+            ["feliz", "A barra colorida mostra quanto falta para o próximo nível. Evolua sempre!", "#nx-lv-sec"]] },
   { lines: [["pensando", "Últimos atalhos: *ESC* abre o menu e pausa o jogo, e *P* liga ou desliga o filtro pixel."],
             ["debochado", "O *AUTO-WAVE* inicia as ondas sozinho e o *PULAR LOJA* ignora a loja. O jogo também *salva sozinho* entre as ondas.", "#btn-auto-wave,#btn-skip-shop"],
             ["apontando", "Com o *AUTO-WAVE* e o *PULAR LOJA* ligados, aparece o botão *VELOCIDADE*: ele alterna entre *1x* e *2x* e acelera o jogo todo. Se você desligar o Pular Loja, a velocidade volta pra 1x.", "#btn-auto-wave,#btn-skip-shop,#btn-speed"],
@@ -5003,13 +5202,26 @@ function html(s, n) {                       // *negrito*; revela n caracteres vi
     for (const ch of s) { if (ch === '*') { b = !b; o += b ? '<b>' : '</b>'; continue; } if (c >= n) break; c++; o += ch === '<' ? '&lt;' : ch === '&' ? '&amp;' : ch; }
     return o + (b ? '</b>' : '');
 }
+/* som de fala 8-bit (blips de onda quadrada) */
+let _bAC = null; const _bNotes = [196, 220, 247, 262, 294, 330, 392];
+function blip(ch) {
+    if (!/[\p{L}\p{N}]/u.test(ch)) return;
+    try {
+        const vol = +((document.getElementById('volume-slider') || {}).value || 1); if (!vol) return;
+        _bAC = _bAC || new (window.AudioContext || window.webkitAudioContext)(); if (_bAC.state === 'suspended') _bAC.resume();
+        const o = _bAC.createOscillator(), g = _bAC.createGain(), t = _bAC.currentTime, f = _bNotes[Math.floor(Math.random() * _bNotes.length)] * (Math.random() < .25 ? 2 : 1);
+        o.type = 'square'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * .85, t + .05);
+        g.gain.setValueAtTime(.08 * vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + .06);
+        o.connect(g); g.connect(_bAC.destination); o.start(t); o.stop(t + .07);
+    } catch (e) {}
+}
 function type(s) {
     return new Promise(res => {
-        const len = s.replace(/\*/g, '').length; let n = 0;
+        const len = s.replace(/\*/g, '').length; let n = 0; const plain = s.replace(/\*/g, '');
         S.typing = true; box.classList.remove('done'); clearInterval(S.timer);
         const fin = () => { clearInterval(S.timer); S.typing = false; S.fin = null; txt.innerHTML = html(s, len); box.classList.add('done'); res(); };
         S.fin = fin; txt.innerHTML = '';
-        S.timer = setInterval(() => { n++; txt.innerHTML = html(s, n); if (n >= len) fin(); }, 26);
+        S.timer = setInterval(() => { n++; txt.innerHTML = html(s, n); if (n % 2 === 1) blip(plain[n - 1] || ''); if (n >= len) fin(); }, 26);
     });
 }
 function show(m) {
@@ -5145,6 +5357,7 @@ window.hideTutorial = window.skipTutorial = skipTut;
         [/Passe a carta sobre a torre pra ver uma prévia dos status\./, 'Segure a carta sobre a torre pra ver uma prévia dos status.'],
         [/\*clique na torre quebrada\*/, '*toque na torre quebrada*'],
         [/e clique num espaço vazio/g, 'e toque num espaço vazio'],
+        [/Clique no botão \*💎 LOJA\*/, 'Toque no botão *💎 LOJA*'],
         [/Clique em \*INICIAR ONDA\*/, 'Toque em *INICIAR ONDA*'],
         [/Clique em INICIAR ONDA/, 'Toque em INICIAR ONDA'],
         [/clique em PRÓXIMA ONDA/, 'toque em PRÓXIMA ONDA'],
@@ -5272,10 +5485,10 @@ window.hideTutorial = window.skipTutorial = skipTut;
     const sb = $('sidebar'), orig = { hp: $('hp'), gold: $('gold'), wave: $('wave'), go: $('btn-start-wave') };
     const mini = document.createElement('div'); mini.id = 'nx-mini';
     mini.innerHTML = '<button id="nx-mini-toggle" type="button" aria-label="Abrir/fechar painel"><i class="fa-solid fa-table-columns"></i></button>' +
-        '<span class="nx-m">❤️ <b id="nx-m-hp"></b></span><span class="nx-m">💰 <b id="nx-m-gold"></b></span><span class="nx-m">🌊 <b id="nx-m-wave"></b></span>' +
+        '<span class="nx-m">❤️ <b id="nx-m-hp"></b></span><span class="nx-m">💰 <b id="nx-m-gold"></b></span><span class="nx-m">🌊 <b id="nx-m-wave"></b></span><span class="nx-m">⭐ <b id="nx-m-lv"></b></span>' +
         '<button id="nx-mini-go" type="button"></button>';
     document.body.appendChild(mini);
-    const mHp = $('nx-m-hp'), mGold = $('nx-m-gold'), mWave = $('nx-m-wave'), mGo = $('nx-mini-go');
+    const mHp = $('nx-m-hp'), mGold = $('nx-m-gold'), mWave = $('nx-m-wave'), mLv = $('nx-m-lv'), mGo = $('nx-mini-go');
     const toggle = $('nx-mini-toggle');
     toggle.addEventListener('click', () => { try { SFX.ui_click(); } catch (e) {} sb.classList.toggle('nx-open'); toggle.classList.toggle('on', sb.classList.contains('nx-open')); });
     mGo.addEventListener('click', () => { if (orig.go && !orig.go.disabled) orig.go.click(); });       // usa o botão original (mesma lógica, tutorial, etc.)
@@ -5284,7 +5497,7 @@ window.hideTutorial = window.skipTutorial = skipTut;
     });
     function syncMini() {
         const set = (el, v) => { if (el.textContent !== v) el.textContent = v; };
-        set(mHp, orig.hp.textContent); set(mGold, orig.gold.textContent); set(mWave, orig.wave.textContent);
+        set(mHp, orig.hp.textContent); set(mGold, orig.gold.textContent); set(mWave, orig.wave.textContent); if (window.nxLv) set(mLv, String(window.nxLv()));
         mHp.classList.toggle('danger', orig.hp.classList.contains('danger'));
         const dis = !!orig.go.disabled; mGo.disabled = dis;
         set(mGo, dis ? '⚔ EM ONDA' : '▶ ' + orig.go.innerText.replace(/^INICIAR\s*/i, '').trim());
@@ -5305,6 +5518,7 @@ window.hideTutorial = window.skipTutorial = skipTut;
         let top = false;
         if (talk && els.length && !inSb) { const ys = els.map(el => el.getBoundingClientRect()).filter(r => r.width > 2); if (ys.length) top = ys.reduce((a, r) => a + (r.top + r.bottom) / 2, 0) / ys.length > innerHeight * 0.5; }
         dlg.classList.toggle('nx-top', top); dlg.classList.toggle('nx-side', talk && inSb);
+        const mb = $('nx-meta-btn'); if (mb) mb.classList.toggle('tut-show', talk && sel === '#nx-meta-btn');
     }
     setInterval(tutLayout, 150);
     document.addEventListener('pointerdown', e => { if (e.target === cv) { tutClosed = true; sb.classList.remove('nx-force'); } });
