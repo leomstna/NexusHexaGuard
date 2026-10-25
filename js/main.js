@@ -997,6 +997,7 @@
                 let dist = Math.hypot(mouseX - screenX, mouseY - screenY);
                                 
                 if(dist < 60 * zoom) {
+                    if(window.nxBlock && nxBlock('card')) { returnCardToHand(); return; }
                     if(card.isPill) {
                         if(sellTokens <= 0) { 
                             SFX.ui_error();
@@ -3048,6 +3049,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 if (canvasEl) initPixelCard(wrapper, canvasEl, pColors);
                 
                 wrapper.onclick = () => { 
+                    if (window.nxBlock && nxBlock('shop')) return;
                     if (isDual && dualPicked) { 
                         SFX.ui_error(); 
                         if(typeof applyShake === 'function') applyShake(3); 
@@ -3547,7 +3549,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
 
         window.addEventListener('mousedown', e => {
             if(menuActive || isTutorialActive || gameOver) { return; }
-            if(e.target && e.target.closest && e.target.closest('#splash,.nx-modal,#nx-dlg,#nx-task,#giveup-overlay,#gameover-overlay,#lootbox-modal,#shop-overlay,#hand-container,#audio-controls-wrapper,#cheat-panel,#cat-modal,#nx-mini,#nx-rotate,#sidebar,#nx-meta-btn,#nx-meta-modal,#team-modal,#tooltip')) return;
+            if(e.target && e.target.closest && e.target.closest('#splash,.nx-modal,#nx-dlg,#nx-task,#giveup-overlay,#gameover-overlay,#lootbox-modal,#shop-overlay,#hand-container,.hand-arrow,#hand-prog,#audio-controls-wrapper,#cheat-panel,#cat-modal,#nx-mini,#nx-rotate,#sidebar,#nx-meta-btn,#nx-meta-modal,#team-modal,#tooltip')) return;
             if(e.button !== 0) return; 
             if(isShopOpen || dragElement || e.clientX < nxSideW()) return;
             if(document.getElementById('giveup-overlay') && document.getElementById('giveup-overlay').style.display === 'flex') return;
@@ -3564,7 +3566,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             }
             
             const _bt = towers.find(t => t.gridX === pos.x && t.gridY === pos.y);
-            if (_bt && _bt.dur <= 0) { repairTower(_bt); return; }   // torre quebrada: conserta (custo normal + 10)
+            if (_bt && _bt.dur <= 0) { if (window.nxBlock && nxBlock('repair')) return; repairTower(_bt); return; }   // torre quebrada: conserta (custo normal + 10)
 
             if(pos.y >= 0 && pos.y < map.length && pos.x >= 0 && pos.x < map[0].length && map[pos.y][pos.x] === 0) {
                 if(waveActive) {
@@ -3575,6 +3577,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
                 }
 
                 if(!towers.some(t => t.gridX === pos.x && t.gridY === pos.y)) {
+                    if(window.nxBlock && nxBlock('build')) return;
                     let cost = towerTypes[selectedTowerKey].cost;
                     if(gold >= cost) { 
                         SFX.build();
@@ -5202,13 +5205,13 @@ const STEPS = [
   { lines: [["apontando", "Escolha uma torre no *menu lateral* e clique num espaço vazio (*losango livre*) do mapa para construir. Só dá pra construir *fora de combate*.", ".hud-section:has(#tower-list)"],
             ["pensando", "São 3 torres: *Metralhadora* (25g, rápida e de curto alcance), *Canhão de Elite* (45g, longo alcance e dano alto, mas lento) e *Bobina Tesla* (40g, alcance médio e dano elétrico).", "#tower-list"],
             ["pensando", "Ah, e os *cadeados* no fim do caminho expandem o mapa por *100 de ouro*. Você libera *1 expansão a cada 5 ondas*. Guarde essa ideia."]],
-    hint: "Escolha uma torre e clique num espaço vazio do mapa", hl: '#tower-list',
+    hint: "Escolha uma torre e clique num espaço vazio do mapa", hl: '#tower-list', allow: ['build'],
     base: () => statTowersBuilt, wait: b => statTowersBuilt > b,
     ok: [["debochado", "Muito bem. Agora tente não estragar tudo."]] },
   { lines: [["pensando", "Aviso: a partir da onda 3 surgem os *Sabotadores* (roxos). Eles saem do caminho pra atacar a *durabilidade* das suas torres. Os *Monges* (carta) protegem a torre deles."],
             ["irritado", "E a cada *15 ondas* chega o *Boss Demolidor* (vermelho): ele também sai do caminho pra bater nas torres, mas cada golpe tira *33 de durabilidade de uma vez*. Mate-o rápido ou proteja suas torres!"],
             ["preparado", "Hora do show. Clique em *INICIAR ONDA* e segure a base.", "#btn-start-wave"]],
-    hint: "Clique em INICIAR ONDA", hl: '#btn-start-wave', wait: () => waveActive },
+    hint: "Clique em INICIAR ONDA", hl: '#btn-start-wave', allow: ['start'], wait: () => waveActive },
   { lines: [],
     hint: "Defenda a base até o fim da onda!", base: () => hp, wait: () => isShopOpen,
     watch: b => hp < b, say: [["irritado", "Opa, calma aí! Você está tentando perder de propósito?"]],
@@ -5220,10 +5223,10 @@ const STEPS = [
             ["pensando", "Algumas cartas são especiais: *Pílula de Venda* (vende uma torre e devolve ouro, gasta 1 ficha), *Maçã Dourada* (+5 de vida), cartas de *economia* (descontos e mais chance de raridade) e *Monges* (não ocupam vaga de efeito da torre)."],
             ["pensando", "Cartas *Angelicais* e *Demoníacas* mudam o seu alinhamento: quanto mais você compra de um lado, mais cartas dele aparecem. As *exclusivas* só surgem com afinidade alta."],
             ["pensando", "Cada torre aguenta até *3 efeitos* (cartas). Cartas que *regeneram durabilidade* e as cartas de *Monges* não contam nesse limite. Cartas *épicas*, *lendárias* e as que dão um efeito especial não repetem na mesma torre."]],
-    hint: "Compre uma carta e clique em PRÓXIMA ONDA", hl: '#all-cards,#close-shop-btn', wait: () => !isShopOpen },
+    hint: "Compre uma carta e clique em PRÓXIMA ONDA", hl: '#all-cards,#close-shop-btn', allow: ['shop'], wait: () => !isShopOpen },
   { skip: () => playerHand.length === 0,
     lines: [["vem", "Agora *arraste a carta* da mão e solte em cima de uma torre para aplicar o upgrade. Passe a carta sobre a torre pra ver uma prévia dos status.", "#hand-container"]],
-    hint: "Arraste uma carta da mão até uma torre", hl: '#hand-container',
+    hint: "Arraste uma carta da mão até uma torre", hl: '#hand-container', allow: ['card'],
     base: () => statCardsUsed, wait: b => statCardsUsed > b,
     ok: [["surpreso", "Olha só! Torre com carta é torre feliz."]] },
   { lines: [["apontando", "Preste atenção na *durabilidade*: toda torre se desgasta a *cada tiro*, e quanto mais efeitos ela tem, mais rápido desgasta. Passe o mouse na torre pra ver os números."],
@@ -5232,7 +5235,7 @@ const STEPS = [
             ["bravo", "Cada torre tem no máximo *3 consertos* por partida. Se quebrar de novo depois do 3º, ela é *destruída* e some do mapa. Cartas de durabilidade ajudam a evitar isso."]] },
   { lines: [["pensando", "Fora das ondas você junta *Cristais Hexa* 💎: eles vêm de *abates*, *ondas*, *missões diárias* e *conquistas*, e ficam salvos mesmo quando você perde.", "#nx-meta-btn"],
             ["apontando", "Clique no botão *💎 LOJA* para gastar cristais em *upgrades permanentes* (ouro inicial, vida da base, dano...). Quando você juntar *10 💎*, uma notificação avisa que já dá pra jogar na roleta!", "#nx-meta-btn"],
-            ["debochado", "Agora olha *aqui dentro*: tem a *ROLETA*: escolha a aposta (*2, 5, 10, 25* ou *TUDO*) e gire. Você pode perder a aposta, receber metade de volta ou ganhar *2x* e *3x*.", "#nxr"],
+            ["debochado", "Agora olha *aqui dentro*: tem a *ROLETA*. Escolha a aposta (*2, 5, 10, 25* ou *TUDO*) e gire. Você pode perder a aposta, receber metade de volta ou ganhar *2x* e *3x*.", "#nxr"],
             ["apontando", "As casas *🍀 Bênção* devolvem a aposta e dão um *benefício*. As *☠️ Maldição* pagam *1,5x*, mas trazem um *malefício*. Esses efeitos valem só na *próxima partida*, aparecem em *DESTINO* e somem quando ela termina.", "#nxr"],
             ["pensando", "E tem o seu *nível*: você ganha *XP* matando inimigos, vencendo ondas e cumprindo missões. Cada nível dá *💎* e bônus permanentes de *ouro inicial*, *dano* e *vida da base*.", ".nxl"],
             ["feliz", "A barra colorida mostra quanto falta para o próximo nível. Evolua sempre!", ".nxl"]] },
@@ -5345,7 +5348,7 @@ function adv() {                                                            // 1
     if (S.res) { const r = S.res; S.res = null; r(); }
 }
 function end() {
-    S.tok++; clearInterval(S.timer);
+    window.nxGate = null; S.tok++; clearInterval(S.timer);
     if (S.typing && S.fin) S.fin();
     if (S.res) { const r = S.res; S.res = null; r(); }
     try { window.nxMeta && nxMeta(false); } catch (x) {}
@@ -5354,7 +5357,7 @@ function end() {
 }
 /* fim do tutorial guiado: a partida de treino é descartada (sem save, sem estatísticas) e começa uma partida nova */
 function resetRun(finished) {
-    if (S.resetting) return; S.resetting = true;
+    if (S.resetting) return; S.resetting = true; window.nxGate = null;
     if (finished) mark();                                         // se morreu no treino, ele reaparece na próxima partida
     S.tok++; clearInterval(S.timer); hl(); spot(null);
     root.classList.remove('talk', 'review'); task.classList.remove('on'); S.mode = null; isTutorialActive = false;
@@ -5378,8 +5381,10 @@ async function guided() {
         if (tok !== S.tok) return;
         if (st.skip && st.skip()) continue;
         const base = st.base ? st.base() : 0;
+        window.nxGate = [];                                                // falando: nada do jogo liberado
         if (!await talk(st.lines, tok)) return;
         if (st.wait) {
+            window.nxGate = st.allow || [];
             hl(st.hl); $('nx-hint').textContent = window.nxTouchTxt ? nxTouchTxt(st.hint) : st.hint; show('task');
             let said = false;
             while (tok === S.tok && !st.wait(base)) {
@@ -5387,7 +5392,7 @@ async function guided() {
                 if (st.watch && !said && st.watch(base)) { said = true; if (!await talk(st.say, tok)) return; hl(st.hl); show('task'); }
                 await sleep(150);
             }
-            hl(); if (tok !== S.tok) return;
+            window.nxGate = []; hl(); if (tok !== S.tok) return;
             if (!await talk(st.ok, tok)) return;
         }
     }
@@ -5432,6 +5437,20 @@ window.showTutorial = function (fromMenu) {
     restartForTutorial();                                                    // partida em andamento: reseta tudo e roda o tutorial numa partida nova
 };
 window.hideTutorial = window.skipTutorial = skipTut;
+
+/* ── TRAVA DO TUTORIAL: durante o treino, cada ação só funciona no passo em que o Nexus manda fazer ── */
+window.nxGate = null;                                         // null = tudo livre (fora do tutorial); array = ações liberadas agora
+window.nxBlock = function (act) {                             // true = bloqueado
+    if (!window.NXTUTRUN || S.review || !Array.isArray(window.nxGate)) return false;
+    if (window.nxGate.includes(act)) return false;
+    try { SFX.ui_error(); } catch (e) {}
+    const k = $('nx-kn'); if (k) { k.classList.remove('kpop'); void k.offsetWidth; k.classList.add('kpop'); }
+    return true;
+};
+[['startNextWave', 'start'], ['closeShop', 'shop'], ['rerollShop', 'shop'], ['buyLootbox', 'shop'], ['toggleAutoWave', 'auto'], ['toggleSkipShop', 'auto'], ['toggleSpeed', 'auto']].forEach(([fn, act]) => {
+    const orig = window[fn]; if (typeof orig !== 'function') return;
+    window[fn] = function () { if (nxBlock(act)) return; return orig.apply(this, arguments); };
+});
 })();
 
 
