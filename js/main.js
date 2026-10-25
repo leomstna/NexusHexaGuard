@@ -4433,7 +4433,13 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         b.querySelectorAll('[data-px]').forEach(x => x.onclick = () => { click(); FX.px = +x.dataset.px; nxPxChanged(); });
         b.querySelectorAll('[data-tg]').forEach(x => x.onclick = () => { click(); NXO[x.dataset.tg] = !NXO[x.dataset.tg]; saveOpts(); refreshOpts(); });
         $('nx-fs').onclick = () => { click(); if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); };
-        $('nx-wipe').onclick = () => { click(); confirmBox('APAGAR PROGRESSO?', 'Isso apaga recorde, estatísticas, histórico e o jogo salvo. Não dá para desfazer.', 'APAGAR TUDO', () => { ['nexus_highscore', 'nexus_history', LIFE_KEY, SAVE_KEY].forEach(LS.del); refreshMenu(); showOpts(); }); };
+        $('nx-wipe').onclick = () => { click(); confirmBox('APAGAR PROGRESSO?', 'Isso apaga TUDO: recorde, estatísticas, histórico, conquistas, missões, melhorias, opções, tutorial e o jogo salvo. Você volta a ser um jogador novo. Não dá para desfazer.', 'APAGAR TUDO', () => {
+            /* Bloqueia qualquer gravação (beforeunload/visibilitychange/pagehide regravariam o estado em memória), apaga tudo e recarrega do zero */
+            try { Storage.prototype.setItem = function () {}; } catch (e) {}
+            try { Object.keys(localStorage).filter(k => k.indexOf('nexus_') === 0).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+            try { Object.keys(sessionStorage).filter(k => k.indexOf('nexus_') === 0).forEach(k => sessionStorage.removeItem(k)); } catch (e) {}
+            location.reload();
+        }); };
     }
     function refreshOpts() { const sc = $('nx-body').scrollTop; $('nx-body').innerHTML = optsHTML(); bindOpts(); $('nx-body').scrollTop = sc; }
     function showOpts() { openModal('OPÇÕES', optsHTML(), 'opts'); bindOpts(); }
