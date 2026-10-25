@@ -727,6 +727,38 @@
             }, 300);
         }
 
+        /* ── MÃO COM MUITAS CARTAS: faixa de 1 linha com rolagem lateral (roda do mouse, setas e arrastar de lado no toque) ── */
+        const handBox = document.getElementById('hand-container');
+        const handArL = document.getElementById('hand-arrow-l'), handArR = document.getElementById('hand-arrow-r');
+        let handPrevLen = 0;
+        function handNeedsScroll() { return handBox.scrollWidth > handBox.clientWidth + 2; }
+        function updateHandArrows() {
+            if (!handArL || !handArR) return;
+            const r = handBox.getBoundingClientRect(), needs = r.width > 0 && handNeedsScroll();
+            const max = handBox.scrollWidth - handBox.clientWidth;
+            handArL.classList.toggle('show', needs && handBox.scrollLeft > 2);
+            handArR.classList.toggle('show', needs && handBox.scrollLeft < max - 2);
+            if (!needs) return;
+            const top = (r.top + r.height / 2 - 26) + 'px';
+            handArL.style.top = handArR.style.top = top;
+            handArL.style.left = (r.left + 2) + 'px';
+            handArR.style.left = (r.right - 2 - 28) + 'px';
+        }
+        function handScrollBy(dir) {
+            const c = handBox.querySelector('.hand-card'); const step = (c ? c.offsetWidth + 10 : 80) * 2;
+            handBox.scrollBy({ left: dir * step, behavior: 'smooth' });
+        }
+        if (handArL) handArL.addEventListener('click', () => handScrollBy(-1));
+        if (handArR) handArR.addEventListener('click', () => handScrollBy(1));
+        handBox.addEventListener('scroll', updateHandArrows, { passive: true });
+        handBox.addEventListener('wheel', e => {
+            if (!handNeedsScroll()) return;
+            const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+            handBox.scrollLeft += d; e.preventDefault(); e.stopPropagation();
+        }, { passive: false });
+        window.addEventListener('resize', updateHandArrows);
+        if (window.ResizeObserver) new ResizeObserver(updateHandArrows).observe(handBox);
+
         function renderHand() {
             const container = document.getElementById('hand-container');
             const emptyText = document.getElementById('empty-hand');
@@ -780,10 +812,33 @@
                     el.onpointercancel = (e) => {
                         if(dragElement === el) { el.classList.remove('dragging'); el.releasePointerCapture(e.pointerId); clearDropTarget(); returnCardToHand(); }
                     };
+                    const _startDrag = el.onpointerdown;
+                    el.onpointerdown = (e) => {
+                        if (e.pointerType === 'mouse' || !handNeedsScroll()) return _startDrag(e);
+                        if (dragElement || isCardReturning) return;
+                        e.preventDefault();
+                        const sx = e.clientX, sy = e.clientY, sl = handBox.scrollLeft, pid = e.pointerId; let mode = '';
+                        const end = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); };
+                        const mv = ev => {
+                            if (ev.pointerId !== pid) return;
+                            const dx = ev.clientX - sx, dy = ev.clientY - sy;
+                            if (!mode) {
+                                if (Math.hypot(dx, dy) < 8) return;
+                                mode = Math.abs(dx) > Math.abs(dy) ? 'scroll' : 'drag';   // de lado = rola a mão; pra cima/baixo = arrasta a carta
+                                if (mode === 'drag') { end(); _startDrag(ev); return; }
+                                clearTimeout(hoverTimer); tt.classList.remove('visible');
+                            }
+                            handBox.scrollLeft = sl - dx;
+                        };
+                        const up = ev => { if (ev.pointerId === pid) end(); };
+                        window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+                    };
                     container.appendChild(el);
                 });
                 updateCursorTargeting();
             }
+            if (playerHand.length > handPrevLen && handNeedsScroll()) handBox.scrollTo({ left: handBox.scrollWidth, behavior: 'smooth' });   // carta nova: mostra no fim
+            handPrevLen = playerHand.length; updateHandArrows();
         }
 
         function moveDrag(_e) {
@@ -5453,8 +5508,8 @@ window.hideTutorial = window.skipTutorial = skipTut;
     const hand = $('hand-container');
     hand.addEventListener('pointerdown', e => {
         if (!isT(e) || !e.target.closest || !e.target.closest('.hand-card')) return;
-        clearTimeout(lpTimer); lpStart = { x: e.clientX, y: e.clientY, id: e.pointerId, idx: draggingCardIndex, t: performance.now(), shown: false };
-        lpTimer = setTimeout(() => { if (lpStart && draggingCardIndex === lpStart.idx && !hoveredDropTower) { lpStart.shown = true; cardTip(playerHand[lpStart.idx], lpStart.x, lpStart.y); } }, 450);
+        clearTimeout(lpTimer); lpStart = { x: e.clientX, y: e.clientY, id: e.pointerId, idx: [...hand.querySelectorAll('.hand-card')].indexOf(e.target.closest('.hand-card')), t: performance.now(), shown: false };
+        lpTimer = setTimeout(() => { if (lpStart && (draggingCardIndex === lpStart.idx || draggingCardIndex === -1) && !hoveredDropTower) { lpStart.shown = true; cardTip(playerHand[lpStart.idx], lpStart.x, lpStart.y); } }, 450);
     });
     window.addEventListener('pointermove', e => { if (lpStart && e.pointerId === lpStart.id && Math.hypot(e.clientX - lpStart.x, e.clientY - lpStart.y) > 18) { clearTimeout(lpTimer); lpStart = null; } }, { passive: true });
     const lpEnd = e => {
