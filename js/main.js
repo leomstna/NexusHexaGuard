@@ -4483,7 +4483,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         }
         h += `<div class="nx-sec">HISTÓRICO GERAL</div><div class="nx-grid">${stat(nf(hs), 'Recorde de score')}${stat(l.bestWave || '-', 'Melhor onda')}${stat(l.games, 'Partidas jogadas')}${stat(nf(l.kills), 'Inimigos derrotados')}${stat(nf(l.dmg), 'Dano total causado')}${stat(nf(l.dmgTaken), 'Dano sofrido')}${stat(nf(l.towers), 'Torres construídas')}${stat(nf(l.cards), 'Cartas usadas')}${stat(nf(l.gold) + 'g', 'Ouro ganho')}${stat(nf(l.crits), 'Críticos')}${stat(nf(l.rerolls), 'Rerolls na loja')}${stat(fmtTime(l.time), 'Tempo jogado')}</div>`;
         h += `<div class="nx-sec">ÚLTIMAS PARTIDAS</div>`;
-        h += hist.length ? hist.map(m => `<div class="nx-hist"><span><b style="color:#fde047">${nf(m.score)}</b> · <span style="color:${m.color}">${m.buildClass}</span> (onda ${m.wave})</span><span style="color:#71717a">${m.date}</span></div>`).join('') : '<span style="color:#71717a">Nenhuma partida registrada ainda.</span>';
+        h += hist.length ? hist.map(m => `<div class="nx-hist"><span>${m.team ? '<b style="color:#e4e4e7">' + String(m.team).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</b> · ' : ''}<b style="color:#fde047">${nf(m.score)}</b> · <span style="color:${m.color}">${m.buildClass}</span> (onda ${m.wave})</span><span style="color:#71717a">${m.date}</span></div>`).join('') : '<span style="color:#71717a">Nenhuma partida registrada ainda.</span>';
         openModal('ESTATÍSTICAS', h, 'stats');
     }
 
@@ -4557,7 +4557,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
         if (enemies.some(e => !e.dead)) return false;
         if (wave === 1 && towers.length === 0 && playerHand.length === 0) return false;
         LS.set(SAVE_KEY, {
-            v: 1, t: Date.now(), floor: floorPalette.id, hp, gold, wave, sellTokens, expansionsUsed, alignmentLight, alignmentDark, adaptiveMult, rerollCost, selectedTowerKey,
+            v: 1, t: Date.now(), team: (window.NXTEAM && NXTEAM.name) || '', floor: floorPalette.id, hp, gold, wave, sellTokens, expansionsUsed, alignmentLight, alignmentDark, adaptiveMult, rerollCost, selectedTowerKey,
             map, waypoints, camX, camY, zoom: zoomTarget, hand: playerHand.map(c => c.name), shopMods: Object.assign({}, shopMods),
             stats: { statTotalDmgDealt, statTotalDmgTaken, statEnemiesKilled, statTowersBuilt, statCardsUsed, statGoldEarned, statCrits, statRerolls },
             towers: towers.map(serTower)
@@ -4567,6 +4567,7 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
     function loadGame(d) {
         if (d.floor) setFloorPalette(d.floor);
         hp = d.hp; gold = d.gold; wave = d.wave; sellTokens = d.sellTokens; expansionsUsed = d.expansionsUsed;
+        if (d.team && window.NXTEAM) NXTEAM.name = d.team;
         alignmentLight = d.alignmentLight; alignmentDark = d.alignmentDark; adaptiveMult = d.adaptiveMult; rerollCost = d.rerollCost;
         if (towerTypes[d.selectedTowerKey]) selectedTowerKey = d.selectedTowerKey;
         map = d.map; waypoints = d.waypoints; mapHeight = map.length; mapWidth = map[0].length;
