@@ -728,21 +728,34 @@
         }
 
         /* ── MÃO COM MUITAS CARTAS: faixa de 1 linha com rolagem lateral (roda do mouse, setas e arrastar de lado no toque) ── */
-        const handBox = document.getElementById('hand-container');
-        const handArL = document.getElementById('hand-arrow-l'), handArR = document.getElementById('hand-arrow-r');
-        let handPrevLen = 0;
+        const handWrap = document.getElementById('hand-container'), handBox = document.getElementById('hand-scroll');
+        const handArL = document.getElementById('hand-arrow-l'), handArR = document.getElementById('hand-arrow-r'), handProg = document.getElementById('hand-prog');
+        let handPrevLen = 0, handBusy = false;
         function handNeedsScroll() { return handBox.scrollWidth > handBox.clientWidth + 2; }
-        function updateHandArrows() {
-            if (!handArL || !handArR) return;
-            const r = handBox.getBoundingClientRect(), needs = r.width > 0 && handNeedsScroll();
-            const max = handBox.scrollWidth - handBox.clientWidth;
-            handArL.classList.toggle('show', needs && handBox.scrollLeft > 2);
-            handArR.classList.toggle('show', needs && handBox.scrollLeft < max - 2);
-            if (!needs) return;
-            const top = (r.top + r.height / 2 - 26) + 'px';
-            handArL.style.top = handArR.style.top = top;
-            handArL.style.left = (r.left + 2) + 'px';
-            handArR.style.left = (r.right - 2 - 28) + 'px';
+        function updateHandScrollUI() {   // só visual (setas/barra); chamado a cada scroll
+            if (!handArL || !handArR || !handProg) return;
+            const ovf = handWrap.classList.contains('ovf'), r = handWrap.getBoundingClientRect();
+            const show = ovf && r.width > 0;
+            const max = handBox.scrollWidth - handBox.clientWidth, sl = handBox.scrollLeft;
+            [handArL, handArR].forEach(b => b.classList.toggle('on', show));
+            handArL.classList.toggle('dis', sl <= 2); handArR.classList.toggle('dis', sl >= max - 2);
+            handProg.classList.toggle('on', show);
+            if (!show) return;
+            const ah = Math.max(36, Math.min(56, r.height - 16)), top = (r.top + r.height / 2 - ah / 2) + 'px';
+            handArL.style.height = handArR.style.height = ah + 'px'; handArL.style.top = handArR.style.top = top;
+            handArL.style.left = (r.left + 6) + 'px'; handArR.style.left = (r.right - 6 - 28) + 'px';
+            const tw = Math.max(20, r.width - 80); handProg.style.left = (r.left + 40) + 'px'; handProg.style.top = (r.bottom - 6) + 'px'; handProg.style.width = tw + 'px';
+            const th = handProg.firstElementChild, ratio = Math.max(0.12, handBox.clientWidth / handBox.scrollWidth);
+            th.style.width = (ratio * 100) + '%'; th.style.left = ((max > 0 ? sl / max : 0) * (1 - ratio) * 100) + '%';
+        }
+        function updateHandArrows() {     // mede se precisa rolar e reserva espaço das setas (preserva a posição da rolagem)
+            if (handBusy) return; handBusy = true;
+            const sl = handBox.scrollLeft;
+            handWrap.classList.remove('ovf');
+            const needs = handWrap.getBoundingClientRect().width > 0 && handNeedsScroll();
+            handWrap.classList.toggle('ovf', needs);
+            if (handBox.scrollLeft !== sl) handBox.scrollLeft = sl;
+            handBusy = false; updateHandScrollUI();
         }
         function handScrollBy(dir) {
             const c = handBox.querySelector('.hand-card'); const step = (c ? c.offsetWidth + 10 : 80) * 2;
@@ -750,17 +763,17 @@
         }
         if (handArL) handArL.addEventListener('click', () => handScrollBy(-1));
         if (handArR) handArR.addEventListener('click', () => handScrollBy(1));
-        handBox.addEventListener('scroll', updateHandArrows, { passive: true });
-        handBox.addEventListener('wheel', e => {
+        handBox.addEventListener('scroll', updateHandScrollUI, { passive: true });
+        handWrap.addEventListener('wheel', e => {
             if (!handNeedsScroll()) return;
             const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
             handBox.scrollLeft += d; e.preventDefault(); e.stopPropagation();
         }, { passive: false });
         window.addEventListener('resize', updateHandArrows);
-        if (window.ResizeObserver) new ResizeObserver(updateHandArrows).observe(handBox);
+        if (window.ResizeObserver) new ResizeObserver(updateHandArrows).observe(handWrap);
 
         function renderHand() {
-            const container = document.getElementById('hand-container');
+            const container = document.getElementById('hand-scroll') || document.getElementById('hand-container');
             const emptyText = document.getElementById('empty-hand');
             container.querySelectorAll('.hand-card').forEach(c => c.remove());
 
@@ -837,8 +850,9 @@
                 });
                 updateCursorTargeting();
             }
+            updateHandArrows();
             if (playerHand.length > handPrevLen && handNeedsScroll()) handBox.scrollTo({ left: handBox.scrollWidth, behavior: 'smooth' });   // carta nova: mostra no fim
-            handPrevLen = playerHand.length; updateHandArrows();
+            handPrevLen = playerHand.length;
         }
 
         function moveDrag(_e) {
@@ -969,7 +983,15 @@
                 return;
             }
 
+            /* alvo = a torre MAIS PRÓXIMA dentro do raio (antes pegava a primeira da lista, e acertava a torre vizinha) */
+            let _bestI = -1, _bestD = Infinity;
             for(let i = towers.length - 1; i >= 0; i--) {
+                const _p = cartToIso(towers[i].gridX, towers[i].gridY);
+                const _d = Math.hypot(mouseX - ((_p.x - cx) * zoom + cx), mouseY - ((_p.y - 10 - cy) * zoom + cy));
+                if(_d < 60 * zoom && _d < _bestD) { _bestD = _d; _bestI = i; }
+            }
+            for(let i = towers.length - 1; i >= 0; i--) {
+                if(i !== _bestI) continue;
                 let t = towers[i]; let p = cartToIso(t.gridX, t.gridY);
                 let screenX = (p.x - cx) * zoom + cx; let screenY = (p.y - 10 - cy) * zoom + cy; 
                 let dist = Math.hypot(mouseX - screenX, mouseY - screenY);
@@ -4237,7 +4259,9 @@ const _fxDecal=fxDecal;fxDecal=function(gx,gy,r,col,a){_fxDecal(gx,gy,r,col,a);c
             let contentH = shopContent.scrollHeight;
             let contentW = shopContent.scrollWidth;
 
-            let availH = overlayH - 70;
+            const _t = document.getElementById('shop-title'), _g = document.getElementById('shop-gold-display'), _bt = document.getElementById('shop-buttons');
+            const others = (_t ? _t.offsetHeight : 40) + (_g ? _g.offsetHeight : 40) + (_bt ? _bt.offsetHeight : 100) + 20 + 10 + 20 + 30 + 40;   // alturas fora das cartas (título, ouro, botões, margens e padding)
+            let availH = overlayH - others;
             let availW = overlayW - 40;
 
             let scaleH = availH / Math.max(contentH, 1);
